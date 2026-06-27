@@ -69,7 +69,7 @@ export const submitQuiz = (slug: string, lessonId: string, answers: number[]) =>
     body: JSON.stringify({ answers }),
   })
 
-export const getLearningPaths = (q: { page?: number } = {}) =>
+export const getLearningPaths = (q: { page?: number; page_size?: number } = {}) =>
   apiFetch<PaginatedLearningPathSummary>(`/learning-paths${buildQuery(q)}`, PaginatedLearningPathSummarySchema)
 
 export const getLearningPath = (slug: string) =>

@@ -28,7 +28,7 @@ export const createRoom = (b: {
 }) =>
   apiFetch('/idea-rooms', SlugResponseSchema, { method: 'POST', body: JSON.stringify(b) })
 
-export const listRooms = (q: { status?: string; category?: string; subcategory?: string; page?: number } = {}) =>
+export const listRooms = (q: { status?: string; category?: string; subcategory?: string; page?: number; page_size?: number } = {}) =>
   apiFetch<PaginatedRoomSummary>(`/idea-rooms${buildQuery(q)}`, PaginatedRoomSummarySchema)
 
 export const getRoom = (slug: string) => apiFetch<IdeaRoom>(`/idea-rooms/${slug}`, RoomSchema)

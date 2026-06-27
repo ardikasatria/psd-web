@@ -63,7 +63,7 @@ export default function AdminCourseReviewPage() {
         <AdminPageSkeleton />
       ) : items.length === 0 ? (
         <AdminContentCard>
-          <AdminTableEmpty message="Tidak ada course yang menunggu tinjauan." />
+          <AdminTableEmpty>Tidak ada course yang menunggu tinjauan.</AdminTableEmpty>
         </AdminContentCard>
       ) : (
         <AdminContentCard>

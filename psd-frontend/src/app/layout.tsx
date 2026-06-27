@@ -13,6 +13,8 @@ const beVietnamPro = Be_Vietnam_Pro({
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Projek Sains Data'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
