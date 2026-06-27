@@ -1,3 +1,16 @@
+function storageHostname() {
+  if (process.env.NEXT_PUBLIC_STORAGE_HOST) {
+    return process.env.NEXT_PUBLIC_STORAGE_HOST
+  }
+  const api = process.env.NEXT_PUBLIC_API_BASE_URL
+  if (api?.includes('://api.')) {
+    return api.replace('://api.', '://storage.').split('/')[2]
+  }
+  return null
+}
+
+const storageHost = storageHostname()
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
@@ -43,6 +56,15 @@ const nextConfig = {
         port: '9000',
         pathname: '/**',
       },
+      ...(storageHost
+        ? [
+            {
+              protocol: 'https',
+              hostname: storageHost,
+              pathname: '/**',
+            },
+          ]
+        : []),
     ],
   },
 }

@@ -2,6 +2,7 @@
 
 import clsx from 'clsx'
 import Image from 'next/image'
+import { shouldUnoptimizeImage } from '@/lib/images'
 import type { Profile } from '@/types/api'
 
 const DEFAULT_ACCENT = '#4572b7'
@@ -25,6 +26,7 @@ export function ProfileCover({
           className="object-cover"
           sizes="(max-width: 1024px) 100vw, 1200px"
           priority
+          unoptimized={shouldUnoptimizeImage(profile.banner_url)}
         />
       ) : (
         <div
@@ -70,6 +72,7 @@ export function ProfileAvatar({
           fill
           className="object-cover"
           sizes={sizes.img}
+          unoptimized={shouldUnoptimizeImage(profile.avatar_url)}
         />
       ) : (
         <div

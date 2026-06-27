@@ -2,6 +2,7 @@ import * as Headless from '@headlessui/react'
 import clsx from 'clsx'
 import Image from 'next/image'
 import React, { forwardRef } from 'react'
+import { shouldUnoptimizeImage } from '@/lib/images'
 import { TouchTarget } from './Button'
 import { Link } from './link'
 
@@ -52,7 +53,15 @@ export default function Avatar({
         </svg>
       )}
       {src && (
-        <Image className="aspect-square object-cover" src={src} alt={alt} width={width} height={height} sizes={sizes} />
+        <Image
+          className="aspect-square object-cover"
+          src={src}
+          alt={alt}
+          width={width}
+          height={height}
+          sizes={sizes}
+          unoptimized={shouldUnoptimizeImage(src)}
+        />
       )}
     </span>
   )
