@@ -31,10 +31,8 @@ const Header2: FC<Props> = async ({ bottomBorder, className }) => {
       <div className="container flex h-20 items-center justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-center gap-x-4 sm:gap-x-5 lg:gap-x-7">
           <Logo />
-          <div className="h-8 border-l"></div>
-          <div className="max-w-xs min-w-0 md:w-60 xl:w-72">
-            <SearchModal type="type2" />
-          </div>
+          <div className="h-8 border-l" />
+          <SearchModal />
         </div>
 
         <div className="flex shrink-0 items-center gap-x-1 sm:gap-x-2">
