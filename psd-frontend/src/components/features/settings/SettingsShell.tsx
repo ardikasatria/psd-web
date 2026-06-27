@@ -102,8 +102,8 @@ function NavLink({
         'group flex items-center gap-3 rounded-2xl border transition-all duration-200 motion-safe:transition-colors',
         compact ? 'p-3' : 'p-4',
         active
-          ? 'border-primary-300 bg-primary-50 shadow-sm dark:border-primary-700 dark:bg-primary-950/40'
-          : 'border-neutral-200/80 bg-white hover:border-primary-200 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:border-primary-800 dark:hover:bg-neutral-800/80'
+          ? 'border-primary-300 bg-primary-50 shadow-sm dark:border-primary-600 dark:bg-primary-900/35 dark:shadow-none'
+          : 'border-neutral-200/80 bg-white hover:border-primary-200 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:border-primary-700 dark:hover:bg-neutral-700/60'
       )}
       aria-current={active ? 'page' : undefined}
     >
@@ -119,9 +119,25 @@ function NavLink({
         <Icon className={compact ? 'size-5' : 'size-5'} aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-semibold text-neutral-900 dark:text-neutral-100">{item.label}</span>
+        <span
+          className={clsx(
+            'block font-semibold',
+            active ? 'text-primary-900 dark:text-white' : 'text-neutral-900 dark:text-neutral-100'
+          )}
+        >
+          {item.label}
+        </span>
         {!compact && (
-          <span className="mt-0.5 block text-sm text-neutral-500 dark:text-neutral-400">{item.description}</span>
+          <span
+            className={clsx(
+              'mt-0.5 block text-sm',
+              active
+                ? 'text-primary-700 dark:text-primary-200'
+                : 'text-neutral-500 dark:text-neutral-400'
+            )}
+          >
+            {item.description}
+          </span>
         )}
       </span>
       <ChevronRightIcon

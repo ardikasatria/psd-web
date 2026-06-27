@@ -75,7 +75,7 @@ export function ProfileCard({
       style={{ ['--psd-accent' as string]: accent }}
     >
       {isOwner && (
-        <div className="absolute end-4 top-4 z-10 hidden lg:block">
+        <div className="pointer-events-auto absolute end-4 top-4 z-30 hidden lg:block">
           <ButtonPrimary href="/settings/profile" className="!rounded-lg !px-3 !py-1.5 !text-xs">
             <PencilSquareIcon className="mr-1 inline size-3.5" aria-hidden />
             Edit
