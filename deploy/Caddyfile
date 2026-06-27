@@ -11,9 +11,19 @@ app.{$DOMAIN} {
 }
 
 api.{$DOMAIN} {
-    reverse_proxy backend:8000
+    # MinIO path-style (bucket di URL) — pakai sertifikat api.* yang sudah aktif
+    handle /psd-media/* {
+        reverse_proxy minio:9000
+    }
+    handle /psd-assets/* {
+        reverse_proxy minio:9000
+    }
+    handle {
+        reverse_proxy backend:8000
+    }
 }
 
+# Opsional: subdomain khusus storage (butuh sertifikat TLS terpisah di Caddy)
 storage.{$DOMAIN} {
     reverse_proxy minio:9000
 }

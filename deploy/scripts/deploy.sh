@@ -36,6 +36,10 @@ fi
 echo "==> Build & start stack (DOMAIN=${DOMAIN})"
 docker compose -f docker-compose.prod.yml up -d --build
 
+echo "==> Reload Caddy (sertifikat TLS subdomain)"
+docker compose -f docker-compose.prod.yml exec -T caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null \
+  || docker compose -f docker-compose.prod.yml restart caddy
+
 echo "==> Migrasi database (alembic upgrade head)"
 docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
 
@@ -48,7 +52,7 @@ echo ""
 echo "Deploy selesai."
 echo "  API:      https://api.${DOMAIN}/api/v1/health"
 echo "  App:      https://${DOMAIN}"
-echo "  Storage:  https://storage.${DOMAIN}"
+echo "  Media:    https://api.${DOMAIN}/psd-media/"
 echo ""
 echo "Verifikasi Fase 0:"
 echo "  ./scripts/verify.sh"
