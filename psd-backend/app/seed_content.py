@@ -17,6 +17,7 @@ from app.modules.learn.models import Course, LearningPath
 from app.modules.micro.models import MicroLesson
 from app.modules.quests.models import Quest
 from app.modules.repos.models import Repo
+from app.modules.rooms.models import IdeaRoom  # noqa: F401 — register FK metadata
 from app.modules.users.models import User
 
 DEMO_PW = hash_password("demo")

@@ -12,6 +12,7 @@ from app.modules.events.models import Event, EventRegistration
 from app.modules.learn.models import Course, Enrollment, LearningPath, LessonProgress, Notebook
 from app.modules.instructors.models import InstructorApplication
 from app.modules.repos.models import Repo, RepoLike
+from app.modules.rooms.models import IdeaRoom  # noqa: F401 — register FK metadata
 from app.modules.users.models import User
 
 DEMO_PW = hash_password("demo")
