@@ -28,6 +28,7 @@ echo "FAIL TLS storage.${DOMAIN} — log Caddy:"
 docker compose -f docker-compose.prod.yml logs caddy --tail=50
 
 echo ""
-echo "Media publik tetap tersedia via https://api.${DOMAIN}/psd-media/ (setelah redeploy Caddyfile terbaru)."
+echo "Media publik: https://storage.${DOMAIN}/psd-media/"
+echo "Fallback (jika storage TLS belum siap): https://api.${DOMAIN}/psd-media/"
 echo "Migrasi URL lama: ./scripts/migrate-storage-urls.sh"
 exit 1

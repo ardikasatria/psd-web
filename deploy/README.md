@@ -42,8 +42,8 @@ chmod +x scripts/*.sh
 
 # DNS A record:
 #   projeksainsdata.com, www.projeksainsdata.com → IP VM (frontend)
-#   api.projeksainsdata.com → IP VM (backend + media MinIO di /psd-media)
-#   storage.projeksainsdata.com → IP VM (opsional; subdomain terpisah)
+#   api.projeksainsdata.com → IP VM (backend)
+#   storage.projeksainsdata.com → IP VM (media MinIO)
 #   app.projeksainsdata.com → IP VM (opsional; redirect ke apex)
 ```
 
@@ -148,23 +148,23 @@ Login demo (setelah `--seed`): `budi@psd.id` / `demo`
 
 ## Troubleshooting media / foto profil
 
-Media publik dilayani lewat **`https://api.<DOMAIN>/psd-media/`** (sertifikat `api.*` yang sudah aktif), bukan subdomain `storage.*`.
+Media publik: **`https://storage.<DOMAIN>/psd-media/`**
 
-Jika avatar lama masih memakai URL `storage.<DOMAIN>`:
-
-```bash
-chmod +x scripts/migrate-storage-urls.sh
-./scripts/migrate-storage-urls.sh
-```
-
-Jika ingin subdomain `storage.*` dengan TLS sendiri (opsional):
+Jika TLS `storage.*` belum aktif setelah DNS diperbaiki:
 
 ```bash
 chmod +x scripts/fix-storage-tls.sh
 ./scripts/fix-storage-tls.sh
 ```
 
-Setelah DNS `storage.*` diarahkan ke VM, Caddy perlu restart agar mengambil sertifikat Let's Encrypt baru.
+Jika avatar lama memakai URL `api.<DOMAIN>` (migrasi sementara):
+
+```bash
+chmod +x scripts/migrate-storage-urls.sh
+# Edit FROM/TO di script bila perlu, atau jalankan SQL manual
+```
+
+Fallback sementara: `https://api.<DOMAIN>/psd-media/` (proxy MinIO di Caddyfile masih aktif).
 
 ## Backup
 
@@ -176,7 +176,7 @@ Cadangkan juga volume `miniodata` secara berkala.
 
 ## Selesai bila
 
-- [ ] HTTPS valid di apex `<DOMAIN>` dan `api.*`; media di `https://api.<DOMAIN>/psd-media/`
+- [ ] HTTPS valid di apex `<DOMAIN>`, `api.*`, dan `storage.*`
 - [ ] `alembic current` = `042_dashboards (head)`
 - [ ] Frontend menarik data API nyata (mock mati)
 - [ ] Seed pilot + reindex Meilisearch (staging)

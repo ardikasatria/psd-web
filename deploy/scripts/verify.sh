@@ -31,7 +31,7 @@ fail=0
 check "API health" "${API}/health" || fail=1
 check "API db" "${API}/health/db" || fail=1
 check "App (frontend)" "${APP}" || fail=1
-check "Media (MinIO via api)" "https://api.${DOMAIN}/psd-media/" || fail=1
+check "Storage (MinIO)" "https://storage.${DOMAIN}/psd-media/" || fail=1
 
 echo ""
 echo "Migrasi Alembic (harus head = 042_dashboards):"
