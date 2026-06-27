@@ -553,7 +553,7 @@ async def run():
             active=True,
         )
 
-        humas = (await db.execute(select(User).where(User.role.in_(["moderator", "superadmin"]))).scalars().first()
+        humas = (await db.execute(select(User).where(User.role.in_(["moderator", "superadmin"])))).scalars().first()
         staff_id = humas.id if humas else psd.id
 
         await upsert_category(
