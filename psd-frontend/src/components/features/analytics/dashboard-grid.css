@@ -1,0 +1,55 @@
+.analytics-dashboard-canvas {
+  position: relative;
+}
+
+.analytics-dashboard-canvas .react-grid-layout {
+  min-height: 100%;
+}
+
+.analytics-dashboard-canvas .react-grid-item {
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+
+.analytics-dashboard-canvas .analytics-widget-shell {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.analytics-dashboard-canvas .react-grid-item.react-grid-placeholder {
+  background: rgb(99 102 241 / 0.12) !important;
+  border: 2px dashed rgb(99 102 241 / 0.45);
+  border-radius: 1rem;
+  opacity: 1 !important;
+}
+
+.dark .analytics-dashboard-canvas .react-grid-item.react-grid-placeholder {
+  background: rgb(99 102 241 / 0.18) !important;
+  border-color: rgb(129 140 248 / 0.55);
+}
+
+.analytics-dashboard-canvas .react-grid-item.react-draggable-dragging {
+  z-index: 20;
+}
+
+.analytics-dashboard-canvas .react-grid-item > .react-resizable-handle::after {
+  border-right-color: rgb(115 115 115);
+  border-bottom-color: rgb(115 115 115);
+}
+
+.dark .analytics-dashboard-canvas .react-grid-item > .react-resizable-handle::after {
+  border-right-color: rgb(163 163 163);
+  border-bottom-color: rgb(163 163 163);
+}
+
+.analytics-dashboard-canvas .widget-drag-handle {
+  touch-action: none;
+}
+
+.analytics-dashboard-canvas .widget-drag-handle:active {
+  cursor: grabbing;
+}

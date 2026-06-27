@@ -1,0 +1,133 @@
+import uuid
+from logging.config import dictConfig
+
+from fastapi import Depends, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.core.config import settings
+from app.core.db import get_db
+from app.core.errors import register_error_handlers
+from app.modules.blog.router import router as blog_router
+from app.modules.categories.router import router as categories_router
+from app.modules.admin.router import router as admin_router
+from app.modules.announcements.router import router as announcements_router
+from app.modules.auth.router import router as auth_router
+from app.modules.community.router import router as community_router
+from app.modules.competitions.router import router as comp_router
+from app.modules.events.router import router as events_router
+from app.modules.gamification.router import router as gamification_router
+from app.modules.health.router import router as health_router
+from app.modules.instructors.router import router as instructors_router
+from app.modules.learn.router import router as learn_router
+from app.modules.me.router import router as me_router
+from app.modules.notifications.router import router as notifications_router
+from app.modules.quests.router import router as quests_router
+from app.modules.activity.router import router as activity_router
+from app.modules.micro.router import router as micro_router
+from app.modules.repos.router import router as repos_router
+from app.modules.rooms.router import router as rooms_router
+from app.modules.collections.router import router as collections_router
+from app.modules.factory.router import router as factory_router
+from app.modules.search.router import router as search_router
+from app.modules.social.router import router as social_router
+from app.modules.synthesis.router import router as synthesis_router
+from app.modules.teams.router import router as teams_router
+from app.modules.users.router import router as users_router
+
+dictConfig(
+    {
+        "version": 1,
+        "formatters": {
+            "json": {
+                "format": '{"level":"%(levelname)s","logger":"%(name)s","message":"%(message)s"}',
+            }
+        },
+        "handlers": {
+            "default": {
+                "class": "logging.StreamHandler",
+                "formatter": "json",
+            }
+        },
+        "root": {"level": "INFO", "handlers": ["default"]},
+    }
+)
+
+
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID", uuid.uuid4().hex[:12])
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        return response
+
+
+app = FastAPI(title=settings.APP_NAME)
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestIdMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+register_error_handlers(app)
+
+app.include_router(health_router, prefix=settings.API_PREFIX)
+app.include_router(auth_router, prefix=settings.API_PREFIX)
+app.include_router(repos_router, prefix=settings.API_PREFIX)
+app.include_router(search_router, prefix=settings.API_PREFIX)
+app.include_router(comp_router, prefix=settings.API_PREFIX)
+app.include_router(events_router, prefix=settings.API_PREFIX)
+app.include_router(community_router, prefix=settings.API_PREFIX)
+app.include_router(learn_router, prefix=settings.API_PREFIX)
+app.include_router(instructors_router, prefix=settings.API_PREFIX)
+app.include_router(users_router, prefix=settings.API_PREFIX)
+app.include_router(social_router, prefix=settings.API_PREFIX)
+app.include_router(gamification_router, prefix=settings.API_PREFIX)
+app.include_router(blog_router, prefix=settings.API_PREFIX)
+app.include_router(me_router, prefix=settings.API_PREFIX)
+app.include_router(notifications_router, prefix=settings.API_PREFIX)
+app.include_router(announcements_router, prefix=settings.API_PREFIX)
+app.include_router(categories_router, prefix=settings.API_PREFIX)
+app.include_router(quests_router, prefix=settings.API_PREFIX)
+app.include_router(activity_router, prefix=settings.API_PREFIX)
+app.include_router(micro_router, prefix=settings.API_PREFIX)
+app.include_router(teams_router, prefix=settings.API_PREFIX)
+app.include_router(synthesis_router, prefix=settings.API_PREFIX)
+app.include_router(rooms_router, prefix=settings.API_PREFIX)
+app.include_router(collections_router, prefix=settings.API_PREFIX)
+app.include_router(factory_router, prefix=settings.API_PREFIX)
+app.include_router(admin_router, prefix=settings.API_PREFIX)
+
+
+@app.get(settings.API_PREFIX + "/health/db")
+async def health_db(db: AsyncSession = Depends(get_db)):
+    await db.execute(text("SELECT 1"))
+    return {"db": "ok"}
+
+
+@app.on_event("startup")
+async def startup_search_indexes():
+    try:
+        from app.core.search import ensure_indexes
+
+        ensure_indexes()
+    except Exception:
+        pass

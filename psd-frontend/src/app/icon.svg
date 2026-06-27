@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="60 10 380 435" fill="none">
+  <defs>
+    <linearGradient id="psd-g" x1="469.45" y1="-15.96" x2="124.11" y2="360.31" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f19090" />
+      <stop offset="0.23" stop-color="#c6899a" />
+      <stop offset="0.76" stop-color="#687ab0" />
+      <stop offset="1" stop-color="#4375ba" />
+    </linearGradient>
+  </defs>
+  <polygon fill="url(#psd-g)" points="434.45 12.19 434.45 68.1 362.15 68.1 362.15 255.15 137.84 255.15 137.84 199.22 302.09 199.22 302.09 12.19 434.45 12.19" />
+  <path fill="url(#psd-g)" d="M65.54,82.77v358.52h60.06V182h164.23V13.09h-149.46c-41.33,0-74.84,31.19-74.84,69.67ZM229.78,126.08h-104.17v-57.07h104.17v57.07Z" />
+  <path fill="url(#psd-g)" d="M374.39,79.06v192.03h-236.55v170.19h221.78c41.33,0,74.83-31.43,74.83-70.2V79.06h-60.06ZM374.39,384.94h-176.49v-57.5h176.49v57.5Z" />
+</svg>

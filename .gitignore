@@ -1,0 +1,30 @@
+# Hanya push: deploy/, psd-frontend/, psd-backend/
+/*
+!/.gitignore
+!/deploy/
+!/psd-frontend/
+!/psd-backend/
+
+# Dependencies
+**/node_modules/
+
+# Python virtual env
+**/.venv/
+**/venv/
+**/ENV/
+
+# Env rahasia (contoh .env.example tetap di-push)
+.env
+.env.*
+!.env.example
+
+# Build & cache
+**/.next/
+**/out/
+**/__pycache__/
+**/.pytest_cache/
+*.py[cod]
+*.tsbuildinfo
+
+# OS
+.DS_Store

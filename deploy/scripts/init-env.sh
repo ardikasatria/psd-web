@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Buat deploy/.env dengan rahasia acak. Jalankan sekali di VM sebelum deploy pertama.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+if [[ -f .env ]]; then
+  echo "deploy/.env sudah ada — tidak ditimpa."
+  echo "Jika perlu MEILI_KEY, tambahkan manual: MEILI_KEY=\$(openssl rand -hex 24)"
+  exit 0
+fi
+
+DOMAIN="${1:-projeksainsdata.com}"
+
+cat > .env <<EOF
+DOMAIN=${DOMAIN}
+POSTGRES_USER=psd
+POSTGRES_PASSWORD=$(openssl rand -hex 24)
+POSTGRES_DB=psd
+MINIO_ROOT_USER=psd
+MINIO_ROOT_PASSWORD=$(openssl rand -hex 24)
+JWT_SECRET=$(openssl rand -hex 32)
+MEILI_KEY=$(openssl rand -hex 24)
+
+# Opsional — fitur AI (Langkah 38/40); isi sebelum pilot jika sintesis/ruang ide AI aktif
+OPENAI_API_KEY=
+AI_MODEL=gpt-4o-mini
+FACTORY_RUN_TIMEOUT_S=90
+EOF
+
+chmod 600 .env
+echo "deploy/.env dibuat untuk DOMAIN=${DOMAIN}"
+echo "Edit DOMAIN bila perlu, lalu jalankan: ./scripts/deploy.sh"
