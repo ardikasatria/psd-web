@@ -7,8 +7,11 @@ from sqlalchemy.orm import selectinload
 
 from app.core.db import SessionLocal
 from app.core.search import ensure_indexes, index_competition, index_repo
+from app.register_models import register_models
 from app.modules.competitions.models import Competition
 from app.modules.repos.models import Repo
+
+register_models()
 
 
 async def run() -> None:

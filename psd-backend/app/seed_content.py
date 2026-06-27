@@ -7,9 +7,10 @@ from sqlalchemy import select
 
 from app.core.db import SessionLocal
 from app.core.security import hash_password
+from app.register_models import register_models
 from app.modules.announcements.models import Announcement
-from app.modules.categories.models import Category  # noqa: F401 — register FK metadata
-from app.modules.collections.models import Collection  # noqa: F401 — register FK metadata
+from app.modules.categories.models import Category
+from app.modules.collections.models import Collection
 from app.modules.community.models import Thread
 from app.modules.competitions.models import Competition
 from app.modules.events.models import Event
@@ -17,8 +18,9 @@ from app.modules.learn.models import Course, LearningPath
 from app.modules.micro.models import MicroLesson
 from app.modules.quests.models import Quest
 from app.modules.repos.models import Repo
-from app.modules.rooms.models import IdeaRoom  # noqa: F401 — register FK metadata
 from app.modules.users.models import User
+
+register_models()
 
 DEMO_PW = hash_password("demo")
 

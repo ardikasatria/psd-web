@@ -5,6 +5,7 @@ from sqlalchemy import delete
 
 from app.core.db import SessionLocal
 from app.core.security import hash_password
+from app.register_models import register_models
 from app.modules.community.models import Post, Thread
 from app.modules.competitions.models import Competition, LeaderboardRow, Submission
 from app.modules.categories.models import Category
@@ -12,8 +13,9 @@ from app.modules.events.models import Event, EventRegistration
 from app.modules.learn.models import Course, Enrollment, LearningPath, LessonProgress, Notebook
 from app.modules.instructors.models import InstructorApplication
 from app.modules.repos.models import Repo, RepoLike
-from app.modules.rooms.models import IdeaRoom  # noqa: F401 — register FK metadata
 from app.modules.users.models import User
+
+register_models()
 
 DEMO_PW = hash_password("demo")
 

@@ -5,20 +5,9 @@ from sqlalchemy import create_engine, pool
 
 from app.core.config import settings
 from app.core.db import Base
-from app.modules.announcements import models as _announcements  # noqa: F401
-from app.modules.community import models as _community  # noqa: F401
-from app.modules.competitions import models as _competitions  # noqa: F401
-from app.modules.events import models as _events  # noqa: F401
-from app.modules.gamification import models as _gamification  # noqa: F401
-from app.modules.instructors import models as _instructors  # noqa: F401
-from app.modules.learn import models as _learn  # noqa: F401
-from app.modules.notifications import models as _notifications  # noqa: F401
-from app.modules.repos import models as _repos  # noqa: F401
-from app.modules.rooms import models as _rooms  # noqa: F401
-from app.modules.social import models as _social  # noqa: F401
-from app.modules.synthesis import models as _synthesis  # noqa: F401
-from app.modules.teams import models as _teams  # noqa: F401
-from app.modules.users import models as _users  # noqa: F401
+from app.register_models import register_models
+
+register_models()
 
 config = context.config
 
