@@ -3,7 +3,6 @@
 import { useAssistantContext } from '@/lib/assistant/useAssistantContext'
 import { askAssistant, getAssistantQuota, type AskResult } from '@/lib/api/assistant'
 import ButtonPrimary from '@/shared/ButtonPrimary'
-import { Button } from '@/shared/Button'
 import Textarea from '@/shared/Textarea'
 import {
   ArrowTopRightOnSquareIcon,
@@ -165,18 +164,25 @@ export function AssistantFab() {
           </div>
         )}
 
-        <Button
+        <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           className={clsx(
-            '!rounded-full !p-3.5 shadow-lg shadow-sky-600/25',
-            open ? '!bg-neutral-800 dark:!bg-neutral-700' : '!bg-sky-600 hover:!bg-sky-700',
+            'inline-flex size-14 shrink-0 items-center justify-center rounded-full text-white shadow-lg transition-[transform,box-shadow,filter] duration-200',
+            'hover:scale-105 hover:brightness-105 active:scale-95',
+            open
+              ? 'bg-neutral-800 shadow-neutral-900/25 dark:bg-neutral-700'
+              : [
+                  'bg-[linear-gradient(135deg,#f19090_0%,#c6899a_23%,#687ab0_76%,#4375ba_100%)]',
+                  'shadow-[#4375ba]/30',
+                  'dark:[background-image:none] dark:bg-neutral-800 dark:shadow-neutral-900/30 dark:hover:bg-neutral-700',
+                ],
           )}
           aria-expanded={open}
           aria-label={open ? 'Tutup asisten PSD' : 'Buka asisten PSD'}
         >
-          {open ? <XMarkIcon className="size-6 text-white" /> : <SparklesIcon className="size-6 text-white" />}
-        </Button>
+          {open ? <XMarkIcon className="size-6" aria-hidden /> : <SparklesIcon className="size-6" aria-hidden />}
+        </button>
       </div>
     </>
   )

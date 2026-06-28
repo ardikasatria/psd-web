@@ -3,31 +3,27 @@ import type { NbOutput } from '@/lib/notebooks/editor/notebookModel'
 import { KernelStatus, type KernelStatusValue, type NotebookKernel } from './kernelInterface'
 
 const PYODIDE_VERSION = '0.26.4'
-const PYODIDE_BASE = `https://cdn.jsdelivr.net/pyodide/pyodide@${PYODIDE_VERSION}/full/`
+// Official Pyodide CDN path (not the npm mirror at pyodide/pyodide@version).
+const PYODIDE_BASE = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`
 
-declare global {
-  interface Window {
-    loadPyodide?: (config?: { indexURL: string }) => Promise<any>
+type LoadPyodideFn = (config?: { indexURL?: string }) => Promise<any>
+
+let loadPyodidePromise: Promise<LoadPyodideFn> | null = null
+
+async function ensurePyodideLoader(): Promise<LoadPyodideFn> {
+  if (!loadPyodidePromise) {
+    loadPyodidePromise = import(
+      /* webpackIgnore: true */
+      `${PYODIDE_BASE}pyodide.mjs`
+    ).then((mod) => {
+      const loadPyodide = mod.loadPyodide as LoadPyodideFn | undefined
+      if (typeof loadPyodide !== 'function') {
+        throw new Error('Pyodide tidak tersedia')
+      }
+      return loadPyodide
+    })
   }
-}
-
-async function ensurePyodideScript(): Promise<void> {
-  if (window.loadPyodide) return
-  await new Promise<void>((resolve, reject) => {
-    const existing = document.querySelector('script[data-psd-pyodide]')
-    if (existing) {
-      existing.addEventListener('load', () => resolve())
-      existing.addEventListener('error', () => reject(new Error('Gagal memuat Pyodide')))
-      return
-    }
-    const script = document.createElement('script')
-    script.src = `${PYODIDE_BASE}pyodide.js`
-    script.async = true
-    script.dataset.psdPyodide = '1'
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error('Gagal memuat Pyodide'))
-    document.head.appendChild(script)
-  })
+  return loadPyodidePromise
 }
 
 export async function createPyodideKernel({
@@ -46,9 +42,8 @@ export async function createPyodideKernel({
     listeners.forEach((cb) => cb(s))
   }
 
-  await ensurePyodideScript()
-  if (!window.loadPyodide) throw new Error('Pyodide tidak tersedia')
-  const pyodide = await window.loadPyodide({ indexURL: PYODIDE_BASE })
+  const loadPyodide = await ensurePyodideLoader()
+  const pyodide = await loadPyodide({ indexURL: PYODIDE_BASE })
   if (packages.length) await pyodide.loadPackage(packages)
 
   pyodide.globals.set('__PSD_API_BASE__', apiBase)
