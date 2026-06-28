@@ -29,12 +29,12 @@ async def test_not_found_error_envelope():
 
 
 @pytest.mark.asyncio
-async def test_auth_me_requires_token():
+async def test_auth_me_guest_returns_null():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         r = await ac.get(f"{API}/auth/me")
-    assert r.status_code == 401
-    assert r.json()["error"]["code"] == "unauthorized"
+    assert r.status_code == 200
+    assert r.json()["user"] is None
 
 
 @pytest.mark.asyncio
@@ -44,7 +44,13 @@ async def test_register_login_me_flow():
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         reg = await ac.post(
             f"{API}/auth/register",
-            json={"username": f"user_{uuid.uuid4().hex[:6]}", "email": email, "password": "demo123", "name": "Test"},
+            json={
+                "username": f"user_{uuid.uuid4().hex[:6]}",
+                "email": email,
+                "password": "demo123",
+                "name": "Test",
+                "accept_tos": True,
+            },
         )
         assert reg.status_code == 200
         token = reg.json()["token"]

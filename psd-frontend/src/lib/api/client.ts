@@ -3,6 +3,9 @@ import { z } from 'zod'
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
 const PREFIX = '/api/v1'
 
+export const API_BASE = BASE
+export const API_PREFIX = PREFIX
+
 export class ApiError extends Error {
   constructor(
     public status: number,

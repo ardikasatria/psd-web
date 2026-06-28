@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.cookies import clear_auth_cookie, set_auth_cookie
 from app.core.db import get_db
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_current_user_optional
 from app.email.auth_mail import (
     send_change_email_verification,
     send_password_changed_email,
@@ -92,7 +92,9 @@ async def logout(response: Response):
 
 
 @router.get("/auth/me")
-async def me(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def me(user: User | None = Depends(get_current_user_optional), db: AsyncSession = Depends(get_db)):
+    if not user:
+        return {"user": None, "accepted_tos_version": None, "tos_current": settings.TOS_VERSION}
     from app.modules.gamification.service import profile_gamification
 
     profile = ProfileOut.from_user(user, include_email=True).model_dump()

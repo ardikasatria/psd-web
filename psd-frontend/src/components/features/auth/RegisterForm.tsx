@@ -1,7 +1,6 @@
 'use client'
 
 import { AuthPageShell } from '@/components/features/auth/AuthPageShell'
-import { AuthEmailNotice } from '@/components/features/auth/AuthEmailNotice'
 import { useToast } from '@/components/common/Toast'
 import { register } from '@/lib/api/auth'
 import { getApiErrorMessage, isRateLimited } from '@/lib/api/errors'
@@ -17,7 +16,7 @@ export function RegisterForm() {
   const router = useRouter()
   const qc = useQueryClient()
   const { toast } = useToast()
-  const [form, setForm] = useState({ username: '', email: '', password: '', name: '' })
+  const [form, setForm] = useState({ username: '', email: '', password: '', passwordConfirm: '', name: '' })
   const [acceptTos, setAcceptTos] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,12 +28,21 @@ export function RegisterForm() {
       setError('Anda harus menyetujui Ketentuan Layanan & Kebijakan Privasi.')
       return
     }
+    if (form.password !== form.passwordConfirm) {
+      setError('Konfirmasi kata sandi tidak cocok.')
+      return
+    }
+    if (form.password.length < 8) {
+      setError('Kata sandi minimal 8 karakter.')
+      return
+    }
     setLoading(true)
     setError('')
     setRateLimited(false)
     try {
-      await register({ ...form, accept_tos: true })
-      await qc.invalidateQueries({ queryKey: ['me'] })
+      const { passwordConfirm: _, ...payload } = form
+      const auth = await register({ ...payload, accept_tos: true })
+      qc.setQueryData(['me'], { user: auth.user })
       router.push(`/check-email?email=${encodeURIComponent(form.email)}`)
     } catch (err) {
       if (isRateLimited(err)) {
@@ -95,12 +103,23 @@ export function RegisterForm() {
             className="mt-1"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
+            minLength={8}
+            autoComplete="new-password"
             required
           />
         </Field>
-        <AuthEmailNotice variant="info" title="Verifikasi email">
-          Setelah mendaftar, kami mengirim email verifikasi berbahasa Indonesia dengan tombol aksi aman ke alamat di atas.
-        </AuthEmailNotice>
+        <Field>
+          <Label>Konfirmasi kata sandi</Label>
+          <Input
+            type="password"
+            className="mt-1"
+            value={form.passwordConfirm}
+            onChange={(e) => setForm({ ...form, passwordConfirm: e.target.value })}
+            minLength={8}
+            autoComplete="new-password"
+            required
+          />
+        </Field>
         <label className="flex items-start gap-3 text-sm text-neutral-700 dark:text-neutral-300">
           <input
             type="checkbox"

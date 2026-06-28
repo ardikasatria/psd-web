@@ -30,8 +30,8 @@ export function LoginForm() {
     setError('')
     setRateLimited(false)
     try {
-      await login({ email, password })
-      await qc.invalidateQueries({ queryKey: ['me'] })
+      const auth = await login({ email, password })
+      qc.setQueryData(['me'], { user: auth.user })
       router.push(next.startsWith('/') ? next : '/dashboard')
     } catch (err) {
       if (isRateLimited(err)) {

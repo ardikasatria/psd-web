@@ -103,9 +103,8 @@ def get_provider() -> EmailProvider:
     sender = settings.PSD_EMAIL_SENDER
     key = settings.RESEND_API_KEY
     if not key or not sender:
-        if settings.DEV_EMAIL_ECHO:
-            return EchoProvider()
-        raise RuntimeError("Email belum dikonfigurasi (RESEND_API_KEY / PSD_EMAIL_SENDER)")
+        log.warning("Email belum lengkap (RESEND_API_KEY / PSD_EMAIL_SENDER) — mode echo")
+        return EchoProvider()
 
     if settings.PSD_EMAIL_PROVIDER == "http":
         return ResendHttpProvider(api_key=key, sender=sender)

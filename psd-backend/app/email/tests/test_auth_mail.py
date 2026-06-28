@@ -77,3 +77,15 @@ def test_send_reset_password(monkeypatch):
     provider.send.assert_called_once()
     html = provider.send.call_args[0][2]
     assert "reset-password?token=rst" in html
+
+
+def test_send_verify_does_not_raise_when_provider_fails(monkeypatch):
+    class FailProvider:
+        def send(self, *args, **kwargs):
+            raise RuntimeError("smtp down")
+
+    monkeypatch.setattr("app.email.auth_mail.get_provider", lambda: FailProvider())
+    monkeypatch.setattr("app.email.auth_mail.settings.DEV_EMAIL_ECHO", False)
+    monkeypatch.setattr("app.email.auth_mail.settings.APP_BASE_URL", "https://psd.test")
+
+    send_verify_email("user@test.com", name="Budi", token="tok123", expiry_minutes=60)

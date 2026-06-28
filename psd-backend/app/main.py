@@ -84,7 +84,24 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class CorsFallbackMiddleware(BaseHTTPMiddleware):
+    """Pastikan header CORS ada pada respons error (500) bila origin diizinkan."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        origin = request.headers.get("origin")
+        if origin and origin in settings.BACKEND_CORS_ORIGINS:
+            if not response.headers.get("access-control-allow-origin"):
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                existing = response.headers.get("vary")
+                response.headers["Vary"] = f"{existing}, Origin" if existing else "Origin"
+        return response
+
+
 app = FastAPI(title=settings.APP_NAME)
+
+app.add_middleware(CorsFallbackMiddleware)
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIdMiddleware)
@@ -144,6 +161,9 @@ async def health_db(db: AsyncSession = Depends(get_db)):
 
 @app.on_event("startup")
 async def startup_search_indexes():
+    import logging
+
+    logging.getLogger("psd.cors").info("BACKEND_CORS_ORIGINS=%s", settings.BACKEND_CORS_ORIGINS)
     try:
         from app.core.search import ensure_indexes
 

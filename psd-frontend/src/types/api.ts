@@ -314,7 +314,7 @@ export const AuthResponseSchema = z.object({
 export type AuthResponse = z.infer<typeof AuthResponseSchema>
 
 export const MeResponseSchema = z.object({
-  user: ProfileSchema,
+  user: ProfileSchema.nullable(),
 })
 export type MeResponse = z.infer<typeof MeResponseSchema>
 

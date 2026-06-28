@@ -34,11 +34,10 @@ def send_auth_email(
 
     try:
         get_provider().send(to, subject, html, text)
-    except Exception:
+    except Exception as exc:
+        log.exception("auth_email_send_failed kind=%s to=%s", kind, to, exc_info=exc)
         if settings.DEV_EMAIL_ECHO:
             log.warning("AUTH EMAIL (fallback) [%s] → %s | %s\n%s", kind, to, subject, text)
-            return
-        raise
 
 
 def send_verify_email(

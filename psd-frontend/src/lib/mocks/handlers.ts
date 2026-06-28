@@ -287,7 +287,7 @@ export const handlers = [
   http.get(`${API}/auth/me`, ({ request }) => {
     const user = resolveUserFromRequest(request)
     if (!user) {
-      return errorResponse(401, 'unauthorized', 'Sesi tidak valid. Silakan masuk kembali.')
+      return HttpResponse.json({ user: null })
     }
     const g = mockGamificationFor(user.username)
     const accepted =
