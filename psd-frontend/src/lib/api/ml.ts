@@ -1,7 +1,8 @@
 import { z } from 'zod'
-import { ApiError } from './client'
+import { Paginated } from '@/types/api'
+import { ApiError, API_BASE } from './client'
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
+const BASE = API_BASE
 
 async function mlFetch<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -14,10 +15,19 @@ async function mlFetch<T>(path: string, schema: z.ZodType<T>, init: RequestInit 
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    const detail = typeof body?.detail === 'string' ? body.detail : body?.message ?? res.statusText
-    throw new ApiError(res.status, 'ml_error', detail)
+    const errObj = body?.error as { message?: string; code?: string } | undefined
+    const detail =
+      typeof body?.detail === 'string'
+        ? body.detail
+        : errObj?.message ?? body?.message ?? res.statusText
+    throw new ApiError(res.status, errObj?.code ?? 'ml_error', detail)
   }
-  return schema.parse(await res.json())
+  const json = await res.json()
+  const parsed = schema.safeParse(json)
+  if (!parsed.success) {
+    throw new ApiError(500, 'schema_error', 'Respons API registry model tidak valid.')
+  }
+  return parsed.data
 }
 
 const RegistrySummarySchema = z.object({
@@ -32,13 +42,7 @@ const RegistrySummarySchema = z.object({
   created_at: z.string().nullable().optional(),
 })
 
-const PaginatedRegistriesSchema = z.object({
-  items: z.array(RegistrySummarySchema),
-  total: z.number(),
-  page: z.number(),
-  page_size: z.number(),
-  pages: z.number(),
-})
+const PaginatedRegistriesSchema = Paginated(RegistrySummarySchema)
 
 const ModelVersionSchema = z.object({
   id: z.string(),
