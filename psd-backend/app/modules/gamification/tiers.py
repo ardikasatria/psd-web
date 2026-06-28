@@ -5,7 +5,16 @@ from psd_gamification.points import award as reputation_award
 from psd_gamification.points import reputation_points
 from psd_gamification.tiers import perks_for_reputation as perks_for
 from psd_gamification.tiers import tier_for_reputation as tier_for
+from psd_gamification.tiers import tier_slug_for_reputation
 
 TIERS = [(t["min_reputation"], t["label"]) for t in load_manifest()["tiers"]]
 
-__all__ = ["TIERS", "tier_for", "perks_for", "reputation_points", "reputation_award", "achievement_badges"]
+__all__ = [
+    "TIERS",
+    "tier_for",
+    "tier_slug_for_reputation",
+    "perks_for",
+    "reputation_points",
+    "reputation_award",
+    "achievement_badges",
+]
