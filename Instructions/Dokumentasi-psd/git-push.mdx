@@ -1,0 +1,65 @@
+---
+title: Git push untuk pengguna
+description: Cara menyiapkan akses dan mendorong kode ke repository PSD.
+sidebar_position: 1
+---
+
+{/*
+  TEMPLATE CONTOH (Langkah 8 brief). Sesuaikan ke kerangka docs PSD (Next.js/MDX/Nextra/Docusaurus).
+  GANTI semua placeholder (git.psd.example, port SSH, owner contoh) dengan nilai NYATA (Langkah 0).
+  Komponen <Callout> & <CodeBlock> di bawah ilustratif — pakai komponen docs PSD yang sebenarnya.
+*/}
+
+# Git push untuk pengguna
+
+Anda masuk ke PSD dan Gitea dengan satu akun. Untuk mendorong (push) dari komputer,
+siapkan salah satu metode autentikasi di bawah.
+
+<Callout type="info">
+Login PSD memakai OIDC, jadi akun Gitea Anda tidak punya kata sandi biasa untuk push.
+Gunakan **SSH key** atau **Personal Access Token**.
+</Callout>
+
+## 1. Menyiapkan akses
+
+### Opsi A — SSH key (disarankan)
+
+```bash
+ssh-keygen -t ed25519 -C "email-anda@itera.ac.id"
+cat ~/.ssh/id_ed25519.pub   # salin, lalu tambahkan di Pengaturan → SSH Keys
+ssh -T git@git.psd.example   # uji koneksi
+```
+
+### Opsi B — Personal Access Token (HTTPS)
+
+1. Gitea: **Pengaturan → Aplikasi → Buat Token** (scope `repo`).
+2. Saat `git push` meminta kredensial: username = nama pengguna Gitea, password = **token**.
+
+## 2. Clone, commit, push
+
+```bash
+git clone git@git.psd.example:budi/proyek-saya.git
+cd proyek-saya
+git add .
+git commit -m "Deskripsi perubahan"
+git push origin main
+```
+
+<Callout type="tip">
+Untuk berkas besar gunakan **Git LFS** (`git lfs track "*.parquet"`). Lebih baik lagi,
+akses dataset lewat `psd://` dari notebook daripada menyimpan data besar di repo.
+</Callout>
+
+## 3. Berkontribusi (fork → branch → PR)
+
+1. **Fork** repo dari PSD.
+2. Buat branch, push:
+   ```bash
+   git checkout -b fitur-baru
+   git push origin fitur-baru
+   ```
+3. Buka **Pull Request** lewat PSD. Setelah di-review & disetujui, PR di-merge — Anda menerima notifikasi.
+
+<DownloadButton href="/docs/assets/mulai-cepat-psd.ipynb">
+  Unduh notebook contoh
+</DownloadButton>

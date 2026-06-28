@@ -23,13 +23,6 @@ export const metadata: Metadata = {
   },
   description: 'Platform sains data kolaboratif lokal Indonesia',
   keywords: ['sains data', 'machine learning', 'UMKM', 'Indonesia'],
-  icons: {
-    icon: [
-      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
-      { url: '/icon.svg', type: 'image/svg+xml' },
-    ],
-    apple: '/apple-icon.png',
-  },
 }
 
 const themeInitScript = `(function(){try{var t=localStorage.getItem('psd-theme');if(!t){var l=localStorage.getItem('theme');t=l==='dark-mode'?'dark':l==='light-mode'?'light':'system'}var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}})();`

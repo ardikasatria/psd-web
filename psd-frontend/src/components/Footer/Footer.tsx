@@ -16,10 +16,11 @@ const widgetMenus: WidgetFooterMenu[] = [
     title: 'Bantuan',
     menus: [
       { href: '/help', label: 'Pusat bantuan' },
-      { href: '/about', label: 'Tentang Kami' },
-      { href: '/help/apa-itu-psd', label: 'Apa itu PSD?' },
       { href: '/help/panduan-memulai', label: 'Panduan memulai' },
+      { href: '/help/git-menyiapkan-akses', label: 'Git push' },
+      { href: '/help/notebook-membuka', label: 'Notebook JupyterHub' },
       { href: '/help/faq', label: 'FAQ' },
+      { href: '/about', label: 'Tentang Kami' },
     ],
   },
   {
