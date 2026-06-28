@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from app.core.schemas import OwnerRef
+from app.core.config import settings
 from app.modules.users.refs import owner_ref_dict
 
 
@@ -57,6 +58,30 @@ def owner_ref(user) -> dict:
     return owner_ref_dict(user)
 
 
+def normalize_files(files: list | None) -> list[dict]:
+    """Pastikan setiap file punyi url publik (dari path_key bila perlu)."""
+    out: list[dict] = []
+    base = settings.S3_ASSETS_PUBLIC_BASE_URL.rstrip("/")
+    for raw in files or []:
+        if not isinstance(raw, dict):
+            continue
+        path = raw.get("path") or ""
+        url = raw.get("url")
+        if not url:
+            key = raw.get("path_key")
+            if key:
+                url = f"{base}/{str(key).lstrip('/')}"
+        out.append(
+            {
+                "path": path,
+                "size_bytes": int(raw.get("size_bytes") or 0),
+                "type": raw.get("type") or "application/octet-stream",
+                "url": url or "",
+            }
+        )
+    return out
+
+
 def to_summary(r, category=None, subcategory=None, team=None) -> dict:
     owner = getattr(r, "owner", None)
     return {
@@ -85,8 +110,8 @@ def to_summary(r, category=None, subcategory=None, team=None) -> dict:
 def to_detail(r, category=None, subcategory=None, team=None, from_room=None) -> dict:
     return {
         **to_summary(r, category, subcategory, team),
-        "readme_md": r.readme_md,
-        "files": r.files,
+        "readme_md": r.readme_md or "",
+        "files": normalize_files(r.files),
         "license": r.license,
         "metrics": r.metrics,
         "from_room": from_room,

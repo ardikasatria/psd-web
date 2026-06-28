@@ -382,7 +382,7 @@ export const RepoFileSchema = z.object({
   path: z.string(),
   size_bytes: z.number(),
   type: z.string(),
-  url: z.string(),
+  url: z.string().optional(),
 })
 export type RepoFile = z.infer<typeof RepoFileSchema>
 
@@ -396,7 +396,7 @@ export const RepoDetailSchema = RepoSummarySchema.extend({
   readme_md: z.string(),
   files: z.array(RepoFileSchema),
   license: z.string().nullable(),
-  metrics: z.record(z.string(), z.number()).optional(),
+  metrics: z.record(z.string(), z.number()).nullable().optional(),
   liked: z.boolean().default(false),
   from_room: FromRoomRefSchema.nullable().optional(),
 })
