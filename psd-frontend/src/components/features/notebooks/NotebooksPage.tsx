@@ -2,9 +2,7 @@
 
 import { heroGradient } from '@/components/common/featureGradients'
 import { pageCtaPanelClass } from '@/components/common/SidebarStatTile'
-import { NotebookHubCallout } from '@/components/features/notebooks/NotebookHubCallout'
-import { hubEnabled, hubNotebookUrl } from '@/lib/hub'
-import { NotebookCard } from '@/components/features/NotebookCard'
+import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
 import { NotebookConceptSection } from '@/components/features/notebooks/NotebookConceptSection'
 import { NotebooksLearnSidebar } from '@/components/features/notebooks/NotebooksLearnSidebar'
 import { QueryState } from '@/components/features/QueryState'
@@ -15,7 +13,6 @@ import { NotebookSummary, PaginatedNotebookSummary } from '@/types/api'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import Input from '@/shared/Input'
 import {
-  ArrowTopRightOnSquareIcon,
   MagnifyingGlassIcon,
   PlusIcon,
   SparklesIcon,
@@ -80,25 +77,20 @@ export function NotebooksPage() {
                   Notebook
                 </h1>
                 <p className="mt-3 text-base leading-relaxed text-neutral-600 dark:text-neutral-400">
-                  Katalog notebook praktik PSD — jalankan di Jupyter Notebook terintegrasi, akses dataset via{' '}
+                  Katalog notebook praktik PSD — jalankan di JupyterHub terintegrasi, akses dataset via{' '}
                   <code className="rounded bg-white/60 px-1 dark:bg-neutral-900/60">psd://</code>, dan bagikan workflow
                   ke komunitas.
                 </p>
               </div>
               <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-                {hubEnabled() && (
-                  <ButtonPrimary href={hubNotebookUrl()} target="_blank" rel="noopener noreferrer">
-                    <ArrowTopRightOnSquareIcon className="size-4" aria-hidden />
-                    Buka Jupyter Notebook
-                  </ButtonPrimary>
-                )}
+                <OpenHubButton />
                 {me.data?.user ? (
-                  <ButtonPrimary href="/notebooks/new" outline={hubEnabled()}>
+                  <ButtonPrimary href="/notebooks/new" outline>
                     <PlusIcon className="size-4" aria-hidden />
                     Bagikan notebook
                   </ButtonPrimary>
                 ) : (
-                  <ButtonPrimary href="/login?next=/notebooks/new" outline={hubEnabled()}>
+                  <ButtonPrimary href="/login?next=/notebooks/new" outline>
                     Masuk untuk berbagi
                   </ButtonPrimary>
                 )}
@@ -115,8 +107,6 @@ export function NotebooksPage() {
           </div>
 
           <NotebookConceptSection />
-
-          <NotebookHubCallout compact />
 
           <div id="notebook-catalog" className="scroll-mt-28 space-y-4">
             <form

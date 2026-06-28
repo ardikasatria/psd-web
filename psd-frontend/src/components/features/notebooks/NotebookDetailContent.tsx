@@ -6,7 +6,7 @@ import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import { useMe } from '@/lib/api/dashboard'
 import { useTrackView } from '@/lib/analytics/useTrackView'
 import { deleteNotebook, getNotebook } from '@/lib/api/notebooks'
-import { hubEnabled, hubNotebookUrl } from '@/lib/hub'
+import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
 import { isStaff } from '@/lib/auth/roles'
 import { NotebookDetail } from '@/types/api'
 import { Badge } from '@/shared/Badge'
@@ -138,33 +138,17 @@ export function NotebookDetailContent({ id }: { id: string }) {
                   <div className="bg-gradient-to-br from-violet-500 to-indigo-600 px-5 py-6 text-white">
                     <CodeBracketSquareIcon className="size-8" aria-hidden />
                     <p className="mt-3 text-sm font-medium text-white/90">Notebook PSD</p>
-                    <p className="mt-1 text-lg font-semibold">Jalankan di Jupyter Notebook</p>
+                    <p className="mt-1 text-lg font-semibold">Jalankan di JupyterHub</p>
                   </div>
                   <div className="space-y-4 p-5">
-                    {hubEnabled() ? (
-                      <ButtonPrimary
-                        href={hubNotebookUrl()}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full justify-center"
-                      >
-                        <ArrowTopRightOnSquareIcon className="size-5" data-slot="icon" />
-                        Buka Jupyter Notebook
-                      </ButtonPrimary>
-                    ) : (
-                      <>
-                        <ButtonPrimary disabled className="w-full justify-center">
-                          Buka Jupyter Notebook
-                        </ButtonPrimary>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                          Jupyter Notebook belum aktif di lingkungan ini. Lihat{' '}
-                          <Link href="/help/notebook-membuka" className="text-primary-600 hover:underline dark:text-primary-400">
-                            panduan notebook
-                          </Link>
-                          .
-                        </p>
-                      </>
-                    )}
+                    <OpenHubButton className="w-full [&_a]:w-full [&_button]:w-full [&_a]:justify-center [&_button]:justify-center" />
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                      Login PSD otomatis diteruskan ke{' '}
+                      <Link href="/help/notebook-membuka" className="text-primary-600 hover:underline dark:text-primary-400">
+                        JupyterHub
+                      </Link>
+                      .
+                    </p>
 
                     {data.source_url && (
                       <Button

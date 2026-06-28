@@ -4,7 +4,7 @@ import { NotebookCard } from '@/components/features/NotebookCard'
 import { QueryState } from '@/components/features/QueryState'
 import { useAuthGuard } from '@/lib/auth/useAuthGuard'
 import { getMyNotebooks } from '@/lib/api/me'
-import { hubEnabled, hubNotebookUrl } from '@/lib/hub'
+import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
 import { PaginatedNotebookSummary, NotebookSummary } from '@/types/api'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import { useQuery } from '@tanstack/react-query'
@@ -24,16 +24,12 @@ export function MyNotebooksPage() {
         <div>
           <h2 className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">Notebook saya</h2>
           <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-            Notebook yang Anda daftarkan ke katalog — buat di Jupyter Notebook, simpan ke Git, kelola metadata di sini.
+            Notebook yang Anda daftarkan ke katalog — buat di JupyterHub, simpan ke Git, kelola metadata di sini.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <ButtonPrimary href="/notebooks/new">Bagikan notebook</ButtonPrimary>
-          {hubEnabled() && (
-            <ButtonPrimary href={hubNotebookUrl()} target="_blank" rel="noopener noreferrer" outline>
-              Buka Jupyter Notebook
-            </ButtonPrimary>
-          )}
+          <OpenHubButton outline />
           <ButtonPrimary href="/notebooks" outline>
             Jelajahi katalog
           </ButtonPrimary>

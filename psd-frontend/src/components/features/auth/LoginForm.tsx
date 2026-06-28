@@ -17,7 +17,10 @@ export function LoginForm() {
   const qc = useQueryClient()
   const { toast } = useToast()
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') || '/dashboard'
+  const rawNext = searchParams.get('next') || '/dashboard'
+  const externalNext =
+    rawNext.startsWith('http://') || rawNext.startsWith('https://') ? rawNext : null
+  const next = externalNext ?? (rawNext.startsWith('/') ? rawNext : '/dashboard')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -32,7 +35,11 @@ export function LoginForm() {
     try {
       const auth = await login({ email, password })
       qc.setQueryData(['me'], { user: auth.user })
-      router.push(next.startsWith('/') ? next : '/dashboard')
+      if (externalNext) {
+        window.location.assign(externalNext)
+      } else {
+        router.push(next)
+      }
     } catch (err) {
       if (isRateLimited(err)) {
         setRateLimited(true)

@@ -1,12 +1,12 @@
 'use client'
 
-import { hubEnabled, hubNotebookUrl } from '@/lib/hub'
-import ButtonPrimary from '@/shared/ButtonPrimary'
+import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
+import { useHub } from '@/lib/hub/useHub'
 import { Button } from '@/shared/Button'
-import { ArrowTopRightOnSquareIcon, CodeBracketSquareIcon } from '@heroicons/react/24/outline'
+import { CodeBracketSquareIcon } from '@heroicons/react/24/outline'
 
 export function NotebookHubCallout({ compact }: { compact?: boolean }) {
-  const hubActive = hubEnabled()
+  const { enabled, isLoading } = useHub()
 
   return (
     <div
@@ -21,26 +21,15 @@ export function NotebookHubCallout({ compact }: { compact?: boolean }) {
           <CodeBracketSquareIcon className="size-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Jupyter Notebook PSD</h3>
+          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">JupyterHub PSD</h3>
           <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-            Notebook di PSD dijalankan di Jupyter Notebook terintegrasi login OAuth — bukan Colab atau hosting file
-            seperti Kaggle. Buat dan edit di{' '}
-            <code className="rounded bg-white/80 px-1 dark:bg-neutral-900/80">~/work</code>, akses dataset via{' '}
-            <code className="rounded bg-white/80 px-1 dark:bg-neutral-900/80">psd://</code>, lalu push ke Git.
+            Notebook dijalankan di JupyterHub (<strong>hub.projeksainsdata.com</strong>) dengan login OAuth PSD —
+            bukan Colab. Folder kerja persisten di{' '}
+            <code className="rounded bg-white/80 px-1 dark:bg-neutral-900/80">~/work</code>, dataset via{' '}
+            <code className="rounded bg-white/80 px-1 dark:bg-neutral-900/80">psd://</code>.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {hubActive ? (
-              <ButtonPrimary
-                href={hubNotebookUrl()}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ArrowTopRightOnSquareIcon className="size-4" data-slot="icon" />
-                Buka Jupyter Notebook
-              </ButtonPrimary>
-            ) : (
-              <ButtonPrimary disabled>Buka Jupyter Notebook</ButtonPrimary>
-            )}
+            <OpenHubButton />
             <Button href="/help/notebook-membuka" outline>
               Panduan
             </Button>
@@ -48,12 +37,6 @@ export function NotebookHubCallout({ compact }: { compact?: boolean }) {
               Simpan & push Git
             </Button>
           </div>
-          {!hubActive && (
-            <p className="mt-2 text-xs text-neutral-500">
-              Jupyter Notebook belum aktif di lingkungan ini — hubungi admin atau set{' '}
-              <code className="rounded bg-neutral-100 px-1 dark:bg-neutral-800">COMPOSE_PROFILES=hub</code>.
-            </p>
-          )}
         </div>
       </div>
     </div>

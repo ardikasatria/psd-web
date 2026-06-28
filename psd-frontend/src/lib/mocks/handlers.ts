@@ -3699,6 +3699,21 @@ export const handlers = [
     return HttpResponse.json(mockWidgetData(w, d.pipeline_id))
   }),
 
+  // Langkah 52 — JupyterHub
+  http.get(`${API_ROOT}/api/hub/config`, () =>
+    HttpResponse.json({
+      hub_url: 'https://hub.projeksainsdata.com',
+      enabled: true,
+      spawn_path: '/hub/spawn',
+    }),
+  ),
+
+  http.get(`${API_ROOT}/api/hub/launch`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    return HttpResponse.redirect('https://hub.projeksainsdata.com/hub/spawn', 302)
+  }),
+
   // Langkah 57 — Asisten & feed personal
   http.get(`${API_ROOT}/api/assistant/quota`, ({ request }) => {
     const user = resolveUserFromRequest(request)
