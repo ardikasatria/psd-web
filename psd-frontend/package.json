@@ -8,7 +8,7 @@
     "prebuild": "npm run sync:gamification",
     "start": "next start",
     "lint": "tsc --noEmit",
-    "sync:gamification": "bash -c 'if [ -f ../psd-gamification/psd_gamification/gamification.json ]; then cp ../psd-gamification/psd_gamification/gamification.json src/lib/gamification/gamification.json; elif [ ! -f src/lib/gamification/gamification.json ]; then echo \"gamification.json tidak ditemukan — jalankan dari monorepo atau salin manual\" && exit 1; fi'",
+    "sync:gamification": "node scripts/sync-gamification.mjs",
     "test:notebook": "node --experimental-strip-types --test src/lib/notebooks/editor/notebookModel.test.ts"
   },
   "dependencies": {
