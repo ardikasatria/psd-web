@@ -1,18 +1,37 @@
 import asyncio
 from datetime import datetime, timezone
 
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 
 from app.core.db import SessionLocal
 from app.core.security import hash_password
 from app.register_models import register_models
-from app.modules.community.models import Post, Thread
-from app.modules.competitions.models import Competition, LeaderboardRow, Submission
+from app.mlops.models import DriftReport, ModelRegistry, ModelVersion
+from app.modules.activity.models import ActivityEvent
+from app.modules.announcements.models import Announcement
+from app.modules.blog.models import BlogPost
 from app.modules.categories.models import Category
-from app.modules.events.models import Event, EventRegistration
-from app.modules.learn.models import Course, Enrollment, LearningPath, LessonProgress, Notebook
+from app.modules.collections.models import Collection
+from app.modules.community.models import ForumReaction, ForumVote, Post as ForumPost, Thread
+from app.modules.competitions.models import (
+    Competition,
+    CompetitionProposal,
+    LeaderboardRow,
+    Submission,
+)
+from app.modules.events.models import Event, EventProposal, EventRegistration
+from app.modules.factory.models import Dashboard, DataSource, Pipeline, PipelineRun, Widget
+from app.modules.gamification.models import UserBadge
 from app.modules.instructors.models import InstructorApplication
+from app.modules.learn.models import Course, Enrollment, LearningPath, LessonProgress, Notebook
+from app.modules.micro.models import MicroCompletion, MicroLesson
+from app.modules.notifications.models import Notification
+from app.modules.quests.models import Quest, QuestClaim
 from app.modules.repos.models import Repo, RepoLike
+from app.modules.rooms.models import IdeaRoom, ProblemComponent, RoomProblem, RoomSubmission
+from app.modules.social.models import Follow, Post as SocialPost, PostComment as SocialPostComment, PostLike as SocialPostLike
+from app.modules.synthesis.models import SynthesisJob
+from app.modules.teams.models import Team, TeamInvite, TeamJoinRequest, TeamMember
 from app.modules.users.models import User
 
 register_models()
@@ -49,28 +68,68 @@ LEADERBOARD_NAMES = [
     "stats-savvy", "pandas-pro", "sklearn-star", "torch-titan", "xgboost-x",
 ]
 
+# Anak dulu, induk belakangan — aman dijalankan ulang setelah seed_content / Fase 1.
+SEED_WIPE_ORDER = (
+    DriftReport,
+    ModelVersion,
+    ModelRegistry,
+    Widget,
+    Dashboard,
+    PipelineRun,
+    Pipeline,
+    DataSource,
+    SynthesisJob,
+    MicroCompletion,
+    QuestClaim,
+    LessonProgress,
+    Enrollment,
+    InstructorApplication,
+    Submission,
+    LeaderboardRow,
+    CompetitionProposal,
+    EventProposal,
+    ForumReaction,
+    ForumVote,
+    ForumPost,
+    Thread,
+    EventRegistration,
+    SocialPostComment,
+    SocialPostLike,
+    SocialPost,
+    Follow,
+    UserBadge,
+    Notification,
+    BlogPost,
+    Announcement,
+    ActivityEvent,
+    RoomSubmission,
+    ProblemComponent,
+    RoomProblem,
+    RepoLike,
+    Repo,
+    Competition,
+    Event,
+    Course,
+    LearningPath,
+    Notebook,
+    IdeaRoom,
+    MicroLesson,
+    Collection,
+    Quest,
+    TeamJoinRequest,
+    TeamInvite,
+    TeamMember,
+    Team,
+    Category,
+    User,
+)
+
 
 async def run():
     async with SessionLocal() as db:
-        for model in (
-            LessonProgress,
-            Enrollment,
-            InstructorApplication,
-            Submission,
-            LeaderboardRow,
-            Post,
-            Thread,
-            EventRegistration,
-            RepoLike,
-            Repo,
-            Competition,
-            Event,
-            Course,
-            LearningPath,
-            Notebook,
-            Category,
-            User,
-        ):
+        for model in SEED_WIPE_ORDER:
+            if model is Category:
+                await db.execute(update(Category).values(parent_id=None))
             await db.execute(delete(model))
 
         users = [
@@ -450,10 +509,10 @@ async def run():
         await db.flush()
 
         db.add_all([
-            Post(id="post_01", thread_id="thr_01", author_id=uid["siti-rahayu"],
+            ForumPost(id="post_01", thread_id="thr_01", author_id=uid["siti-rahayu"],
                  body_md="Terima kasih sharingnya! Apakah ada library khusus untuk normalisasi slang Indonesia?",
                  created_at=dt("2026-06-19T10:00:00Z")),
-            Post(id="post_02", thread_id="thr_01", author_id=uid["budi-santoso"],
+            ForumPost(id="post_02", thread_id="thr_01", author_id=uid["budi-santoso"],
                  body_md="Saya pakai kombinasi regex custom + kamus slang. Bisa cek notebook saya di /notebooks/nb_01.",
                  created_at=dt("2026-06-20T14:00:00Z")),
         ])
