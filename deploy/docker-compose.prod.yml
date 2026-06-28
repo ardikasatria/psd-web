@@ -283,8 +283,6 @@ services:
     restart: unless-stopped
 
   jupyterhub:
-    profiles:
-      - hub
     build:
       context: ../psd-jupyterhub
       dockerfile: docker/Dockerfile.hub

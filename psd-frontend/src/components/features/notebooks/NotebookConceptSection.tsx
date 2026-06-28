@@ -1,11 +1,13 @@
 'use client'
 
 import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
+import { OpenNotebookButton } from '@/components/features/notebooks/OpenNotebookButton'
 import {
   ArrowTopRightOnSquareIcon,
-  CloudIcon,
+  BeakerIcon,
   CodeBracketSquareIcon,
   DocumentDuplicateIcon,
+  GlobeAltIcon,
   ShareIcon,
 } from '@heroicons/react/24/outline'
 import { conceptGradientBr, conceptGradientRow } from '@/components/common/featureGradients'
@@ -14,44 +16,43 @@ import Link from 'next/link'
 
 const POINTS = [
   {
-    icon: CloudIcon,
-    title: 'JupyterHub PSD',
+    icon: GlobeAltIcon,
+    title: 'Terintegrasi di PSD',
     body: (
       <>
-        Server notebook pribadi di{' '}
-        <strong className="font-semibold text-neutral-900 dark:text-neutral-100">hub.projeksainsdata.com</strong> —
-        masuk otomatis dengan akun PSD (OAuth), tanpa instalasi lokal, batas sumber daya sesuai tier.
+        Buat &amp; jalankan notebook <strong className="font-semibold text-neutral-900 dark:text-neutral-100">langsung di platform</strong>{' '}
+        — gaya Kaggle, tanpa membuka UI JupyterHub.
       </>
     ),
   },
   {
-    icon: DocumentDuplicateIcon,
-    title: 'Katalog = metadata',
+    icon: BeakerIcon,
+    title: 'Runtime hybrid',
     body: (
       <>
-        PSD mengkurasi referensi &amp; workflow — bukan hosting file seperti Kaggle. Berkas{' '}
-        <code className="rounded bg-neutral-100 px-1 text-xs dark:bg-neutral-800">.ipynb</code> disimpan di Git
-        (Gitea) milik Anda.
+        Tier <strong>pemula</strong> → JupyterLite di browser (gratis). Tier lebih tinggi → kernel server terisolasi
+        dengan kuota CPU/RAM.
       </>
     ),
   },
   {
     icon: ShareIcon,
-    title: 'Ekosistem terhubung',
+    title: 'Katalog + Git',
     body: (
       <>
-        Melengkapi kursus, data sintesis, kompetisi, dan Ruang Ide — dokumentasi eksperimen nyata dengan SDK{' '}
-        <code className="rounded bg-neutral-100 px-1 text-xs dark:bg-neutral-800">psd://</code>.
+        Katalog PSD = kurasi metadata; berkas <code className="rounded bg-neutral-100 px-1 text-xs dark:bg-neutral-800">.ipynb</code>{' '}
+        disimpan di Git milik Anda. SDK <code className="rounded bg-neutral-100 px-1 text-xs dark:bg-neutral-800">psd://</code>{' '}
+        / <code className="rounded bg-neutral-100 px-1 text-xs dark:bg-neutral-800">psd-lite</code>.
       </>
     ),
   },
 ] as const
 
 const STEPS = [
-  { icon: DocumentDuplicateIcon, title: 'Temukan', desc: 'Jelajahi katalog referensi', accent: 'from-primary-400 to-primary-500' },
-  { icon: CodeBracketSquareIcon, title: 'Buka Notebook', desc: 'Login PSD → JupyterHub', accent: 'from-violet-400 to-indigo-500' },
-  { icon: ArrowTopRightOnSquareIcon, title: 'Eksperimen', desc: 'Dataset psd:// & analisis', accent: 'from-indigo-400 to-violet-500' },
-  { icon: ShareIcon, title: 'Bagikan', desc: 'Push Git & daftar katalog', accent: 'from-amber-400 to-primary-500' },
+  { icon: DocumentDuplicateIcon, title: 'Temukan', desc: 'Katalog referensi', accent: 'from-primary-400 to-primary-500' },
+  { icon: CodeBracketSquareIcon, title: 'Mulai', desc: 'Workspace notebook PSD', accent: 'from-violet-400 to-indigo-500' },
+  { icon: ArrowTopRightOnSquareIcon, title: 'Eksperimen', desc: 'psd:// & analisis', accent: 'from-indigo-400 to-violet-500' },
+  { icon: ShareIcon, title: 'Bagikan', desc: 'Push Git & katalog', accent: 'from-amber-400 to-primary-500' },
 ] as const
 
 export function NotebookConceptSection() {
@@ -66,11 +67,11 @@ export function NotebookConceptSection() {
             <div>
               <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-50">Apa peran notebook di PSD?</h2>
               <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-                Praktik kode terintegrasi platform — bukan Colab atau upload file datar.
+                Praktik kode terintegrasi — bukan Colab, bukan upload file datar.
               </p>
             </div>
           </div>
-          <OpenHubButton compact showLoginHint />
+          <OpenNotebookButton compact />
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -91,12 +92,12 @@ export function NotebookConceptSection() {
           })}
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           <Link
             href="/help/notebook-membuka"
             className="text-sm font-medium text-violet-700 hover:underline dark:text-violet-300"
           >
-            Panduan JupyterHub →
+            Panduan notebook →
           </Link>
           <span className="text-neutral-300 dark:text-neutral-600">·</span>
           <Link
@@ -112,7 +113,7 @@ export function NotebookConceptSection() {
         <div className="mb-6 text-center">
           <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Alur belajar praktik</h3>
           <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-            Dari katalog hingga berbagi workflow — lewat JupyterHub terintegrasi login PSD.
+            Dari katalog hingga berbagi workflow — notebook hidup di dalam PSD.
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-4">
@@ -142,15 +143,25 @@ export function NotebookConceptSection() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
-        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Akses dataset di notebook</h3>
-        <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-          Di JupyterHub, muat dataset PSD langsung tanpa unduh manual:
-        </p>
-        <code className="mt-3 block overflow-x-auto rounded-xl bg-neutral-100 px-4 py-3 font-mono text-xs text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
-          import psd{'\n'}
-          df = psd.load(&quot;psd://pemilik/dataset/berkas.csv&quot;)
-        </code>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
+          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Kernel server (tier menengah+)</h3>
+          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+            Analisis berat dengan library Python penuh:
+          </p>
+          <code className="mt-3 block overflow-x-auto rounded-xl bg-neutral-100 px-4 py-3 font-mono text-xs text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
+            import psd{'\n'}
+            df = psd.load(&quot;psd://pemilik/dataset/berkas.csv&quot;)
+          </code>
+        </div>
+        <div className="rounded-2xl border border-sky-200/80 bg-sky-50/50 p-5 dark:border-sky-900/40 dark:bg-sky-950/20">
+          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Browser (tier pemula)</h3>
+          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">JupyterLite + psd-lite di browser:</p>
+          <code className="mt-3 block overflow-x-auto rounded-xl bg-white/80 px-4 py-3 font-mono text-xs text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
+            import psd_lite{'\n'}
+            df = await psd_lite.load(&quot;psd://pemilik/dataset/berkas.csv&quot;)
+          </code>
+        </div>
       </div>
     </section>
   )

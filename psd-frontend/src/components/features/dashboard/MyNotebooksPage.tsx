@@ -4,7 +4,7 @@ import { NotebookCard } from '@/components/features/NotebookCard'
 import { QueryState } from '@/components/features/QueryState'
 import { useAuthGuard } from '@/lib/auth/useAuthGuard'
 import { getMyNotebooks } from '@/lib/api/me'
-import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
+import { OpenNotebookButton } from '@/components/features/notebooks/OpenNotebookButton'
 import { PaginatedNotebookSummary, NotebookSummary } from '@/types/api'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import { useQuery } from '@tanstack/react-query'
@@ -29,7 +29,7 @@ export function MyNotebooksPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <ButtonPrimary href="/notebooks/new">Bagikan notebook</ButtonPrimary>
-          <OpenHubButton outline />
+          <OpenNotebookButton outline />
           <ButtonPrimary href="/notebooks" outline>
             Jelajahi katalog
           </ButtonPrimary>

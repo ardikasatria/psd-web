@@ -33,16 +33,16 @@ export function OpenHubButton({ outline, plain, compact, className, showLoginHin
   if (!enabled) {
     return (
       <div className={className}>
-        <ButtonPrimary disabled>Buka Jupyter Notebook</ButtonPrimary>
+        <ButtonPrimary disabled>Buka kernel server</ButtonPrimary>
         <p className="mt-2 text-xs text-neutral-500">
-          JupyterHub belum aktif — pastikan{' '}
-          <code className="rounded bg-neutral-100 px-1 dark:bg-neutral-800">PSD_HUB_ENABLED=true</code> di backend.
+          Kernel server belum aktif — pastikan JupyterHub di-deploy dan{' '}
+          <code className="rounded bg-neutral-100 px-1 dark:bg-neutral-800">PSD_HUB_ENABLED=true</code>.
         </p>
       </div>
     )
   }
 
-  const label = compact ? 'Jupyter' : 'Buka Jupyter Notebook'
+  const label = compact ? 'Kernel server' : 'Buka kernel server'
   const icon = <ArrowTopRightOnSquareIcon className="size-4" aria-hidden />
 
   if (!isLoggedIn) {
@@ -53,7 +53,7 @@ export function OpenHubButton({ outline, plain, compact, className, showLoginHin
           {label}
         </ButtonPrimary>
         {showLoginHint && (
-          <p className="mt-2 text-xs text-neutral-500">Masuk dulu — JupyterHub memakai akun PSD Anda (OAuth otomatis).</p>
+          <p className="mt-2 text-xs text-neutral-500">Masuk dulu — kernel server memakai akun PSD (OAuth otomatis).</p>
         )}
       </div>
     )

@@ -22,6 +22,10 @@ JWT_SECRET=$(openssl rand -hex 32)
 MEILI_KEY=$(openssl rand -hex 24)
 GITEA_DB_PASSWORD=$(openssl rand -hex 24)
 
+# JupyterHub (Langkah 52) — ikut deploy default; HUB_OIDC_SECRET diisi setelah seed-oauth-clients
+JUPYTERHUB_CRYPT_KEY=$(openssl rand -hex 32)
+HUB_OIDC_SECRET=
+
 # Opsional — fitur AI (Langkah 38/40); isi sebelum pilot jika sintesis/ruang ide AI aktif
 OPENAI_API_KEY=
 AI_MODEL=gpt-4o-mini

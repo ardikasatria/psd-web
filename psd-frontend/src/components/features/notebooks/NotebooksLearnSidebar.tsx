@@ -1,17 +1,17 @@
 'use client'
 
 import { SidebarStatTile, sidebarCalloutClass, sidebarSectionClass, sidebarTipClass } from '@/components/common/SidebarStatTile'
-import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
+import { OpenNotebookButton } from '@/components/features/notebooks/OpenNotebookButton'
 import { getNotebooks } from '@/lib/api/notebooks'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useMe } from '@/lib/api/dashboard'
-import { useHub } from '@/lib/hub/useHub'
 import {
   AcademicCapIcon,
   ArrowRightIcon,
   BeakerIcon,
   BookOpenIcon,
   CodeBracketSquareIcon,
+  GlobeAltIcon,
   LightBulbIcon,
   PlusIcon,
   SparklesIcon,
@@ -21,10 +21,10 @@ import clsx from 'clsx'
 import Link from 'next/link'
 
 const NOTEBOOK_TIPS = [
-  'JupyterHub PSD memakai login OAuth — masuk ke PSD dulu, lalu buka hub; folder kerja persisten di ~/work.',
-  'Muat dataset PSD dengan psd.load("psd://pemilik/dataset/berkas.csv") tanpa unduh manual.',
-  'Setelah eksperimen, push .ipynb ke Git lalu daftarkan ke katalog agar komunitas belajar dari workflow Anda.',
-  'Gabungkan notebook dengan data sintesis untuk latihan pipeline end-to-end tanpa data sensitif.',
+  'Notebook terintegrasi PSD — jalankan langsung di workspace, tanpa UI JupyterHub.',
+  'Tier pemula: JupyterLite di browser. Tier menengah+: kernel server dengan kuota CPU/RAM.',
+  'Muat dataset dengan psd.load (server) atau psd-lite (browser).',
+  'Push .ipynb ke Git lalu daftarkan ke katalog agar komunitas belajar dari workflow Anda.',
 ]
 
 type Props = {
@@ -35,7 +35,6 @@ type Props = {
 export function NotebooksLearnSidebar({ className, onScrollToCatalog }: Props) {
   const { isLoggedIn } = useAuth()
   const me = useMe()
-  const { enabled } = useHub()
   const tip = NOTEBOOK_TIPS[new Date().getDate() % NOTEBOOK_TIPS.length]
 
   const catalog = useQuery({
@@ -51,31 +50,29 @@ export function NotebooksLearnSidebar({ className, onScrollToCatalog }: Props) {
   return (
     <aside className={clsx('space-y-5', className)}>
       <div className="grid grid-cols-2 gap-2">
-        <SidebarStatTile label="Notebook" value={items.length} icon={<BookOpenIcon className="size-4" />} />
+        <SidebarStatTile label="Katalog" value={items.length} icon={<BookOpenIcon className="size-4" />} />
         <SidebarStatTile
-          label="JupyterHub"
-          value={enabled ? 'Aktif' : '—'}
-          icon={<CodeBracketSquareIcon className="size-4" />}
+          label="Runtime"
+          value="Hybrid"
+          icon={<GlobeAltIcon className="size-4" />}
           accent="violet"
         />
         <SidebarStatTile label="Topik" value={tags.size} icon={<BeakerIcon className="size-4" />} accent="indigo" />
         <SidebarStatTile label="Resmi PSD" value={items.filter((n) => n.owner.is_official).length} icon={<SparklesIcon className="size-4" />} />
       </div>
 
-      {enabled && (
-        <section className={sidebarCalloutClass}>
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
-            <CodeBracketSquareIcon className="size-4 text-violet-600 dark:text-violet-400" />
-            JupyterHub PSD
-          </h3>
-          <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
-            Server notebook pribadi — login otomatis via akun PSD (OAuth).
-          </p>
-          <div className="mt-3">
-            <OpenHubButton plain compact />
-          </div>
-        </section>
-      )}
+      <section className={sidebarCalloutClass}>
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+          <CodeBracketSquareIcon className="size-4 text-violet-600 dark:text-violet-400" />
+          Workspace notebook
+        </h3>
+        <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
+          Editor terintegrasi — browser (pemula) atau kernel server (tier lebih tinggi).
+        </p>
+        <div className="mt-3">
+          <OpenNotebookButton plain compact />
+        </div>
+      </section>
 
       {withSource.length > 0 && (
         <section className={sidebarCalloutClass}>
@@ -104,7 +101,7 @@ export function NotebooksLearnSidebar({ className, onScrollToCatalog }: Props) {
           </li>
           <li className="flex gap-2">
             <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[10px] font-bold text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">2</span>
-            Masuk PSD → buka JupyterHub
+            Mulai workspace notebook
           </li>
           <li className="flex gap-2">
             <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">3</span>
@@ -136,7 +133,7 @@ export function NotebooksLearnSidebar({ className, onScrollToCatalog }: Props) {
           </Link>
           <Link href="/help/notebook-membuka" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-primary-50 hover:text-primary-700 dark:text-neutral-300 dark:hover:bg-neutral-700/80 dark:hover:text-primary-300">
             <CodeBracketSquareIcon className="size-4" />
-            Panduan JupyterHub
+            Panduan notebook
           </Link>
           <Link href="/synthesis" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-primary-50 hover:text-primary-700 dark:text-neutral-300 dark:hover:bg-neutral-700/80 dark:hover:text-primary-300">
             <SparklesIcon className="size-4" />
@@ -167,7 +164,7 @@ export function NotebooksLearnSidebar({ className, onScrollToCatalog }: Props) {
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary-700"
         >
           <PlusIcon className="size-4" aria-hidden />
-          Bagikan notebook
+          Bagikan ke katalog
         </Link>
       ) : (
         <Link

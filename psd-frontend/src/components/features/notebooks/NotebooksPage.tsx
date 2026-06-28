@@ -2,8 +2,10 @@
 
 import { heroGradient } from '@/components/common/featureGradients'
 import { pageCtaPanelClass } from '@/components/common/SidebarStatTile'
-import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
+import { OpenNotebookButton } from '@/components/features/notebooks/OpenNotebookButton'
+import { NotebookCard } from '@/components/features/NotebookCard'
 import { NotebookConceptSection } from '@/components/features/notebooks/NotebookConceptSection'
+import { NotebookQuotaPanel } from '@/components/features/notebooks/NotebookQuotaPanel'
 import { NotebooksLearnSidebar } from '@/components/features/notebooks/NotebooksLearnSidebar'
 import { QueryState } from '@/components/features/QueryState'
 import { FeaturePageShell } from '@/components/features/layout'
@@ -77,13 +79,13 @@ export function NotebooksPage() {
                   Notebook
                 </h1>
                 <p className="mt-3 text-base leading-relaxed text-neutral-600 dark:text-neutral-400">
-                  Katalog notebook praktik PSD — jalankan di JupyterHub terintegrasi, akses dataset via{' '}
-                  <code className="rounded bg-white/60 px-1 dark:bg-neutral-900/60">psd://</code>, dan bagikan workflow
-                  ke komunitas.
+                  Notebook terintegrasi PSD — jalankan di workspace platform, akses dataset via{' '}
+                  <code className="rounded bg-white/60 px-1 dark:bg-neutral-900/60">psd://</code>, bagikan workflow ke
+                  komunitas.
                 </p>
               </div>
               <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-                <OpenHubButton />
+                <OpenNotebookButton />
                 {me.data?.user ? (
                   <ButtonPrimary href="/notebooks/new" outline>
                     <PlusIcon className="size-4" aria-hidden />
@@ -105,6 +107,8 @@ export function NotebooksPage() {
               aria-hidden
             />
           </div>
+
+          {me.data?.user && <NotebookQuotaPanel compact />}
 
           <NotebookConceptSection />
 

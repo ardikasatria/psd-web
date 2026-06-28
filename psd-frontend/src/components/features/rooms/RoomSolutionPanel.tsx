@@ -4,7 +4,7 @@ import { SyntheticBadge } from '@/components/common/SyntheticBadge'
 import { RoomSolvingView } from '@/components/features/rooms/RoomProblemPanel'
 import { getNotebooks } from '@/lib/api/notebooks'
 import { getRepos } from '@/lib/api/repos'
-import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
+import { OpenNotebookButton } from '@/components/features/notebooks/OpenNotebookButton'
 import {
   finishRoom,
   getSubmission,
@@ -407,7 +407,7 @@ export function RoomSolutionPanel({
             <code className="text-xs">psd://owner/dataset/path</code> di notebook.
           </p>
           <div className="mt-4">
-            <OpenHubButton compact />
+            <OpenNotebookButton compact />
           </div>
         </div>
       )}

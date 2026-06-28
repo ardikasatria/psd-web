@@ -250,34 +250,30 @@ git push origin fitur-baru
     slug: 'notebook-membuka',
     category: 'notebook',
     title: 'Membuka notebook',
-    description: 'Jupyter Notebook PSD, login OAuth, dan batas sumber daya tier.',
+    description: 'Workspace terintegrasi PSD, runtime hybrid, dan kuota tier.',
     content: `# Membuka notebook
 
-## Dari mana membuka?
+## Notebook terintegrasi (bukan Colab)
 
-- Halaman **repo** atau **Ruang Ide** → tombol **Buka Notebook**
-- Menu notebook di PSD (bila tersedia)
+PSD menyediakan **notebook langsung di platform** — pengalaman mirip Kaggle. Anda **tidak perlu** membuka UI JupyterHub secara manual.
 
-Tombol membuka **Jupyter Notebook** dengan login PSD otomatis (OAuth) — tidak perlu instalasi Jupyter di laptop.
+1. Buka **Notebook** → **Mulai notebook** (workspace).
+2. **Tier pemula** — runtime **browser** (JupyterLite + Pyodide), biaya server ~nol.
+3. **Tier menengah/lanjut** — boleh memakai **kernel server** terisolasi (OAuth PSD otomatis).
 
-## Apa yang terjadi?
+## Kuota per tier
 
-1. Anda diarahkan ke layanan **Jupyter Notebook** PSD (subdomain hub).
-2. Server notebook **pribadi** disiapkan (spawn) — tunggu beberapa detik.
-3. JupyterLab terbuka; folder kerja persisten di \`~/work\`.
+| Tier | Notebook | Kernel aktif | Runtime |
+|------|----------|--------------|---------|
+| Pemula | 3 | 1 | Browser saja |
+| Menengah | 10 | 2 | Browser + server |
+| Lanjut | 50 | 4 | Browser + server |
 
-> **Catatan:** Fitur notebook membutuhkan Jupyter Notebook aktif di instalasi PSD. Jika tombol tidak muncul, hubungi admin.
+Tier naik seiring **poin gamifikasi**. CPU-only — tanpa GPU.
 
-## Batas sumber daya (CPU-only)
+## Kernel server (tier menengah+)
 
-PSD **tidak menyediakan GPU** — sesuai strategi edukasi, bukan paritas compute cloud besar.
-
-**Tier pemula:** 1 CPU, 2 GB RAM, sesi maks. ~2 jam  
-**Tier menengah:** 2 CPU, 4 GB RAM, sesi maks. ~4 jam  
-**Tier lanjut:** 4 CPU, 8 GB RAM, sesi maks. ~6 jam
-
-- Tier naik seiring **poin gamifikasi** Anda.
-- Server **berhenti otomatis** setelah idle (~1 jam) — hemat sumber daya; file di \`~/work\` tetap tersimpan.
+Tombol **Buka kernel server** menyiapkan kontainer pribadi via OAuth — folder kerja persisten di \`~/work\`, idle-culling ~1 jam.
 
 Lanjut: [Dataset psd://](/help/notebook-dataset-sdk) · [Simpan & push notebook](/help/notebook-simpan-push)`,
   },

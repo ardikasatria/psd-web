@@ -6,7 +6,7 @@ import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import { useMe } from '@/lib/api/dashboard'
 import { useTrackView } from '@/lib/analytics/useTrackView'
 import { deleteNotebook, getNotebook } from '@/lib/api/notebooks'
-import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
+import { OpenNotebookButton } from '@/components/features/notebooks/OpenNotebookButton'
 import { isStaff } from '@/lib/auth/roles'
 import { NotebookDetail } from '@/types/api'
 import { Badge } from '@/shared/Badge'
@@ -138,14 +138,14 @@ export function NotebookDetailContent({ id }: { id: string }) {
                   <div className="bg-gradient-to-br from-violet-500 to-indigo-600 px-5 py-6 text-white">
                     <CodeBracketSquareIcon className="size-8" aria-hidden />
                     <p className="mt-3 text-sm font-medium text-white/90">Notebook PSD</p>
-                    <p className="mt-1 text-lg font-semibold">Jalankan di JupyterHub</p>
+                    <p className="mt-1 text-lg font-semibold">Workspace notebook</p>
                   </div>
                   <div className="space-y-4 p-5">
-                    <OpenHubButton className="w-full [&_a]:w-full [&_button]:w-full [&_a]:justify-center [&_button]:justify-center" />
+                    <OpenNotebookButton className="w-full [&_a]:w-full [&_button]:w-full [&_a]:justify-center [&_button]:justify-center" />
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      Login PSD otomatis diteruskan ke{' '}
+                      Jalankan di editor terintegrasi PSD — lihat{' '}
                       <Link href="/help/notebook-membuka" className="text-primary-600 hover:underline dark:text-primary-400">
-                        JupyterHub
+                        panduan notebook
                       </Link>
                       .
                     </p>

@@ -271,27 +271,19 @@ pytest app/contrib/tests/test_contrib.py -q
 
 ## JupyterHub Notebook (Langkah 52)
 
-Notebook mandiri via JupyterHub + OAuth PSD. CPU-only, batas tier gamifikasi, idle-culling.
+Notebook mandiri via JupyterHub + OAuth PSD. **Service `jupyterhub` selalu ikut `./scripts/deploy.sh`** (bukan profile terpisah).
 
 **DNS:** `hub.<DOMAIN>` → Caddy → service `jupyterhub`.
 
-### Setup sekali
+### Setup sekali (otomatis sebagian besar)
 
 ```bash
-# 1. Seed klien OAuth (salin secret jupyterhub)
-./scripts/seed-oauth-clients.sh
-# → HUB_OIDC_SECRET di deploy/.env
-
-# 2. Kunci enkripsi auth_state Hub
-openssl rand -hex 32   # → JUPYTERHUB_CRYPT_KEY di deploy/.env
-
-# 3. Build image single-user (DockerSpawner)
-chmod +x scripts/build-hub-images.sh
-./scripts/build-hub-images.sh
-
-# 4. Redeploy stack
-docker compose -f docker-compose.prod.yml up -d --build jupyterhub backend frontend
+./scripts/deploy.sh
+# Seed OAuth mencetak client_secret jupyterhub → salin ke HUB_OIDC_SECRET di deploy/.env
+./scripts/deploy.sh   # deploy ulang agar Hub muat secret OAuth
 ```
+
+`deploy.sh` juga otomatis: build image `psd-singleuser:latest`, buat `JUPYTERHUB_CRYPT_KEY` bila belum ada.
 
 Klaim OIDC `psd_tier` (pemula/menengah/lanjut) menentukan batas CPU/RAM di spawn hook.
 SDK `import psd` di notebook: `psd.load("psd://owner/dataset/file.csv")` via presigned MinIO.

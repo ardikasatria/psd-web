@@ -3,10 +3,12 @@
 import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
 import { useHub } from '@/lib/hub/useHub'
 import { Button } from '@/shared/Button'
-import { CodeBracketSquareIcon } from '@heroicons/react/24/outline'
+import { CodeBracketSquareIcon, CpuChipIcon } from '@heroicons/react/24/outline'
 
 export function NotebookHubCallout({ compact }: { compact?: boolean }) {
   const { enabled, isLoading } = useHub()
+
+  if (isLoading || !enabled) return null
 
   return (
     <div
@@ -18,23 +20,19 @@ export function NotebookHubCallout({ compact }: { compact?: boolean }) {
     >
       <div className="flex flex-wrap items-start gap-3">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
-          <CodeBracketSquareIcon className="size-5" aria-hidden />
+          <CpuChipIcon className="size-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">JupyterHub PSD</h3>
+          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Kernel server (tier menengah+)</h3>
           <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-            Notebook dijalankan di JupyterHub (<strong>hub.projeksainsdata.com</strong>) dengan login OAuth PSD —
-            bukan Colab. Folder kerja persisten di{' '}
-            <code className="rounded bg-white/80 px-1 dark:bg-neutral-900/80">~/work</code>, dataset via{' '}
-            <code className="rounded bg-white/80 px-1 dark:bg-neutral-900/80">psd://</code>.
+            Untuk compute berat — kernel terisolasi di belakang layar via OAuth PSD. UI JupyterHub tidak perlu dibuka
+            manual setelah login.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <OpenHubButton />
-            <Button href="/help/notebook-membuka" outline>
-              Panduan
-            </Button>
-            <Button href="/help/notebook-simpan-push" plain>
-              Simpan & push Git
+            <OpenHubButton compact />
+            <Button href="/notebooks/workspace" outline>
+              <CodeBracketSquareIcon className="size-4" aria-hidden />
+              Workspace
             </Button>
           </div>
         </div>

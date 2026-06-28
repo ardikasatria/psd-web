@@ -1,0 +1,45 @@
+'use client'
+
+import { useAuth } from '@/lib/auth/useAuth'
+import ButtonPrimary from '@/shared/ButtonPrimary'
+import { PlayIcon } from '@heroicons/react/24/outline'
+import clsx from 'clsx'
+import Link from 'next/link'
+
+const WORKSPACE_PATH = '/notebooks/workspace'
+
+type Props = {
+  outline?: boolean
+  compact?: boolean
+  plain?: boolean
+  className?: string
+}
+
+/** CTA utama — editor notebook terintegrasi di dalam PSD (bukan buka tab Hub). */
+export function OpenNotebookButton({ outline, compact, plain, className }: Props) {
+  const { isLoggedIn } = useAuth()
+  const label = compact ? 'Mulai' : 'Mulai notebook'
+  const href = isLoggedIn ? WORKSPACE_PATH : `/login?next=${encodeURIComponent(WORKSPACE_PATH)}`
+
+  if (plain) {
+    return (
+      <Link
+        href={href}
+        className={clsx(
+          'inline-flex items-center gap-1 text-sm font-medium text-violet-700 hover:underline dark:text-violet-300',
+          className,
+        )}
+      >
+        {label}
+        <PlayIcon className="size-3.5" aria-hidden />
+      </Link>
+    )
+  }
+
+  return (
+    <ButtonPrimary href={href} outline={outline} className={clsx(className)}>
+      <PlayIcon className="size-4" aria-hidden />
+      {label}
+    </ButtonPrimary>
+  )
+}
