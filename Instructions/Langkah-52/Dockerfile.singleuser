@@ -1,0 +1,18 @@
+# Image single-user notebook PSD (Langkah 52, sub-langkah 4).
+# CPU-only. Pra-pasang pustaka DS umum + PSD SDK (psd://).
+FROM quay.io/jupyter/scipy-notebook:latest
+
+USER root
+# (opsional) alat sistem ringan bila diperlukan
+USER ${NB_UID}
+
+# Pustaka DS umum untuk pengajaran (sesuaikan).
+RUN pip install --no-cache-dir \
+    pandas numpy scikit-learn matplotlib seaborn duckdb pyarrow httpx
+
+# Pasang PSD SDK agar `import psd` tersedia di notebook.
+COPY app/psd_sdk /opt/psd/psd
+ENV PYTHONPATH=/opt/psd:${PYTHONPATH}
+
+# Catatan: TANPA CUDA/GPU. Dataset diakses via SDK psd:// (presigned MinIO),
+# bukan dengan menanam kredensial MinIO di image.

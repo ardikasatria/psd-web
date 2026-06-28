@@ -1,9 +1,12 @@
-# Hanya push: deploy/, psd-frontend/, psd-backend/
+# Hanya push folder produksi + instruksi (bukan theme/demo lokal)
 /*
 !/.gitignore
 !/deploy/
 !/psd-frontend/
 !/psd-backend/
+!/psd-jupyterhub/
+!/psd-superset/
+!/Instructions/
 
 # Dependencies
 **/node_modules/

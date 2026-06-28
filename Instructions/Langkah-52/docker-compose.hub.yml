@@ -1,0 +1,32 @@
+# Cuplikan compose JupyterHub PSD (Langkah 52). Gabungkan ke compose PSD.
+# DockerSpawner perlu akses socket Docker host untuk membuat kontainer notebook.
+
+services:
+  jupyterhub:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.hub      # image hub: jupyterhub + dockerspawner + oauthenticator + idle-culler + app.hubtools
+    command: jupyterhub -f /srv/jupyterhub/jupyterhub_config.py
+    ports: ["8000:8000"]
+    environment:
+      - PSD_OIDC_ISSUER=https://psd.example          # provider OIDC (Langkah 48)
+      - PSD_OIDC_CLIENT_SECRET=${HUB_OIDC_SECRET}     # secret klien 'jupyterhub' (Langkah 48)
+      - PSD_HUB_CALLBACK_URL=https://hub.psd.example/hub/oauth_callback
+      - PSD_API_BASE=https://psd.example              # untuk SDK psd:// di notebook
+      - PSD_SINGLEUSER_IMAGE=psd/singleuser:latest
+      - PSD_HUB_NETWORK=psd-net
+      - PSD_HUB_CULL_TIMEOUT=3600
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock     # DockerSpawner
+      - ./jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py:ro
+    networks: [psd-net]
+    restart: unless-stopped
+
+networks:
+  psd-net:
+    name: psd-net
+
+# Catatan:
+# - Build image single-user (docker/Dockerfile.singleuser) → tag psd/singleuser:latest.
+# - MinIO (Langkah 15) tak perlu di-mount; SDK mengakses via presigned URL.
+# - Untuk K8s: pakai Zero-to-JupyterHub (Helm) + KubeSpawner; hook & SDK tetap sama.

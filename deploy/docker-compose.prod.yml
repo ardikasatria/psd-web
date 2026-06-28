@@ -283,6 +283,8 @@ services:
     restart: unless-stopped
 
   jupyterhub:
+    profiles:
+      - hub
     build:
       context: ../psd-jupyterhub
       dockerfile: docker/Dockerfile.hub
@@ -302,6 +304,8 @@ services:
     restart: unless-stopped
 
   superset-db:
+    profiles:
+      - bi
     image: postgres:16
     environment:
       POSTGRES_USER: superset
@@ -317,6 +321,8 @@ services:
     restart: unless-stopped
 
   superset:
+    profiles:
+      - bi
     image: apache/superset:4.0.2
     environment:
       SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
@@ -347,6 +353,8 @@ services:
     restart: unless-stopped
 
   mlflow-db:
+    profiles:
+      - ml
     image: postgres:16
     environment:
       POSTGRES_USER: mlflow
@@ -362,6 +370,8 @@ services:
     restart: unless-stopped
 
   mlflow:
+    profiles:
+      - ml
     image: ghcr.io/mlflow/mlflow:v2.14.3
     environment:
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
@@ -398,10 +408,6 @@ services:
       - frontend
       - backend
       - minio
-      - gitea
-      - jupyterhub
-      - superset
-      - mlflow
     restart: unless-stopped
 
 networks:

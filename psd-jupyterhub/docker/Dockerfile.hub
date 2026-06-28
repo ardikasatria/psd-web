@@ -1,0 +1,15 @@
+FROM jupyterhub/jupyterhub:4.1
+
+USER root
+RUN pip install --no-cache-dir \
+    dockerspawner==14.0.0 \
+    oauthenticator==17.1.0 \
+    jupyterhub-idle-culler==1.2.1 \
+    httpx
+
+COPY app /srv/jupyterhub/app
+COPY jupyterhub_config.py /srv/jupyterhub/jupyterhub_config.py
+ENV PYTHONPATH=/srv/jupyterhub
+
+WORKDIR /srv/jupyterhub
+CMD ["jupyterhub", "-f", "/srv/jupyterhub/jupyterhub_config.py"]

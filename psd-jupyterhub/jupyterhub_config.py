@@ -1,0 +1,52 @@
+# jupyterhub_config.py — JupyterHub PSD (Langkah 52)
+import os
+
+from app.hubtools.spawn import apply_tier_limits, auth_state_hook
+
+c = get_config()  # noqa: F821
+
+ISSUER = os.environ["PSD_OIDC_ISSUER"].rstrip("/")
+
+c.JupyterHub.authenticator_class = "generic-oauth"
+c.GenericOAuthenticator.client_id = "jupyterhub"
+c.GenericOAuthenticator.client_secret = os.environ["PSD_OIDC_CLIENT_SECRET"]
+c.GenericOAuthenticator.oauth_callback_url = os.environ["PSD_HUB_CALLBACK_URL"]
+c.GenericOAuthenticator.authorize_url = f"{ISSUER}/oauth/authorize"
+c.GenericOAuthenticator.token_url = f"{ISSUER}/oauth/token"
+c.GenericOAuthenticator.userdata_url = f"{ISSUER}/oauth/userinfo"
+c.GenericOAuthenticator.scope = ["openid", "profile", "email"]
+c.GenericOAuthenticator.username_claim = "preferred_username"
+c.GenericOAuthenticator.enable_auth_state = True
+
+c.JupyterHub.spawner_class = "docker"
+c.DockerSpawner.image = os.environ.get("PSD_SINGLEUSER_IMAGE", "psd/singleuser:latest")
+c.DockerSpawner.network_name = os.environ.get("PSD_HUB_NETWORK", "psd-net")
+c.DockerSpawner.remove = True
+c.DockerSpawner.notebook_dir = "/home/jovyan/work"
+c.DockerSpawner.volumes = {
+    "psd-notebook-{username}": "/home/jovyan/work",
+}
+
+c.Spawner.auth_state_hook = auth_state_hook
+c.Spawner.pre_spawn_hook = apply_tier_limits
+
+cull_timeout = int(os.environ.get("PSD_HUB_CULL_TIMEOUT", "3600"))
+c.JupyterHub.services = [
+    {
+        "name": "idle-culler",
+        "command": [
+            "python",
+            "-m",
+            "jupyterhub_idle_culler",
+            f"--timeout={cull_timeout}",
+            "--cull-every=300",
+        ],
+    },
+]
+c.JupyterHub.load_roles = [
+    {
+        "name": "idle-culler",
+        "services": ["idle-culler"],
+        "scopes": ["list:users", "read:users:activity", "delete:servers"],
+    },
+]

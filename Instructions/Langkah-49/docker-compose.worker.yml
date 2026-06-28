@@ -1,0 +1,45 @@
+# Cuplikan untuk digabung ke docker-compose PSD (Langkah 49).
+# Dua worker TERPISAH agar beban AI dan Pabrik Data tidak saling sumbat.
+# Sesuaikan `build`/`image`, env, dan path modul `app.tasks.celery_app:celery_app`.
+
+services:
+  # Worker AI: I/O-bound (OpenAI), boleh konkuren lebih tinggi.
+  worker-ai:
+    build: .
+    command: >
+      celery -A app.tasks.celery_app:celery_app worker
+      -Q ai -c 4 -n ai@%h --max-tasks-per-child=50
+    environment:
+      - PSD_CELERY_BROKER_URL=redis://redis:6379/0
+      - PSD_CELERY_RESULT_URL=redis://redis:6379/1
+      # + env OpenAI / token-throttle gamifikasi PSD
+    depends_on: [redis]
+    restart: unless-stopped
+
+  # Worker Pabrik Data: DuckDB single-writer → konkurensi RENDAH (hindari lock).
+  worker-pabrik:
+    build: .
+    command: >
+      celery -A app.tasks.celery_app:celery_app worker
+      -Q pabrik_data -c 1 -n pabrik@%h --max-tasks-per-child=20
+    environment:
+      - PSD_CELERY_BROKER_URL=redis://redis:6379/0
+      - PSD_CELERY_RESULT_URL=redis://redis:6379/1
+    depends_on: [redis]
+    restart: unless-stopped
+
+  # Pemantauan (opsional). Untuk produksi, pertimbangkan celery-exporter →
+  # Prometheus → Grafana (konsisten dengan stack monitoring PSD).
+  flower:
+    build: .
+    command: celery -A app.tasks.celery_app:celery_app flower --port=5555
+    ports: ["5555:5555"]
+    environment:
+      - PSD_CELERY_BROKER_URL=redis://redis:6379/0
+      - PSD_CELERY_RESULT_URL=redis://redis:6379/1
+    depends_on: [redis]
+    restart: unless-stopped
+
+# Catatan: `redis` diasumsikan sudah ada di compose PSD. Bila satu instans Redis
+# dipakai bersama cache aplikasi, pertimbangkan instans/port terpisah untuk broker
+# agar beban antrian tak mengganggu cache.

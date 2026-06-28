@@ -1,0 +1,10 @@
+FROM quay.io/jupyter/scipy-notebook:latest
+
+USER root
+USER ${NB_UID}
+
+RUN pip install --no-cache-dir \
+    pandas numpy scikit-learn matplotlib seaborn duckdb pyarrow httpx
+
+COPY app/psd_sdk /opt/psd/psd
+ENV PYTHONPATH=/opt/psd:${PYTHONPATH}

@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Deploy / redeploy produksi di VM.
-#   ./scripts/deploy.sh          # build, up, migrasi
-#   ./scripts/deploy.sh --seed   # + isi data demo (staging/pilot)
+#   ./scripts/deploy.sh              # stack inti (Tanpa JupyterHub/Superset/MLflow)
+#   ./scripts/deploy.sh --seed       # + data demo pilot
+#   COMPOSE_PROFILES=hub ./scripts/deploy.sh     # + JupyterHub (butuh psd-jupyterhub/)
+#   COMPOSE_PROFILES=bi ./scripts/deploy.sh      # + Superset (butuh psd-superset/)
+#   COMPOSE_PROFILES=ml ./scripts/deploy.sh      # + MLflow
+#   COMPOSE_PROFILES=hub,bi,ml ./scripts/deploy.sh   # semua opsional Fase 1
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -11,11 +15,31 @@ for arg in "$@"; do
     --seed) SEED=true ;;
     -h|--help)
       echo "Usage: $0 [--seed]"
+      echo ""
+      echo "Profile opsional (via env COMPOSE_PROFILES, pisah koma):"
+      echo "  hub  JupyterHub   (folder psd-jupyterhub/ wajib ada)"
+      echo "  bi   Superset     (folder psd-superset/ wajib ada)"
+      echo "  ml   MLflow"
+      echo ""
+      echo "Contoh: COMPOSE_PROFILES=hub,bi,ml $0"
       exit 0
       ;;
     *) echo "Argumen tidak dikenal: $arg (pakai --seed atau --help)"; exit 1 ;;
   esac
 done
+
+compose() {
+  docker compose -f docker-compose.prod.yml "$@"
+}
+
+profile_args=()
+if [[ -n "${COMPOSE_PROFILES:-}" ]]; then
+  IFS=',' read -ra _profiles <<< "${COMPOSE_PROFILES}"
+  for p in "${_profiles[@]}"; do
+    p="${p// /}"
+    [[ -n "$p" ]] && profile_args+=(--profile "$p")
+  done
+fi
 
 if [[ ! -f .env ]]; then
   echo "deploy/.env belum ada. Jalankan: ./scripts/init-env.sh [domain]"
@@ -38,15 +62,15 @@ if [[ ! -f secrets/psd_oidc.pem ]]; then
   exit 1
 fi
 
-echo "==> Build & start stack (DOMAIN=${DOMAIN})"
-docker compose -f docker-compose.prod.yml up -d --build
+echo "==> Build & start stack (DOMAIN=${DOMAIN}${COMPOSE_PROFILES:+, profiles=${COMPOSE_PROFILES}})"
+compose "${profile_args[@]}" up -d --build
 
 echo "==> Reload Caddy (sertifikat TLS subdomain)"
-docker compose -f docker-compose.prod.yml exec -T caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null \
-  || docker compose -f docker-compose.prod.yml restart caddy
+compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null \
+  || compose restart caddy
 
 echo "==> Migrasi database (alembic upgrade head)"
-docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
+compose exec backend alembic upgrade head
 
 echo "==> Seed klien OAuth internal (Langkah 48)"
 bash scripts/seed-oauth-clients.sh docker-compose.prod.yml
@@ -76,4 +100,9 @@ echo "  Flower:       http://127.0.0.1:5555 (SSH tunnel ke VM)"
 echo ""
 if ! $SEED; then
   echo "Seed pilot: ./scripts/deploy.sh --seed"
+fi
+if [[ -z "${COMPOSE_PROFILES:-}" ]]; then
+  echo ""
+  echo "Layanan opsional (JupyterHub/Superset/MLflow) belum diaktifkan."
+  echo "  COMPOSE_PROFILES=hub,bi,ml ./scripts/deploy.sh"
 fi
