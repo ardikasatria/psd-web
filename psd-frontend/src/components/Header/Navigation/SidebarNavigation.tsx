@@ -123,8 +123,9 @@ const SidebarNavigation: React.FC<Props> = ({ data }) => {
 
   return (
     <div>
-      <p className="text-sm/relaxed">
-        Discover the most outstanding articles on all topics of life. Write your stories and share them
+      <p className="text-sm/relaxed text-neutral-600 dark:text-neutral-400">
+        Platform sains data kolaboratif lokal Indonesia. Temukan, bagikan, dan kembangkan proyek, dataset, dan model
+        bersama komunitas.
       </p>
       <div className="mt-5 flex items-center justify-between">
         <SocialsList />

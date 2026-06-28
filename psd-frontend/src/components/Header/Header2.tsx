@@ -31,15 +31,19 @@ const Header2: FC<Props> = async ({ bottomBorder, className }) => {
       <div className="container flex h-20 items-center justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-center gap-x-4 sm:gap-x-5 lg:gap-x-7">
           <Logo />
-          <div className="h-8 border-l" />
-          <SearchModal />
+          <div className="hidden h-8 border-l lg:block" />
+          <div className="hidden lg:block">
+            <SearchModal />
+          </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-x-1 sm:gap-x-2">
           <div className="hidden lg:block">
             <Navigation menu={navigationMenu} featuredPosts={featuredPosts} />
           </div>
-          <ThemeToggle />
+          <div className="hidden lg:block">
+            <ThemeToggle />
+          </div>
           <NotificationBell />
           <HeaderAuthActions className="me-2" />
           <div className="flex lg:hidden">

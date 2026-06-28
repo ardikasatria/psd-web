@@ -34,8 +34,10 @@ const Header: FC<HeaderProps> = async ({ bottomBorder, className }) => {
         >
           <div className="flex items-center gap-x-4 sm:gap-x-5 lg:gap-x-7">
             <Logo />
-            <div className="h-8 border-l" />
-            <SearchModal />
+            <div className="hidden h-8 border-l lg:block" />
+            <div className="hidden lg:block">
+              <SearchModal />
+            </div>
           </div>
 
           <div className="ms-auto flex items-center justify-end gap-x-0.5">
