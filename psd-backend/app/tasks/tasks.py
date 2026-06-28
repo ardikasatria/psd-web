@@ -20,6 +20,12 @@ def run_pipeline_job(self, job_id: str, payload: dict) -> dict:
     return execute(self, "pipeline", job_id, payload, seams.pipeline_impl)
 
 
+@celery_app.task(bind=True, base=PSDTask, name="psd.pipeline.spark_run")
+def run_spark_pipeline_job(self, job_id: str, payload: dict) -> dict:
+    payload = {**payload, "engine": "spark"}
+    return execute(self, "pipeline_spark", job_id, payload, seams.pipeline_impl)
+
+
 @celery_app.task(bind=True, base=PSDTask, name="psd.mlops.drift_run")
 def run_drift_job(self, report_id: str, payload: dict) -> dict:
     return execute(self, "drift", report_id, payload, seams.drift_impl)
