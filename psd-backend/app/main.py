@@ -90,7 +90,7 @@ class CorsFallbackMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
         origin = request.headers.get("origin")
-        if origin and origin in settings.BACKEND_CORS_ORIGINS:
+        if origin and settings.cors_allows(origin):
             if not response.headers.get("access-control-allow-origin"):
                 response.headers["Access-Control-Allow-Origin"] = origin
                 response.headers["Access-Control-Allow-Credentials"] = "true"

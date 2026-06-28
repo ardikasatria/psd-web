@@ -2,6 +2,7 @@
 
 import { getPersonalizedFeed, type FeedSection } from '@/lib/api/assistant'
 import { QueryState } from '@/components/features/QueryState'
+import { useAuth } from '@/lib/auth/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
 import Link from 'next/link'
@@ -20,11 +21,17 @@ type Props = {
 }
 
 export function PersonalizedFeedSection({ className, compact = false }: Props) {
+  const { isLoggedIn } = useAuth()
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['personalized-feed'],
     queryFn: () => getPersonalizedFeed(),
+    enabled: isLoggedIn,
     retry: false,
   })
+
+  if (!isLoggedIn) {
+    return null
+  }
 
   if (isError) {
     return null

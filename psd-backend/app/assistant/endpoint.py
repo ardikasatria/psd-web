@@ -76,7 +76,7 @@ async def feed(
     kinds: str = "dataset,course,kompetisi,ruang",
 ):
     if not settings.PSD_ASSISTANT_ENABLED:
-        raise ApiError(503, "assistant_disabled", "Feed personal tidak aktif.")
+        return {"feed": [], "strategy": "popularity"}
 
     summary = await fetch_activity_summary(db, user)
     profile = build_affinity(summary)

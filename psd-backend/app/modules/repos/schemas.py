@@ -58,19 +58,20 @@ def owner_ref(user) -> dict:
 
 
 def to_summary(r, category=None, subcategory=None, team=None) -> dict:
+    owner = getattr(r, "owner", None)
     return {
         "id": r.id,
         "slug": r.slug,
         "kind": r.kind,
         "name": r.name,
         "description": r.description,
-        "tags": r.tags,
+        "tags": r.tags or [],
         "likes": r.likes,
         "downloads": r.downloads,
         "visibility": r.visibility,
         "featured": bool(getattr(r, "featured", False)),
         "updated_at": r.updated_at,
-        "owner": owner_ref(r.owner),
+        "owner": owner_ref(owner) if owner else {"username": "unknown", "type": "user", "avatar_url": None},
         "category": category,
         "subcategory": subcategory,
         "team": team,

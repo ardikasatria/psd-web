@@ -118,6 +118,7 @@ async def _list(db, kind, q, tags, sort, category, subcategory, team, p: PagePar
             stmt = stmt.where(or_(*[Repo.tags.contains([tag]) for tag in tag_list]))
     stmt = await filter_by_category_slugs(db, stmt, Repo, category, subcategory)
     stmt = await _team_filter(db, stmt, team)
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
     if sort == "-downloads":
         stmt = stmt.order_by(Repo.downloads.desc())
     elif sort == "downloads":
@@ -132,7 +133,6 @@ async def _list(db, kind, q, tags, sort, category, subcategory, team, p: PagePar
         stmt = stmt.order_by(Repo.updated_at.asc())
     else:
         stmt = stmt.order_by(Repo.updated_at.desc())
-    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
     rows = (await db.execute(stmt.offset(p.offset).limit(p.page_size))).scalars().all()
     items = []
     for r in rows:

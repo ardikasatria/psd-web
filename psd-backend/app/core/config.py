@@ -1,3 +1,6 @@
+import json
+
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -143,6 +146,42 @@ class Settings(BaseSettings):
     PSD_EMAIL_UNSUBSCRIBE_SECRET: str = ""
     PSD_EMAIL_REDIS: bool = True
     PSD_EMAIL_DIGEST_HOUR: int = 8  # WIB, via Celery beat
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def _parse_cors_origins(cls, value):
+        if isinstance(value, str):
+            raw = value.strip()
+            if raw.startswith("["):
+                return json.loads(raw)
+            if raw:
+                return [raw]
+        return value
+
+    @model_validator(mode="after")
+    def _ensure_app_cors_origins(self):
+        origins = list(self.BACKEND_CORS_ORIGINS)
+        base = self.APP_BASE_URL.rstrip("/")
+        if base and base not in origins:
+            origins.append(base)
+        if base.startswith("https://"):
+            www = base.replace("https://", "https://www.", 1)
+            if www not in origins:
+                origins.append(www)
+        elif base.startswith("http://"):
+            www = base.replace("http://", "http://www.", 1)
+            if www not in origins:
+                origins.append(www)
+        self.BACKEND_CORS_ORIGINS = origins
+        return self
+
+    def cors_allows(self, origin: str | None) -> bool:
+        if not origin:
+            return False
+        if origin in self.BACKEND_CORS_ORIGINS:
+            return True
+        base = self.APP_BASE_URL.rstrip("/")
+        return origin == base or origin == base.replace("://", "://www.", 1)
 
 
 settings = Settings()
