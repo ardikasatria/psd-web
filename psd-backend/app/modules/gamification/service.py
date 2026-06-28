@@ -7,34 +7,11 @@ from app.modules.learn.models import Course
 from app.modules.repos.models import Repo
 from app.modules.social.models import Follow
 from app.modules.users.models import User
+from psd_gamification.badges import achievement_badges
+from psd_gamification.points import reputation_points
 
-POINTS = {
-    "asset_published": 10,
-    "like_received": 2,
-    "course_completed": 15,
-    "submission_scored": 5,
-    "forum_thread": 3,
-    "forum_post": 1,
-    "follow_received": 2,
-    "post_like_received": 1,
-    "comment_made": 1,
-    "micro_completed": 1,
-    "room_finished": 30,
-}
-
-BADGES = {
-    "langkah-pertama": ("Langkah Pertama", "bronze", "Membuat aset pertama"),
-    "berbagi-ilmu": ("Berbagi Ilmu", "silver", "Menerbitkan course pertama"),
-    "populer": ("Populer", "silver", "Aset mencapai 50 suka"),
-    "kontributor-aktif": ("Kontributor Aktif", "bronze", "Membuka 10 diskusi"),
-    "juara": ("Juara", "gold", "Peringkat 1 leaderboard kompetisi"),
-    "terhubung": ("Terhubung", "bronze", "Memiliki 10 pengikut"),
-    "berpengaruh": ("Berpengaruh", "gold", "Memiliki 500 pengikut"),
-    "ramai": ("Ramai", "silver", "Postingan mencapai 25 suka"),
-    "konsisten": ("Konsisten", "silver", "Streak 7 hari belajar"),
-    "pemecah_masalah": ("Pemecah Masalah", "bronze", "Menyelesaikan 1 ruang ide"),
-    "arsitek_ide": ("Arsitek Ide", "gold", "Master menyelesaikan ruang ide"),
-}
+POINTS = reputation_points()
+BADGES = achievement_badges()
 
 
 async def award_reputation(db, user: User, reason: str, points: int | None = None) -> None:

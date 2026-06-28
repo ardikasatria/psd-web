@@ -49,7 +49,7 @@ def test_service_measures_latency_and_logs():
 
 def test_quota_limits_by_tier():
     assert limit_for("pemula") == 100
-    assert limit_for("lanjut") == 2000
+    assert limit_for("grandmaster") == 2000
     assert limit_for("tak-ada") == 100
 
 

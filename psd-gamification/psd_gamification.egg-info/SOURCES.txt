@@ -1,0 +1,15 @@
+README.md
+pyproject.toml
+psd_gamification/__init__.py
+psd_gamification/badges.py
+psd_gamification/data.py
+psd_gamification/gamification.json
+psd_gamification/points.py
+psd_gamification/quota.py
+psd_gamification/seams.py
+psd_gamification/tiers.py
+psd_gamification.egg-info/PKG-INFO
+psd_gamification.egg-info/SOURCES.txt
+psd_gamification.egg-info/dependency_links.txt
+psd_gamification.egg-info/top_level.txt
+tests/test_gamification.py

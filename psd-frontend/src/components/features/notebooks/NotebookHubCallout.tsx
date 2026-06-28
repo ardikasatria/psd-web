@@ -23,7 +23,7 @@ export function NotebookHubCallout({ compact }: { compact?: boolean }) {
           <CpuChipIcon className="size-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Kernel server (tier menengah+)</h3>
+          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Kernel server (tier Ahli+)</h3>
           <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
             Untuk compute berat — kernel terisolasi di belakang layar via OAuth PSD. UI JupyterHub tidak perlu dibuka
             manual setelah login.

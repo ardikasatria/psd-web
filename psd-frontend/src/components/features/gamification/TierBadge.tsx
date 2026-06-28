@@ -1,19 +1,8 @@
 import clsx from 'clsx'
 import Image from 'next/image'
+import { TIER_BADGE_FILES, TIER_LABELS, tierLabel } from '@/lib/gamification/config'
 
-const TIER_FILES = [
-  'Badges-psd-01-pemula.svg',
-  'Badges-psd-02-kontributor.svg',
-  'Badges-psd-03-ahli.svg',
-  'Badges-psd-04-master.svg',
-  'Badges-psd-05-grandmaster.svg',
-] as const
-
-const TIER_NAMES = ['Pemula', 'Kontributor', 'Ahli', 'Master', 'Grandmaster'] as const
-
-export function tierLabel(level: number) {
-  return TIER_NAMES[Math.min(Math.max(level, 0), TIER_NAMES.length - 1)]
-}
+export { tierLabel }
 
 export function TierBadge({
   level,
@@ -26,7 +15,7 @@ export function TierBadge({
   className?: string
   title?: string
 }) {
-  const idx = Math.min(Math.max(level, 0), TIER_FILES.length - 1)
+  const idx = Math.min(Math.max(level, 0), TIER_BADGE_FILES.length - 1)
   const sizes = { sm: 40, md: 56, lg: 80 }[size]
 
   return (
@@ -35,7 +24,7 @@ export function TierBadge({
       title={title ?? tierLabel(idx)}
     >
       <Image
-        src={`/badges/${TIER_FILES[idx]}`}
+        src={`/badges/${TIER_BADGE_FILES[idx]}`}
         alt={tierLabel(idx)}
         width={sizes}
         height={sizes}
@@ -45,3 +34,6 @@ export function TierBadge({
     </span>
   )
 }
+
+// Backward compat for code importing TIER_NAMES
+export const TIER_NAMES = TIER_LABELS

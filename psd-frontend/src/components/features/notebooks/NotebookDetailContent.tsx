@@ -141,7 +141,10 @@ export function NotebookDetailContent({ id }: { id: string }) {
                     <p className="mt-1 text-lg font-semibold">Workspace notebook</p>
                   </div>
                   <div className="space-y-4 p-5">
-                    <OpenNotebookButton className="w-full [&_a]:w-full [&_button]:w-full [&_a]:justify-center [&_button]:justify-center" />
+                    <OpenNotebookButton
+                      notebookId={id}
+                      className="w-full [&_a]:w-full [&_button]:w-full [&_a]:justify-center [&_button]:justify-center"
+                    />
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
                       Jalankan di editor terintegrasi PSD — lihat{' '}
                       <Link href="/help/notebook-membuka" className="text-primary-600 hover:underline dark:text-primary-400">

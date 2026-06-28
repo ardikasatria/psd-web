@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import uuid
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Request, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -14,10 +14,14 @@ from app.core.pagination import PageParams, page_params, paginated
 from app.core.storage import upload_asset
 from app.modules.categories.service import apply_category_body, filter_by_category_slugs, load_category_refs
 from app.modules.gamification.service import after_course_published, award_reputation
-from app.modules.gamification.tiers import perks_for
+from app.modules.gamification.tiers import tier_slug_for_reputation
 from app.modules.learn.models import Course, Enrollment, LearningPath, LessonProgress, Notebook
 from app.modules.learn.path_utils import apply_path_payload, path_detail, path_summary
 from app.modules.learn.notebooks import colab_url
+from app.modules.notebook.launch import launch_notebook, user_tier_slug
+from app.modules.notebook.store import NotebookStore
+from psd_notebook.policy import NotebookQuotaError
+from psd_notebook import policy as nb_policy
 from app.modules.notifications.service import notify_staff
 from app.modules.teams.deps import membership, team_ref
 from app.modules.teams.models import Team
@@ -591,10 +595,16 @@ async def list_notebooks(
     category: str | None = None,
     subcategory: str | None = None,
     team: str | None = None,
+    mine: bool = False,
     p: PageParams = Depends(page_params),
+    user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(Notebook).options(selectinload(Notebook.owner))
+    if mine:
+        if not user:
+            raise ApiError(401, "unauthorized", "Login diperlukan untuk melihat notebook Anda.")
+        stmt = stmt.where(Notebook.owner_id == user.id)
     if q:
         stmt = stmt.where(Notebook.title.ilike(f"%{q}%"))
     stmt = await filter_by_category_slugs(db, stmt, Notebook, category, subcategory)
@@ -615,6 +625,25 @@ def _nb_owner(n: Notebook) -> dict:
     return owner_ref_dict(n.owner)
 
 
+@router.get("/notebooks/me/usage")
+async def notebook_usage(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    store = NotebookStore(db)
+    tier = await user_tier_slug(user)
+    lim = nb_policy.limits_for(tier)
+    owned = await store.count(user.id)
+    return {
+        "tier": tier,
+        "owned": owned,
+        "limits": {
+            "max_notebooks": lim.max_notebooks,
+            "max_concurrent_kernels": lim.max_concurrent_kernels,
+            "runtime": lim.runtime,
+            "cpu": lim.cpu,
+            "mem_gb": lim.mem_gb,
+        },
+    }
+
+
 @router.get("/notebooks/{nb_id}")
 async def get_notebook(nb_id: str, db: AsyncSession = Depends(get_db)):
     n = (
@@ -633,26 +662,81 @@ async def create_notebook(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    quota = perks_for(user.reputation or 0)["notebook_quota"]
-    owned = (
-        await db.execute(select(func.count()).select_from(Notebook).where(Notebook.owner_id == user.id))
-    ).scalar_one()
-    if owned >= quota:
-        raise ApiError(429, "limit_reached", f"Kuota notebook tercapai ({quota})")
+    store = NotebookStore(db)
+    tier = tier_slug_for_reputation(user.reputation or 0)
+    try:
+        nb_policy.check_can_create(tier, await store.count(user.id))
+    except NotebookQuotaError as exc:
+        raise ApiError(429, "limit_reached", str(exc)) from exc
     team_id = await _resolve_notebook_team_id(db, body.get("team_id"), user)
-    n = Notebook(
-        title=body["title"],
-        owner_id=user.id,
-        description=body.get("description", ""),
-        tags=body.get("tags", []),
-        source_url=body.get("source_url"),
-        team_id=team_id,
-    )
+    n = await store.create(user.id, body["title"])
+    n.description = body.get("description", "")
+    n.tags = body.get("tags", [])
+    n.source_url = body.get("source_url")
+    n.team_id = team_id
     await apply_category_body(db, body, n)
-    db.add(n)
     await db.commit()
     await db.refresh(n)
     return await get_notebook(n.id, db)
+
+
+@router.get("/notebooks/{nb_id}/content")
+async def get_notebook_content(
+    nb_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    store = NotebookStore(db)
+    n = await store.get(nb_id)
+    if not n:
+        raise ApiError(404, "not_found", "Notebook tidak ditemukan")
+    await _can_edit_notebook(db, n, user)
+    content = await store.content_or_blank(n)
+    await db.commit()
+    return {"id": n.id, "content": content}
+
+
+@router.put("/notebooks/{nb_id}/content")
+async def put_notebook_content(
+    nb_id: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    store = NotebookStore(db)
+    n = await store.get(nb_id)
+    if not n:
+        raise ApiError(404, "not_found", "Notebook tidak ditemukan")
+    await _can_edit_notebook(db, n, user)
+    content = body.get("content")
+    if not isinstance(content, dict) or "cells" not in content:
+        raise ApiError(400, "invalid_body", "Field 'content' harus objek .ipynb dengan 'cells'.")
+    await store.save_content(n, content)
+    await db.commit()
+    return {"id": n.id, "saved": True}
+
+
+@router.post("/notebooks/{nb_id}/launch")
+async def launch_notebook_endpoint(
+    nb_id: str,
+    body: dict,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    n = (await db.execute(select(Notebook).where(Notebook.id == nb_id))).scalar_one_or_none()
+    if not n:
+        raise ApiError(404, "not_found", "Notebook tidak ditemukan")
+    await _can_edit_notebook(db, n, user)
+    tier = await user_tier_slug(user)
+    api_base = f"{request.url.scheme}://{request.url.netloc}/api/v1"
+    out = await launch_notebook(
+        tier=tier,
+        requested_runtime=body.get("runtime"),
+        user_id=user.id,
+        api_base=api_base,
+    )
+    return {"notebook_id": n.id, **out}
 
 
 @router.patch("/notebooks/{nb_id}")

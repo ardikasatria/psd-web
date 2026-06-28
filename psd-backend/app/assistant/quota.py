@@ -1,45 +1,28 @@
-"""Kuota AI per tier gamifikasi (Langkah 57)."""
+"""Kuota AI — delegasi ke psd_gamification."""
 from __future__ import annotations
 
 import time
 
-QUOTAS = {"pemula": 20, "menengah": 100, "lanjut": 500}
-DEFAULT_TIER = "pemula"
+from psd_gamification import quota as gq
+
+FEATURE = "ai.messages_per_day"
+QuotaExceeded = gq.QuotaExceeded
 
 
-class QuotaExceeded(Exception):
-    pass
+def limit_for(tier_slug: str | None) -> int:
+    return int(gq.quota(FEATURE, tier_slug or "pemula"))
 
 
-def limit_for(tier: str | None) -> int:
-    return QUOTAS.get((tier or "").lower(), QUOTAS[DEFAULT_TIER])
-
-
-def check_and_consume(store, user_id: str, tier: str, *, cost: int = 1) -> dict:
-    limit = limit_for(tier)
-    used = store.incr(user_id, cost)
-    if used > limit:
-        store.incr(user_id, -cost)
-        raise QuotaExceeded(f"Kuota AI tier '{tier}' habis ({limit}/jendela).")
-    return {"used": used, "limit": limit, "remaining": limit - used}
+def check_and_consume(store, user_id: str, tier_slug: str, *, cost: int = 1) -> dict:
+    return gq.check_and_consume(store, FEATURE, user_id, tier_slug, cost=cost)
 
 
 class InMemoryWindowStore:
     def __init__(self, window_s: int = 86400, clock=time.time):
-        self.window_s = window_s
-        self.clock = clock
-        self._data: dict[str, tuple[int, float]] = {}
+        self._inner = gq.InMemoryWindowStore(window_s=window_s, clock=clock)
 
     def incr(self, key: str, amount: int = 1) -> int:
-        now = self.clock()
-        count, start = self._data.get(key, (0, now))
-        if now - start >= self.window_s:
-            count, start = 0, now
-        if amount == 0:
-            return count
-        count += amount
-        self._data[key] = (count, start)
-        return count
+        return self._inner.incr(key, amount)
 
 
 class RedisWindowStore:

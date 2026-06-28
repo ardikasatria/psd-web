@@ -145,7 +145,7 @@ export function NotebookConceptSection() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
-          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Kernel server (tier menengah+)</h3>
+          <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Kernel server (tier Ahli+)</h3>
           <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
             Analisis berat dengan library Python penuh:
           </p>

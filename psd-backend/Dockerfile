@@ -6,9 +6,15 @@ WORKDIR /code
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY psd-backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY psd-gamification /psd-gamification
+RUN pip install --no-cache-dir /psd-gamification
+
+COPY psd-notebook /psd-notebook
+RUN pip install --no-cache-dir /psd-notebook
+
+COPY psd-backend .
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

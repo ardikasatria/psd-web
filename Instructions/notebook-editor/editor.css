@@ -1,0 +1,99 @@
+/* Gaya dasar editor notebook. Netral & themable — agen menerapkan token desain PSD.
+   Variabel CSS agar mudah disesuaikan ke identitas visual PSD. */
+.nb-editor {
+  --nb-bg: #ffffff;
+  --nb-fg: #1a1a1a;
+  --nb-muted: #6b7280;
+  --nb-border: #e5e7eb;
+  --nb-accent: #0b8457;        /* ganti ke aksen PSD */
+  --nb-code-bg: #f7f8fa;
+  --nb-error: #b91c1c;
+  --nb-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  color: var(--nb-fg);
+  background: var(--nb-bg);
+  font-family: system-ui, sans-serif;
+}
+
+/* Toolbar */
+.nb-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--nb-bg);
+  border-bottom: 1px solid var(--nb-border);
+}
+.nb-toolbar button {
+  font: inherit;
+  padding: 6px 10px;
+  border: 1px solid var(--nb-border);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+.nb-toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.nb-primary,
+.nb-toolbar .nb-primary {
+  background: var(--nb-accent);
+  color: #fff;
+  border-color: var(--nb-accent);
+}
+.nb-toolbar__left { display: flex; gap: 8px; flex-wrap: wrap; }
+.nb-toolbar__right { display: flex; gap: 12px; align-items: center; color: var(--nb-muted); font-size: 13px; }
+.nb-runtime { padding: 2px 8px; border-radius: 999px; background: var(--nb-code-bg); }
+.nb-status { display: inline-flex; align-items: center; gap: 6px; }
+.nb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--nb-muted); }
+.nb-status--idle .nb-dot { background: var(--nb-accent); }
+.nb-status--busy .nb-dot { background: #d97706; animation: nb-pulse 1s infinite; }
+.nb-status--dead .nb-dot { background: var(--nb-error); }
+@keyframes nb-pulse { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .nb-status--busy .nb-dot { animation: none; } }
+
+/* Sel */
+.nb-cells { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.nb-cell {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  gap: 8px;
+  border: 1px solid var(--nb-border);
+  border-radius: 8px;
+  padding: 8px;
+}
+.nb-cell:focus-within { border-color: var(--nb-accent); }
+.nb-cell__gutter { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.nb-run { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--nb-border); background: #fff; cursor: pointer; }
+.nb-count { font: 11px var(--nb-mono); color: var(--nb-muted); }
+
+.nb-src {
+  width: 100%;
+  border: 0;
+  resize: vertical;
+  font: 13px/1.5 var(--nb-mono);
+  background: var(--nb-code-bg);
+  padding: 8px;
+  border-radius: 6px;
+}
+.nb-cell--markdown .nb-src { background: #fff; font-family: inherit; }
+.nb-src:focus { outline: 2px solid var(--nb-accent); outline-offset: 1px; }
+.nb-md { padding: 6px 8px; }
+
+.nb-outputs { margin-top: 8px; }
+.nb-out { margin: 4px 0; padding: 6px 8px; font: 12px/1.5 var(--nb-mono); white-space: pre-wrap; border-radius: 6px; background: var(--nb-code-bg); }
+.nb-stream.is-err, .nb-error { color: var(--nb-error); background: #fef2f2; }
+.nb-html { font-family: inherit; }
+
+.nb-cell__actions { display: flex; flex-direction: column; gap: 4px; }
+.nb-cell__actions button { font: inherit; width: 40px; padding: 4px; border: 1px solid var(--nb-border); border-radius: 6px; background: #fff; cursor: pointer; }
+.nb-danger { color: var(--nb-error); }
+
+@media (max-width: 640px) {
+  .nb-cell { grid-template-columns: 40px 1fr; }
+  .nb-cell__actions { grid-column: 1 / -1; flex-direction: row; }
+}

@@ -1,4 +1,5 @@
 import type { ContributorRow, Quest, Tier } from '@/types/api'
+import { TIER_LABELS } from '@/lib/gamification/config'
 
 export type ReputationGoal = {
   kind: 'tier' | 'rank'
@@ -24,8 +25,7 @@ export function tierGoal(tier: Tier): ReputationGoal | null {
   if (tier.next_at == null) return null
   const gap = Math.max(0, tier.next_at - tier.reputation)
   if (gap === 0) return null
-  const names = ['Pemula', 'Kontributor', 'Ahli', 'Master', 'Grandmaster']
-  const nextName = names[Math.min(tier.level + 1, names.length - 1)]
+  const nextName = TIER_LABELS[Math.min(tier.level + 1, TIER_LABELS.length - 1)]
   return {
     kind: 'tier',
     label: 'Tier berikutnya',

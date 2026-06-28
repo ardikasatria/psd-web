@@ -9,6 +9,7 @@ import Link from 'next/link'
 const WORKSPACE_PATH = '/notebooks/workspace'
 
 type Props = {
+  notebookId?: string
   outline?: boolean
   compact?: boolean
   plain?: boolean
@@ -16,10 +17,11 @@ type Props = {
 }
 
 /** CTA utama — editor notebook terintegrasi di dalam PSD (bukan buka tab Hub). */
-export function OpenNotebookButton({ outline, compact, plain, className }: Props) {
+export function OpenNotebookButton({ notebookId, outline, compact, plain, className }: Props) {
   const { isLoggedIn } = useAuth()
   const label = compact ? 'Mulai' : 'Mulai notebook'
-  const href = isLoggedIn ? WORKSPACE_PATH : `/login?next=${encodeURIComponent(WORKSPACE_PATH)}`
+  const target = notebookId ? `/notebooks/${notebookId}/workspace` : WORKSPACE_PATH
+  const href = isLoggedIn ? target : `/login?next=${encodeURIComponent(target)}`
 
   if (plain) {
     return (

@@ -1,31 +1,11 @@
-TIERS = [(0, "Pemula"), (50, "Kontributor"), (250, "Ahli"), (1000, "Master"), (5000, "Grandmaster")]
+"""Backward-compatible re-exports — gunakan psd_gamification sebagai sumber tunggal."""
+from psd_gamification.badges import achievement_badges
+from psd_gamification.data import load_manifest
+from psd_gamification.points import award as reputation_award
+from psd_gamification.points import reputation_points
+from psd_gamification.tiers import perks_for_reputation as perks_for
+from psd_gamification.tiers import tier_for_reputation as tier_for
 
+TIERS = [(t["min_reputation"], t["label"]) for t in load_manifest()["tiers"]]
 
-def tier_for(rep: int) -> dict:
-    idx = 0
-    for i, (threshold, _) in enumerate(TIERS):
-        if rep >= threshold:
-            idx = i
-    return {
-        "level": idx,
-        "name": TIERS[idx][1],
-        "reputation": rep,
-        "next_at": TIERS[idx + 1][0] if idx + 1 < len(TIERS) else None,
-    }
-
-
-def perks_for(rep: int) -> dict:
-    lvl = tier_for(rep)["level"]
-
-    def pick(arr):
-        return arr[min(lvl, len(arr) - 1)]
-
-    return {
-        "upload_max_mb": pick([50, 100, 200, 500, 1000]),
-        "daily_submission_bonus": pick([0, 2, 5, 10, 20]),
-        "notebook_quota": pick([5, 20, 50, 100, 1000]),
-        "event_priority": lvl >= 2,
-        "can_create_event": lvl >= 3,
-        "daily_post_limit": pick([5, 15, 30, 60, 100]),
-        "post_image_max": pick([1, 4, 6, 8, 10]),
-    }
+__all__ = ["TIERS", "tier_for", "perks_for", "reputation_points", "reputation_award", "achievement_badges"]

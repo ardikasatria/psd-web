@@ -23,15 +23,7 @@ import { useQuery } from '@tanstack/react-query'
 
 const TOP_N = 10
 
-const TIER_LEVEL: Record<string, number> = {
-  Pemula: 0,
-  Kontributor: 1,
-  Ahli: 2,
-  Master: 3,
-  Grandmaster: 4,
-}
-
-export function LeaderboardPageContent() {
+import { TIER_LEVEL_BY_LABEL } from '@/lib/gamification/config'
   const { user, isLoggedIn } = useAuth()
 
   const { data, isLoading, isError, error } = useQuery<PaginatedContributor>({
@@ -143,7 +135,7 @@ export function LeaderboardPageContent() {
                     <tbody>
                       {top10.map((row: ContributorRow) => {
                         const isMe = user?.username === row.user.username
-                        const level = TIER_LEVEL[row.tier] ?? 0
+                        const level = TIER_LEVEL_BY_LABEL[row.tier] ?? 0
                         const isTop3 = row.rank <= 3
                         return (
                           <tr

@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:notebook": "node --experimental-strip-types --test src/lib/notebooks/editor/notebookModel.test.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",

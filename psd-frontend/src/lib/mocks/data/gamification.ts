@@ -1,15 +1,13 @@
 import type { Gamification } from '@/types/api'
+import { ACHIEVEMENT_BADGES, perksFromTierSlug, tierSlugFromLevel } from '@/lib/gamification/config'
 
-export const MOCK_BADGES = [
-  { id: 'langkah-pertama', name: 'Langkah Pertama', tier: 'bronze' as const, description: 'Membuat aset pertama', earned: true },
-  { id: 'terhubung', name: 'Terhubung', tier: 'bronze' as const, description: 'Memiliki 10 pengikut', earned: true },
-  { id: 'populer', name: 'Populer', tier: 'silver' as const, description: 'Aset mencapai 50 suka', earned: false },
-  { id: 'berbagi-ilmu', name: 'Berbagi Ilmu', tier: 'silver' as const, description: 'Menerbitkan course pertama', earned: false },
-  { id: 'kontributor-aktif', name: 'Kontributor Aktif', tier: 'bronze' as const, description: 'Membuka 10 diskusi', earned: false },
-  { id: 'ramai', name: 'Ramai', tier: 'silver' as const, description: 'Postingan mencapai 25 suka', earned: false },
-  { id: 'juara', name: 'Juara', tier: 'gold' as const, description: 'Peringkat 1 leaderboard kompetisi', earned: false },
-  { id: 'berpengaruh', name: 'Berpengaruh', tier: 'gold' as const, description: 'Memiliki 500 pengikut', earned: false },
-]
+export const MOCK_BADGES = Object.entries(ACHIEVEMENT_BADGES).map(([id, meta]) => ({
+  id,
+  name: meta.name,
+  tier: meta.tier,
+  description: meta.description,
+  earned: id === 'langkah-pertama' || id === 'terhubung',
+}))
 
 export const mockGamificationByUser: Record<string, { reputation: number; tier: Gamification['tier']; badges: string[] }> = {
   psd: {
@@ -40,17 +38,10 @@ export function mockGamificationFor(username: string) {
     tier: { level: 0, name: 'Pemula', reputation: 12, next_at: 50 },
     badges: [] as string[],
   }
+  const slug = tierSlugFromLevel(base.tier.level)
   return {
     tier: base.tier,
-    perks: {
-      upload_max_mb: [50, 100, 200, 500, 1000][base.tier.level],
-      daily_submission_bonus: [0, 2, 5, 10, 20][base.tier.level],
-      notebook_quota: [5, 20, 50, 100, 1000][base.tier.level],
-      event_priority: base.tier.level >= 2,
-      can_create_event: base.tier.level >= 3,
-      daily_post_limit: [5, 15, 30, 60, 100][base.tier.level],
-      post_image_max: [1, 4, 6, 8, 10][base.tier.level],
-    },
+    perks: perksFromTierSlug(slug),
     badges: MOCK_BADGES.map((b) => ({ ...b, earned: base.badges.includes(b.id) })),
   }
 }

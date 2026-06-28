@@ -1,0 +1,237 @@
+{
+  "tiers": [
+    {
+      "slug": "pemula",
+      "label": "Pemula",
+      "level": 0,
+      "min_reputation": 0,
+      "badge_file": "Badges-psd-01-pemula.svg"
+    },
+    {
+      "slug": "kontributor",
+      "label": "Kontributor",
+      "level": 1,
+      "min_reputation": 50,
+      "badge_file": "Badges-psd-02-kontributor.svg"
+    },
+    {
+      "slug": "ahli",
+      "label": "Ahli",
+      "level": 2,
+      "min_reputation": 250,
+      "badge_file": "Badges-psd-03-ahli.svg"
+    },
+    {
+      "slug": "master",
+      "label": "Master",
+      "level": 3,
+      "min_reputation": 1000,
+      "badge_file": "Badges-psd-04-master.svg"
+    },
+    {
+      "slug": "grandmaster",
+      "label": "Grandmaster",
+      "level": 4,
+      "min_reputation": 5000,
+      "badge_file": "Badges-psd-05-grandmaster.svg"
+    }
+  ],
+  "reputation_points": {
+    "asset_published": 10,
+    "like_received": 2,
+    "course_completed": 15,
+    "submission_scored": 5,
+    "forum_thread": 3,
+    "forum_post": 1,
+    "follow_received": 2,
+    "post_like_received": 1,
+    "comment_made": 1,
+    "micro_completed": 1,
+    "room_finished": 30
+  },
+  "achievement_badges": {
+    "langkah-pertama": {
+      "name": "Langkah Pertama",
+      "tier": "bronze",
+      "description": "Membuat aset pertama"
+    },
+    "berbagi-ilmu": {
+      "name": "Berbagi Ilmu",
+      "tier": "silver",
+      "description": "Menerbitkan course pertama"
+    },
+    "populer": {
+      "name": "Populer",
+      "tier": "silver",
+      "description": "Aset mencapai 50 suka"
+    },
+    "kontributor-aktif": {
+      "name": "Kontributor Aktif",
+      "tier": "bronze",
+      "description": "Membuka 10 diskusi"
+    },
+    "juara": {
+      "name": "Juara",
+      "tier": "gold",
+      "description": "Peringkat 1 leaderboard kompetisi"
+    },
+    "terhubung": {
+      "name": "Terhubung",
+      "tier": "bronze",
+      "description": "Memiliki 10 pengikut"
+    },
+    "berpengaruh": {
+      "name": "Berpengaruh",
+      "tier": "gold",
+      "description": "Memiliki 500 pengikut"
+    },
+    "ramai": {
+      "name": "Ramai",
+      "tier": "silver",
+      "description": "Postingan mencapai 25 suka"
+    },
+    "konsisten": {
+      "name": "Konsisten",
+      "tier": "silver",
+      "description": "Streak 7 hari belajar"
+    },
+    "pemecah_masalah": {
+      "name": "Pemecah Masalah",
+      "tier": "bronze",
+      "description": "Menyelesaikan 1 ruang ide"
+    },
+    "arsitek_ide": {
+      "name": "Arsitek Ide",
+      "tier": "gold",
+      "description": "Master menyelesaikan ruang ide"
+    }
+  },
+  "quota": {
+    "platform.upload_max_mb": {
+      "pemula": 50,
+      "kontributor": 100,
+      "ahli": 200,
+      "master": 500,
+      "grandmaster": 1000
+    },
+    "platform.daily_submission_bonus": {
+      "pemula": 0,
+      "kontributor": 2,
+      "ahli": 5,
+      "master": 10,
+      "grandmaster": 20
+    },
+    "platform.notebook_quota": {
+      "pemula": 5,
+      "kontributor": 20,
+      "ahli": 50,
+      "master": 100,
+      "grandmaster": 1000
+    },
+    "platform.daily_post_limit": {
+      "pemula": 5,
+      "kontributor": 15,
+      "ahli": 30,
+      "master": 60,
+      "grandmaster": 100
+    },
+    "platform.post_image_max": {
+      "pemula": 1,
+      "kontributor": 4,
+      "ahli": 6,
+      "master": 8,
+      "grandmaster": 10
+    },
+    "notebook.max_notebooks": {
+      "pemula": 3,
+      "kontributor": 5,
+      "ahli": 10,
+      "master": 30,
+      "grandmaster": 50
+    },
+    "notebook.max_concurrent_kernels": {
+      "pemula": 1,
+      "kontributor": 1,
+      "ahli": 2,
+      "master": 3,
+      "grandmaster": 4
+    },
+    "notebook.runtime": {
+      "pemula": "browser",
+      "kontributor": "browser",
+      "ahli": "both",
+      "master": "both",
+      "grandmaster": "both"
+    },
+    "jupyter.cpu": {
+      "pemula": 1.0,
+      "kontributor": 1.5,
+      "ahli": 2.0,
+      "master": 3.0,
+      "grandmaster": 4.0
+    },
+    "jupyter.mem_gb": {
+      "pemula": 2,
+      "kontributor": 3,
+      "ahli": 4,
+      "master": 6,
+      "grandmaster": 8
+    },
+    "jupyter.idle_minutes": {
+      "pemula": 30,
+      "kontributor": 45,
+      "ahli": 60,
+      "master": 90,
+      "grandmaster": 120
+    },
+    "inference.per_hour": {
+      "pemula": 100,
+      "kontributor": 250,
+      "ahli": 500,
+      "master": 1200,
+      "grandmaster": 2000
+    },
+    "ai.messages_per_day": {
+      "pemula": 20,
+      "kontributor": 50,
+      "ahli": 100,
+      "master": 250,
+      "grandmaster": 500
+    },
+    "factory.runs_per_day": {
+      "pemula": 5,
+      "kontributor": 15,
+      "ahli": 40,
+      "master": 120,
+      "grandmaster": 400
+    },
+    "factory.max_rows": {
+      "pemula": 50000,
+      "kontributor": 200000,
+      "ahli": 1000000,
+      "master": 5000000,
+      "grandmaster": 20000000
+    },
+    "factory.max_nodes": {
+      "pemula": 8,
+      "kontributor": 15,
+      "ahli": 25,
+      "master": 40,
+      "grandmaster": 80
+    },
+    "synthesis.plans_per_day": {
+      "pemula": 3,
+      "kontributor": 15,
+      "ahli": 40,
+      "master": 100,
+      "grandmaster": 300
+    },
+    "synthesis.max_rows": {
+      "pemula": 2000,
+      "kontributor": 20000,
+      "ahli": 100000,
+      "master": 500000,
+      "grandmaster": 1000000
+    }
+  }
+}

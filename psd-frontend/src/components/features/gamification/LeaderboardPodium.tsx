@@ -9,15 +9,7 @@ import { TrophyIcon } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
 import Link from 'next/link'
 
-const TIER_LEVEL: Record<string, number> = {
-  Pemula: 0,
-  Kontributor: 1,
-  Ahli: 2,
-  Master: 3,
-  Grandmaster: 4,
-}
-
-const PODIUM = [
+import { TIER_LEVEL_BY_LABEL } from '@/lib/gamification/config' = [
   { place: 2, height: 'h-28', gradient: 'from-sky-200/90 to-indigo-100/80 dark:from-sky-900/40 dark:to-indigo-950/30', ring: 'ring-sky-200/80 dark:ring-sky-800/50' },
   { place: 1, height: 'h-36', gradient: 'from-primary-200/90 to-amber-100/80 dark:from-primary-900/50 dark:to-amber-950/30', ring: 'ring-primary-300/80 dark:ring-primary-700/50' },
   { place: 3, height: 'h-24', gradient: 'from-indigo-200/80 to-violet-100/70 dark:from-indigo-900/40 dark:to-violet-950/30', ring: 'ring-indigo-200/80 dark:ring-indigo-800/50' },
@@ -25,7 +17,7 @@ const PODIUM = [
 
 function PodiumSlot({ row, place, isMe }: { row: ContributorRow | undefined; place: number; isMe: boolean }) {
   const config = PODIUM.find((p) => p.place === place)!
-  const level = row ? (TIER_LEVEL[row.tier] ?? 0) : 0
+  const level = row ? (TIER_LEVEL_BY_LABEL[row.tier] ?? 0) : 0
 
   if (!row) {
     return (

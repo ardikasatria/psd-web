@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { ACHIEVEMENT_BADGES } from '@/lib/gamification/config'
 
 const TIER_STYLES = {
   bronze: {
@@ -88,13 +89,9 @@ export function AchievementBadge({
   )
 }
 
-export const BADGE_META: Record<string, { name: string; tier: 'bronze' | 'silver' | 'gold'; description: string }> = {
-  'langkah-pertama': { name: 'Langkah Pertama', tier: 'bronze', description: 'Membuat aset pertama' },
-  'berbagi-ilmu': { name: 'Berbagi Ilmu', tier: 'silver', description: 'Menerbitkan course pertama' },
-  populer: { name: 'Populer', tier: 'silver', description: 'Aset mencapai 50 suka' },
-  'kontributor-aktif': { name: 'Kontributor Aktif', tier: 'bronze', description: 'Membuka 10 diskusi' },
-  juara: { name: 'Juara', tier: 'gold', description: 'Peringkat 1 leaderboard kompetisi' },
-  terhubung: { name: 'Terhubung', tier: 'bronze', description: 'Memiliki 10 pengikut' },
-  berpengaruh: { name: 'Berpengaruh', tier: 'gold', description: 'Memiliki 500 pengikut' },
-  ramai: { name: 'Ramai', tier: 'silver', description: 'Postingan mencapai 25 suka' },
-}
+export const BADGE_META: Record<
+  string,
+  { name: string; tier: 'bronze' | 'silver' | 'gold'; description: string }
+> = Object.fromEntries(
+  Object.entries(ACHIEVEMENT_BADGES).map(([id, meta]) => [id, meta]),
+) as Record<string, { name: string; tier: 'bronze' | 'silver' | 'gold'; description: string }>

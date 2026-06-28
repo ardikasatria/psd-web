@@ -64,7 +64,9 @@ services:
       - meilidata:/meili_data
 
   backend:
-    build: ../psd-backend
+    build:
+      context: ..
+      dockerfile: psd-backend/Dockerfile
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-psd}:${POSTGRES_PASSWORD:-psd}@db:5432/${POSTGRES_DB:-psd}
       REDIS_URL: redis://redis:6379/0
@@ -110,7 +112,8 @@ services:
 
   frontend:
     build:
-      context: ../psd-frontend
+      context: ..
+      dockerfile: psd-frontend/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: http://${VM_IP:-localhost}:8000
         NEXT_PUBLIC_USE_MOCKS: "false"

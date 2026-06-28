@@ -1,6 +1,6 @@
-/** Map tier gamifikasi PSD → tier notebook (pemula/menengah/lanjut). */
-export function hubTierFromGamificationLevel(level: number): 'pemula' | 'menengah' | 'lanjut' {
-  if (level <= 1) return 'pemula'
-  if (level === 2) return 'menengah'
-  return 'lanjut'
+/** Map level gamifikasi PSD (0–4) → slug tier kanonik. */
+import { tierSlugFromLevel, type TierSlug } from '@/lib/gamification/config'
+
+export function hubTierFromGamificationLevel(level: number): TierSlug {
+  return tierSlugFromLevel(level)
 }

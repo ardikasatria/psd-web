@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "psd-gamification"
+version = "1.0.0"
+description = "Sumber kebenaran tunggal tier, poin, dan kuota gamifikasi PSD"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["psd_gamification*"]
+
+[tool.setuptools.package-data]
+psd_gamification = ["gamification.json"]

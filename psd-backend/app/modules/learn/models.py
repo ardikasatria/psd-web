@@ -81,5 +81,6 @@ class Notebook(Base):
     subcategory_id: Mapped[str | None] = mapped_column(ForeignKey("categories.id"), nullable=True, index=True)
     team_id: Mapped[str | None] = mapped_column(ForeignKey("teams.id"), nullable=True, index=True)
     room_id: Mapped[str | None] = mapped_column(ForeignKey("idea_rooms.id"), nullable=True, index=True)
+    content_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     owner: Mapped[User] = relationship(lazy="selectin")

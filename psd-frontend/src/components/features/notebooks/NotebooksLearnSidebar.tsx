@@ -22,7 +22,7 @@ import Link from 'next/link'
 
 const NOTEBOOK_TIPS = [
   'Notebook terintegrasi PSD — jalankan langsung di workspace, tanpa UI JupyterHub.',
-  'Tier pemula: JupyterLite di browser. Tier menengah+: kernel server dengan kuota CPU/RAM.',
+  'Tier Pemula–Kontributor: JupyterLite di browser. Tier Ahli+: kernel server dengan kuota CPU/RAM.',
   'Muat dataset dengan psd.load (server) atau psd-lite (browser).',
   'Push .ipynb ke Git lalu daftarkan ke katalog agar komunitas belajar dari workflow Anda.',
 ]

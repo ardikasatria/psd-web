@@ -172,7 +172,9 @@ services:
     restart: unless-stopped
 
   backend:
-    build: ../psd-backend
+    build:
+      context: ..
+      dockerfile: psd-backend/Dockerfile
     environment: *backend-env
     volumes:
       - ./secrets/psd_oidc.pem:/run/secrets/psd_oidc.pem:ro
@@ -189,7 +191,9 @@ services:
     restart: unless-stopped
 
   worker-ai:
-    build: ../psd-backend
+    build:
+      context: ..
+      dockerfile: psd-backend/Dockerfile
     environment: *backend-env
     volumes:
       - ./secrets/psd_oidc.pem:/run/secrets/psd_oidc.pem:ro
@@ -204,7 +208,9 @@ services:
     restart: unless-stopped
 
   worker-pabrik:
-    build: ../psd-backend
+    build:
+      context: ..
+      dockerfile: psd-backend/Dockerfile
     environment: *backend-env
     volumes:
       - ./secrets/psd_oidc.pem:/run/secrets/psd_oidc.pem:ro
@@ -219,7 +225,9 @@ services:
     restart: unless-stopped
 
   worker-spark:
-    build: ../psd-backend
+    build:
+      context: ..
+      dockerfile: psd-backend/Dockerfile
     environment: *backend-env
     volumes:
       - ./secrets/psd_oidc.pem:/run/secrets/psd_oidc.pem:ro
@@ -236,7 +244,9 @@ services:
       - spark
 
   worker-email:
-    build: ../psd-backend
+    build:
+      context: ..
+      dockerfile: psd-backend/Dockerfile
     environment: *backend-env
     volumes:
       - ./secrets/psd_oidc.pem:/run/secrets/psd_oidc.pem:ro
@@ -251,7 +261,9 @@ services:
     restart: unless-stopped
 
   celery-beat:
-    build: ../psd-backend
+    build:
+      context: ..
+      dockerfile: psd-backend/Dockerfile
     environment: *backend-env
     depends_on:
       redis:
@@ -260,7 +272,9 @@ services:
     restart: unless-stopped
 
   flower:
-    build: ../psd-backend
+    build:
+      context: ..
+      dockerfile: psd-backend/Dockerfile
     environment: *backend-env
     depends_on:
       redis:
@@ -272,7 +286,8 @@ services:
 
   frontend:
     build:
-      context: ../psd-frontend
+      context: ..
+      dockerfile: psd-frontend/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: https://api.${DOMAIN}
         NEXT_PUBLIC_STORAGE_HOST: storage.${DOMAIN}

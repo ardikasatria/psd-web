@@ -1,14 +1,9 @@
-"""JupyterHub integration — dataset resolve & tier mapping (Langkah 52)."""
+"""JupyterHub integration — tier slug dari gamifikasi PSD (Langkah 52)."""
 from __future__ import annotations
 
-from app.modules.gamification.tiers import tier_for
+from psd_gamification.seams import user_tier_slug_from_reputation
 
 
 def hub_tier_for_reputation(reputation: int) -> str:
-    """Map tier gamifikasi PSD → tier notebook (pemula/menengah/lanjut)."""
-    level = tier_for(reputation or 0)["level"]
-    if level <= 1:
-        return "pemula"
-    if level == 2:
-        return "menengah"
-    return "lanjut"
+    """Tier kanonik (pemula → grandmaster) untuk klaim OIDC psd_tier & kuota."""
+    return user_tier_slug_from_reputation(reputation)

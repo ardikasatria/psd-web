@@ -78,9 +78,11 @@ async def client(monkeypatch):
 
 def test_hub_tier_mapping():
     assert hub_tier_for_reputation(0) == "pemula"
-    assert hub_tier_for_reputation(50) == "pemula"
-    assert hub_tier_for_reputation(250) == "menengah"
-    assert hub_tier_for_reputation(5000) == "lanjut"
+    assert hub_tier_for_reputation(49) == "pemula"
+    assert hub_tier_for_reputation(50) == "kontributor"
+    assert hub_tier_for_reputation(250) == "ahli"
+    assert hub_tier_for_reputation(1000) == "master"
+    assert hub_tier_for_reputation(5000) == "grandmaster"
 
 
 @pytest.mark.asyncio

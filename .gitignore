@@ -7,6 +7,8 @@
 !/psd-jupyterhub/
 !/psd-superset/
 !/Instructions/
+!/psd-gamification/
+!/psd-notebook/
 
 # Dependencies
 **/node_modules/

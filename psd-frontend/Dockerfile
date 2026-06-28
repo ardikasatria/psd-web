@@ -1,12 +1,13 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY psd-frontend/package.json psd-frontend/package-lock.json ./
 RUN npm ci
 
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY psd-frontend/ .
+COPY psd-gamification /psd-gamification
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_USE_MOCKS=false
 ARG NEXT_PUBLIC_APP_NAME="Projek Sains Data"
