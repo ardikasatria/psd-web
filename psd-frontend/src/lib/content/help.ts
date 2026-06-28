@@ -13,7 +13,7 @@ export type HelpArticle = {
 export const helpCategories: { id: HelpCategory; label: string; description: string }[] = [
   { id: 'mulai', label: 'Mulai', description: 'Orientasi platform & langkah pertama' },
   { id: 'git', label: 'Git & repo', description: 'Clone, push, LFS, dan Pull Request' },
-  { id: 'notebook', label: 'Notebook', description: 'JupyterHub & SDK psd://' },
+  { id: 'notebook', label: 'Notebook', description: 'Jupyter Notebook & SDK psd://' },
   { id: 'komunitas', label: 'Komunitas', description: 'Etika, FAQ, dan pedoman' },
 ]
 
@@ -33,7 +33,7 @@ Projek Sains Data (PSD) adalah platform kolaboratif untuk menemukan, membagikan,
 - **Model siap pakai** — contoh implementasi untuk bahasa Indonesia.
 - **Kompetisi & komunitas** — belajar sambil berkontribusi pada masalah nyata.
 - **Pabrik Data & analitik** — pipeline, dashboard, dan ruang ide kolaboratif.
-- **Git & notebook** — versioning nyata (Gitea) dan JupyterHub terintegrasi login PSD.
+- **Git & notebook** — versioning nyata (Gitea) dan Jupyter Notebook terintegrasi login PSD.
 
 PSD dikurasi oleh tim resmi dan komunitas praktisi di seluruh nusantara.
 
@@ -88,7 +88,7 @@ Ikuti urutan ini agar pengalaman pertama Anda di PSD lancar.
 Setelah repo aktif di Git (Gitea):
 
 - Baca [Menyiapkan akses Git](/help/git-menyiapkan-akses) sebelum \`git push\` dari laptop.
-- Baca [Membuka notebook](/help/notebook-membuka) untuk JupyterHub & SDK \`psd://\`.
+- Baca [Membuka notebook](/help/notebook-membuka) untuk Jupyter Notebook & SDK \`psd://\`.
 
 ## 6. Atur notifikasi
 
@@ -250,7 +250,7 @@ git push origin fitur-baru
     slug: 'notebook-membuka',
     category: 'notebook',
     title: 'Membuka notebook',
-    description: 'JupyterHub PSD, login OAuth, dan batas sumber daya tier.',
+    description: 'Jupyter Notebook PSD, login OAuth, dan batas sumber daya tier.',
     content: `# Membuka notebook
 
 ## Dari mana membuka?
@@ -258,15 +258,15 @@ git push origin fitur-baru
 - Halaman **repo** atau **Ruang Ide** → tombol **Buka Notebook**
 - Menu notebook di PSD (bila tersedia)
 
-Tombol membuka **JupyterHub** dengan login PSD otomatis (OAuth) — tidak perlu instalasi Jupyter di laptop.
+Tombol membuka **Jupyter Notebook** dengan login PSD otomatis (OAuth) — tidak perlu instalasi Jupyter di laptop.
 
 ## Apa yang terjadi?
 
-1. Anda diarahkan ke subdomain **hub.** domain PSD.
+1. Anda diarahkan ke layanan **Jupyter Notebook** PSD (subdomain hub).
 2. Server notebook **pribadi** disiapkan (spawn) — tunggu beberapa detik.
 3. JupyterLab terbuka; folder kerja persisten di \`~/work\`.
 
-> **Catatan:** Fitur notebook membutuhkan JupyterHub aktif di instalasi PSD. Jika tombol tidak muncul, hubungi admin.
+> **Catatan:** Fitur notebook membutuhkan Jupyter Notebook aktif di instalasi PSD. Jika tombol tidak muncul, hubungi admin.
 
 ## Batas sumber daya (CPU-only)
 
@@ -285,7 +285,7 @@ Lanjut: [Dataset psd://](/help/notebook-dataset-sdk) · [Simpan & push notebook]
     slug: 'notebook-dataset-sdk',
     category: 'notebook',
     title: 'Mengakses dataset (psd://)',
-    description: 'SDK psd.load dan psd.download di JupyterHub.',
+    description: 'SDK psd.load dan psd.download di Jupyter Notebook.',
     content: `# Mengakses dataset dengan psd://
 
 Image notebook PSD sudah memuat library **psd**. Kredensial API (\`PSD_API_BASE\`, token) **diinjeksikan otomatis** saat server dijalankan — jangan hard-code secret di notebook.
@@ -326,13 +326,13 @@ Unduh notebook **Mulai Cepat PSD** yang sudah berisi contoh di atas:
 
 [Unduh mulai-cepat-psd.ipynb](/docs/mulai-cepat-psd.ipynb)
 
-Unggah ke JupyterHub (\`~/work\`) atau buka langsung setelah unduh.`,
+Unggah ke Jupyter Notebook (\`~/work\`) atau buka langsung setelah unduh.`,
   },
   {
     slug: 'notebook-simpan-push',
     category: 'notebook',
     title: 'Menyimpan & push notebook',
-    description: 'Commit .ipynb ke Git dari JupyterHub.',
+    description: 'Commit .ipynb ke Git dari Jupyter Notebook.',
     content: `# Menyimpan & mendorong notebook ke Git
 
 ## Bersihkan output sebelum commit
@@ -342,7 +342,7 @@ Output notebook (grafik, log) membuat diff Git besar dan sulit direview.
 1. Di Jupyter: **Kernel → Restart Kernel and Clear Outputs**
 2. Simpan notebook (**Ctrl+S** / Cmd+S)
 
-## Push via terminal JupyterHub
+## Push via terminal Jupyter Notebook
 
 1. **File → New → Terminal**
 2. Clone repo (jika belum) — gunakan URL dari banner clone PSD:
@@ -408,7 +408,7 @@ Gunakan [Lupa kata sandi](/forgot-password). Email reset berlaku ±30 menit. Res
 
 ## Notebook tidak bisa dibuka?
 
-- JupyterHub mungkin belum diaktifkan admin.
+- Jupyter Notebook mungkin belum diaktifkan admin.
 - Server sedang spawn — tunggu 1–2 menit.
 - Tier/RAM penuh — coba lagi setelah server idle di-stop otomatis.
 

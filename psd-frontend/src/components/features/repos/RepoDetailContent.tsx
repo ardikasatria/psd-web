@@ -10,13 +10,15 @@ import { RepoCloneBanner } from '@/components/features/repos/RepoCloneBanner'
 import { RepoEditDialog } from '@/components/features/repos/RepoEditDialog'
 import { RepoFilesPanel } from '@/components/features/repos/RepoFilesPanel'
 import { RepoMlRegistryLink } from '@/components/features/repos/RepoMlRegistryLink'
+import { RepoRegisterModelVersion } from '@/components/features/repos/RepoRegisterModelVersion'
+import { RepoContributePanel } from '@/components/features/repos/RepoContributePanel'
 import { RepoPullRequestsPanel } from '@/components/features/repos/RepoPullRequestsPanel'
 import { ThreadCard } from '@/components/features/ThreadCard'
 import { QueryState } from '@/components/features/QueryState'
 import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import { createRepoDiscussion, getRepoDiscussions } from '@/lib/api/community'
 import { useAuth } from '@/lib/auth/useAuth'
-import { getRepo } from '@/lib/api/repos'
+import { getRepo, provisionRepoGit } from '@/lib/api/repos'
 import { profilePath } from '@/lib/routes/profile'
 import { Badge } from '@/shared/Badge'
 import ButtonPrimary from '@/shared/ButtonPrimary'
@@ -28,7 +30,7 @@ import clsx from 'clsx'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { FormEvent, Suspense, useState } from 'react'
+import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { PencilSquareIcon } from '@heroicons/react/24/outline'
 
 const kindLabel: Record<RepoKind, string> = {
@@ -104,12 +106,33 @@ export function RepoDetailContent({
 
   const refreshRepo = () => qc.invalidateQueries({ queryKey: repoKey })
 
-  const tabs: { id: TabId; label: string }[] = [
-    { id: 'readme', label: 'README' },
-    { id: 'files', label: 'File' },
-    { id: 'pulls', label: 'Kontribusi' },
-    { id: 'discussions', label: 'Diskusi' },
-  ]
+  const linkGit = useMutation({
+    mutationFn: () => provisionRepoGit(data!.id),
+    onSuccess: () => refreshRepo(),
+  })
+  const triedLink = useRef(false)
+
+  useEffect(() => {
+    if (!isOwner || !data?.id || data.clone_url || triedLink.current) return
+    triedLink.current = true
+    linkGit.mutate()
+  }, [isOwner, data?.id, data?.clone_url, linkGit])
+
+  const tabs = useMemo(() => {
+    const items: { id: TabId; label: string }[] = [
+      { id: 'readme', label: 'README' },
+      { id: 'files', label: 'File' },
+    ]
+    if (data?.clone_url) {
+      items.push({ id: 'pulls', label: isOwner ? 'Kontribusi' : 'Ajukan kontribusi' })
+    }
+    items.push({ id: 'discussions', label: 'Diskusi' })
+    return items
+  }, [isOwner, data?.clone_url])
+
+  useEffect(() => {
+    if (tab === 'pulls' && !data?.clone_url) setTab('readme')
+  }, [tab, data?.clone_url])
 
   return (
     <DetailPageShell>
@@ -133,6 +156,11 @@ export function RepoDetailContent({
               actions={
                 <div className="flex flex-wrap gap-2">
                   {data.kind === 'model' && <RepoMlRegistryLink repoId={data.id} isOwner={isOwner} />}
+                  {!isOwner && data.clone_url && (
+                    <Button outline onClick={() => setTab('pulls')}>
+                      Ajukan kontribusi
+                    </Button>
+                  )}
                   {isOwner && (
                     <Button outline onClick={() => setEditOpen(true)}>
                       <PencilSquareIcon className="size-4" data-slot="icon" aria-hidden />
@@ -150,6 +178,10 @@ export function RepoDetailContent({
             </Suspense>
 
             {data.clone_url && <RepoCloneBanner cloneUrl={data.clone_url} />}
+
+            {data.kind === 'model' && isOwner && (
+              <RepoRegisterModelVersion repoId={data.id} isOwner={isOwner} />
+            )}
 
             <div className="flex flex-wrap gap-2">
               {data.tags.map((tag: string) => (
@@ -227,16 +259,24 @@ export function RepoDetailContent({
                   files={data.files}
                   isOwner={isOwner}
                   license={data.license}
+                  cloneUrl={data.clone_url}
+                  sourceOfTruth={data.source_of_truth}
                   onChange={refreshRepo}
                 />
               )}
 
-              {tab === 'pulls' && (
-                <RepoPullRequestsPanel
-                  repoId={data.id}
-                  isMaintainer={isOwner}
-                  cloneUrl={data.clone_url}
-                />
+              {tab === 'pulls' && data.clone_url && (
+                isOwner ? (
+                  <RepoPullRequestsPanel
+                    repoId={data.id}
+                    cloneUrl={data.clone_url}
+                    linkingGit={linkGit.isPending}
+                    linkError={linkGit.isError}
+                    onLinkGit={() => linkGit.mutate()}
+                  />
+                ) : (
+                  <RepoContributePanel repoId={data.id} ownerUsername={data.owner.username} />
+                )
               )}
 
               {tab === 'discussions' && (

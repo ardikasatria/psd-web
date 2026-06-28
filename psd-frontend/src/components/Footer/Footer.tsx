@@ -18,7 +18,7 @@ const widgetMenus: WidgetFooterMenu[] = [
       { href: '/help', label: 'Pusat bantuan' },
       { href: '/help/panduan-memulai', label: 'Panduan memulai' },
       { href: '/help/git-menyiapkan-akses', label: 'Git push' },
-      { href: '/help/notebook-membuka', label: 'Notebook JupyterHub' },
+      { href: '/help/notebook-membuka', label: 'Jupyter Notebook' },
       { href: '/help/faq', label: 'FAQ' },
       { href: '/about', label: 'Tentang Kami' },
     ],

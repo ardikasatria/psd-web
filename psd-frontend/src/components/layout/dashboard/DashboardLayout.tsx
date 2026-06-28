@@ -2,6 +2,7 @@
 
 import { DashboardSidebar } from '@/components/layout/dashboard/DashboardSidebar'
 import { DashboardTopBar } from '@/components/layout/dashboard/DashboardTopBar'
+import { AssistantShell } from '@/components/features/assistant/AssistantShell'
 import { AnnouncementBanner } from '@/components/common/AnnouncementBanner'
 import { useAuthGuard } from '@/lib/auth/useAuthGuard'
 import { useState } from 'react'
@@ -20,6 +21,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <AssistantShell />
     </div>
   )
 }

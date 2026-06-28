@@ -245,7 +245,7 @@ export function ProfileContent({ username }: { username: string }) {
                     error={notebooks.error}
                     isEmpty={!notebooks.data?.items.length}
                     emptyTitle="Belum ada notebook"
-                    emptyDescription="Notebook Colab atau Jupyter yang dibagikan akan muncul di sini."
+                    emptyDescription="Jupyter Notebook yang dibagikan ke katalog akan muncul di sini."
                   >
                     <div className="grid gap-4 sm:grid-cols-2">
                       {(notebooks.data?.items ?? []).map((nb: NotebookSummary) => (

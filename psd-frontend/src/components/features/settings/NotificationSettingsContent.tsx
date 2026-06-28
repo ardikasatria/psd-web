@@ -1,7 +1,9 @@
 'use client'
 
+import { AuthEmailNotice } from '@/components/features/auth/AuthEmailNotice'
 import { QueryState } from '@/components/features/QueryState'
 import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
+import { EmailEventModesSection } from '@/components/features/settings/EmailEventModesSection'
 import { SettingsSavedToast } from '@/components/features/settings/SettingsSavedToast'
 import { SettingsSectionCard } from '@/components/features/settings/SettingsSectionCard'
 import { SettingsShell } from '@/components/features/settings/SettingsShell'
@@ -63,6 +65,15 @@ export function NotificationSettingsContent() {
                     ))}
                   </select>
                 </div>
+                <EmailEventModesSection
+                  settings={settings}
+                  disabled={isSaving || !settings.email.email_enabled}
+                  onPatchEvents={(events) => patch({ email: { events } })}
+                />
+                <AuthEmailNotice variant="info" title="Berhenti berlangganan via email" className="mt-6">
+                  Setiap email notifikasi PSD memuat tautan &quot;Berhenti berlangganan&quot; yang menonaktifkan semua
+                  email notifikasi sekaligus. Anda dapat mengaktifkannya kembali kapan saja di halaman ini.
+                </AuthEmailNotice>
               </SettingsSectionCard>
 
               <SettingsSectionCard

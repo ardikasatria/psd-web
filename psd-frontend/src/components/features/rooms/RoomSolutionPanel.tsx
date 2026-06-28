@@ -403,7 +403,7 @@ export function RoomSolutionPanel({
         <div className="rounded-2xl border border-violet-200/80 bg-violet-50/40 p-5 dark:border-violet-800/50 dark:bg-violet-950/20">
           <h3 className="text-sm font-semibold text-violet-900 dark:text-violet-200">Notebook tim</h3>
           <p className="mt-1 text-sm text-violet-800/90 dark:text-violet-300/90">
-            Analisis dataset Ruang Ide di JupyterHub PSD. Akses dataset via{' '}
+            Analisis dataset Ruang Ide di Jupyter Notebook PSD. Akses dataset via{' '}
             <code className="text-xs">psd://owner/dataset/path</code> di notebook.
           </p>
           <ButtonPrimary

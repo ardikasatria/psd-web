@@ -461,6 +461,7 @@ export const NotebookSummarySchema = z.object({
   subcategory: CategoryRefSchema.nullable().optional(),
   team: TeamRefSchema.nullable().optional(),
   description_preview: z.string().optional(),
+  source_url: z.string().nullable().optional(),
   has_colab: z.boolean().optional(),
 })
 export type NotebookSummary = z.infer<typeof NotebookSummarySchema>

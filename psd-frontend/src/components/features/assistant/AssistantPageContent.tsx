@@ -1,6 +1,7 @@
 'use client'
 
 import { PersonalizedFeedSection } from '@/components/features/assistant/PersonalizedFeedSection'
+import { useAssistantContext } from '@/lib/assistant/useAssistantContext'
 import { FeaturePageShell } from '@/components/features/layout'
 import { askAssistant, getAssistantQuota, type AskResult } from '@/lib/api/assistant'
 import { useAuth } from '@/lib/auth/useAuth'
@@ -25,6 +26,7 @@ const STARTERS = [
 
 export function AssistantPageContent() {
   const { isLoggedIn } = useAuth()
+  const context = useAssistantContext()
   const qc = useQueryClient()
   const bottomRef = useRef<HTMLDivElement>(null)
   const [question, setQuestion] = useState('')
@@ -38,7 +40,7 @@ export function AssistantPageContent() {
   })
 
   const askMutation = useMutation({
-    mutationFn: (q: string) => askAssistant({ question: q }),
+    mutationFn: (q: string) => askAssistant({ question: q, context }),
     onSuccess: (res: AskResult, q) => {
       setError(null)
       setMessages((prev) => [...prev, { role: 'user', content: q }, { role: 'assistant', content: res.reply }])
@@ -85,6 +87,12 @@ export function AssistantPageContent() {
             <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50">Asisten PSD</h1>
             <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
               Tanya cara pakai fitur platform — dijawab dalam Bahasa Indonesia, dengan kuota per tier.
+              {context.fitur && (
+                <>
+                  {' '}
+                  Konteks halaman: <strong>{context.fitur}</strong>
+                </>
+              )}
             </p>
           </div>
           {quota.data && (

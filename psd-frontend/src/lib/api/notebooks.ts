@@ -16,7 +16,7 @@ export const createNotebook = (b: {
   title: string
   description: string
   tags: string[]
-  source_url: string
+  source_url?: string | null
   category?: string | null
   subcategory?: string | null
   team_id?: string | null

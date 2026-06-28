@@ -1,7 +1,9 @@
 'use client'
 
 import { heroGradient } from '@/components/common/featureGradients'
-import { pageCtaPanelClass, pageHighlightStripClass } from '@/components/common/SidebarStatTile'
+import { pageCtaPanelClass } from '@/components/common/SidebarStatTile'
+import { NotebookHubCallout } from '@/components/features/notebooks/NotebookHubCallout'
+import { hubEnabled, hubNotebookUrl } from '@/lib/hub'
 import { NotebookCard } from '@/components/features/NotebookCard'
 import { NotebookConceptSection } from '@/components/features/notebooks/NotebookConceptSection'
 import { NotebooksLearnSidebar } from '@/components/features/notebooks/NotebooksLearnSidebar'
@@ -13,7 +15,7 @@ import { NotebookSummary, PaginatedNotebookSummary } from '@/types/api'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import Input from '@/shared/Input'
 import {
-  CodeBracketSquareIcon,
+  ArrowTopRightOnSquareIcon,
   MagnifyingGlassIcon,
   PlusIcon,
   SparklesIcon,
@@ -54,8 +56,6 @@ export function NotebooksPage() {
 
   const filtered = useMemo(() => items.filter((nb) => matchesTag(nb, tagFilter)), [items, tagFilter])
 
-  const colabReady = items.filter((nb) => nb.has_colab)
-
   const scrollToCatalog = useCallback(() => {
     document.getElementById('notebook-catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
@@ -80,20 +80,29 @@ export function NotebooksPage() {
                   Notebook
                 </h1>
                 <p className="mt-3 text-base leading-relaxed text-neutral-600 dark:text-neutral-400">
-                  Katalog notebook referensi untuk belajar hands-on — buka di Google Colab, fork, modifikasi,
-                  dan bagikan workflow Anda ke komunitas PSD.
+                  Katalog notebook praktik PSD — jalankan di Jupyter Notebook terintegrasi, akses dataset via{' '}
+                  <code className="rounded bg-white/60 px-1 dark:bg-neutral-900/60">psd://</code>, dan bagikan workflow
+                  ke komunitas.
                 </p>
               </div>
-              {me.data?.user ? (
-                <ButtonPrimary href="/notebooks/new" className="shrink-0">
-                  <PlusIcon className="size-4" aria-hidden />
-                  Bagikan notebook
-                </ButtonPrimary>
-              ) : (
-                <ButtonPrimary href="/login?next=/notebooks/new" className="shrink-0">
-                  Masuk untuk berbagi
-                </ButtonPrimary>
-              )}
+              <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                {hubEnabled() && (
+                  <ButtonPrimary href={hubNotebookUrl()} target="_blank" rel="noopener noreferrer">
+                    <ArrowTopRightOnSquareIcon className="size-4" aria-hidden />
+                    Buka Jupyter Notebook
+                  </ButtonPrimary>
+                )}
+                {me.data?.user ? (
+                  <ButtonPrimary href="/notebooks/new" outline={hubEnabled()}>
+                    <PlusIcon className="size-4" aria-hidden />
+                    Bagikan notebook
+                  </ButtonPrimary>
+                ) : (
+                  <ButtonPrimary href="/login?next=/notebooks/new" outline={hubEnabled()}>
+                    Masuk untuk berbagi
+                  </ButtonPrimary>
+                )}
+              </div>
             </div>
             <div
               className="pointer-events-none absolute -end-16 -top-16 size-64 rounded-full bg-primary-400/10 blur-3xl dark:bg-primary-600/10"
@@ -107,29 +116,7 @@ export function NotebooksPage() {
 
           <NotebookConceptSection />
 
-          {colabReady.length > 0 && !search && !tagFilter && (
-            <section className={pageHighlightStripClass}>
-              <div className="mb-4 flex items-center gap-2">
-                <CodeBracketSquareIcon className="size-5 text-sky-600 dark:text-sky-400" aria-hidden />
-                <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Siap dibuka di Colab</h2>
-              </div>
-              <div className="flex gap-4 overflow-x-auto pb-1">
-                {colabReady.slice(0, 4).map((nb) => (
-                  <Link
-                    key={nb.id}
-                    href={`/notebooks/${nb.id}`}
-                    className="flex w-64 shrink-0 flex-col rounded-2xl border border-white/80 bg-white/95 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-800/95"
-                  >
-                    <span className="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
-                      Colab-ready
-                    </span>
-                    <p className="mt-2 line-clamp-2 font-medium text-neutral-900 dark:text-neutral-100">{nb.title}</p>
-                    <p className="mt-2 text-xs text-neutral-500">@{nb.owner.username}</p>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
+          <NotebookHubCallout compact />
 
           <div id="notebook-catalog" className="scroll-mt-28 space-y-4">
             <form
@@ -206,7 +193,7 @@ export function NotebooksPage() {
 
           {!me.data?.user && (
             <div className={pageCtaPanelClass}>
-              <CodeBracketSquareIcon className="mx-auto size-8 text-primary-500" aria-hidden />
+              <SparklesIcon className="mx-auto size-8 text-primary-500" aria-hidden />
               <p className="mt-3 font-semibold text-neutral-900 dark:text-neutral-100">Punya workflow worth sharing?</p>
               <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
                 Masuk dan bagikan notebook referensi — bantu praktisi lain naik skill lebih cepat.

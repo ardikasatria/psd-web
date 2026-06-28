@@ -19,20 +19,20 @@ const STEPS = [
   },
   {
     icon: CodeBracketSquareIcon,
-    title: 'Buka Colab',
-    desc: 'Fork & jalankan sel',
-    accent: 'from-sky-400 to-indigo-500',
+    title: 'Buka Notebook',
+    desc: 'Jalankan di Jupyter Notebook',
+    accent: 'from-violet-400 to-indigo-500',
   },
   {
     icon: ArrowTopRightOnSquareIcon,
     title: 'Eksperimen',
-    desc: 'Modifikasi & catat insight',
+    desc: 'Dataset psd:// & analisis',
     accent: 'from-indigo-400 to-violet-500',
   },
   {
     icon: ShareIcon,
     title: 'Bagikan',
-    desc: 'Kontribusi ke komunitas',
+    desc: 'Push Git & daftar katalog',
     accent: 'from-amber-400 to-primary-500',
   },
 ] as const
@@ -42,7 +42,7 @@ export function NotebookConceptSection() {
     <section className="space-y-8">
       <div className={conceptGradientBr.notebook}>
         <div className="flex flex-wrap items-start gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-indigo-500 text-white">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
             <CodeBracketSquareIcon className="size-5" aria-hidden />
           </div>
           <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-50">Apa peran notebook di PSD?</h2>
@@ -50,18 +50,18 @@ export function NotebookConceptSection() {
         <ul className="mt-5 space-y-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
           <li className="flex gap-2">
             <CheckCircleIcon className="mt-0.5 size-4 shrink-0 text-primary-500" aria-hidden />
-            Notebook PSD adalah <strong>katalog referensi terbuka</strong> — bukan hosting file .ipynb langsung,
-            melainkan kurasi dengan link sumber.
+            Notebook dijalankan di <strong>Jupyter Notebook PSD</strong> — login OAuth, tanpa instalasi lokal, dengan batas
+            sumber daya sesuai tier gamifikasi.
           </li>
           <li className="flex gap-2">
             <CheckCircleIcon className="mt-0.5 size-4 shrink-0 text-primary-500" aria-hidden />
-            Jika sumber berupa <strong>GitHub .ipynb</strong>, PSD otomatis menyiapkan tombol{' '}
-            <strong>Buka di Colab</strong> untuk latihan tanpa setup lokal.
+            Katalog PSD adalah <strong>kurasi metadata</strong> — bukan hosting file seperti Kaggle; berkas .ipynb
+            disimpan di Git (Gitea) milik Anda.
           </li>
           <li className="flex gap-2">
             <CheckCircleIcon className="mt-0.5 size-4 shrink-0 text-primary-500" aria-hidden />
-            Notebook melengkapi <strong>kursus, data sintesis, kompetisi, dan Ruang Ide</strong> — tempat
-            dokumentasi eksperimen nyata.
+            Notebook melengkapi <strong>kursus, data sintesis, kompetisi, dan Ruang Ide</strong> — dokumentasi
+            eksperimen nyata dengan SDK <code className="rounded bg-neutral-100 px-1 dark:bg-neutral-800">psd://</code>.
           </li>
         </ul>
       </div>
@@ -70,7 +70,7 @@ export function NotebookConceptSection() {
         <div className="mb-6 text-center">
           <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Alur belajar praktik</h3>
           <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-            Dari membaca referensi hingga berkontribusi — setiap langkah melatih skill berbeda.
+            Dari eksplorasi katalog hingga berbagi workflow — semua lewat Jupyter Notebook terintegrasi PSD.
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-4">
@@ -80,7 +80,7 @@ export function NotebookConceptSection() {
               <div key={step.title} className="relative flex flex-col items-center text-center">
                 {i < STEPS.length - 1 && (
                   <div
-                    className="pointer-events-none absolute start-[calc(50%+1.75rem)] top-6 hidden h-0.5 w-[calc(100%-3.5rem)] bg-gradient-to-r from-primary-200 to-sky-200 dark:from-primary-800 dark:to-indigo-800 sm:block"
+                    className="pointer-events-none absolute start-[calc(50%+1.75rem)] top-6 hidden h-0.5 w-[calc(100%-3.5rem)] bg-gradient-to-r from-primary-200 to-violet-200 dark:from-primary-800 dark:to-indigo-800 sm:block"
                     aria-hidden
                   />
                 )}
@@ -101,12 +101,13 @@ export function NotebookConceptSection() {
       </div>
 
       <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
-        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Format URL Colab-ready</h3>
+        <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Akses dataset di notebook</h3>
         <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-          Saat membagikan notebook, gunakan URL GitHub dengan pola berikut agar tombol Colab aktif:
+          Di Jupyter Notebook, muat dataset PSD langsung tanpa unduh manual:
         </p>
         <code className="mt-3 block overflow-x-auto rounded-xl bg-neutral-100 px-4 py-3 font-mono text-xs text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
-          https://github.com/&#123;owner&#125;/&#123;repo&#125;/blob/&#123;branch&#125;/path/notebook.ipynb
+          import psd{'\n'}
+          df = psd.load(&quot;psd://pemilik/dataset/berkas.csv&quot;)
         </code>
       </div>
     </section>

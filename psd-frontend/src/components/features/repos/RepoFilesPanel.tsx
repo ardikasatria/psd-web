@@ -1,5 +1,6 @@
 'use client'
 
+import { RepoGiteaFilesPanel } from '@/components/features/repos/RepoGiteaFilesPanel'
 import { useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { deleteRepoFile, uploadRepoFile } from '@/lib/api/repos'
@@ -17,10 +18,26 @@ interface RepoFilesPanelProps {
   files: RepoFile[]
   isOwner: boolean
   license?: string | null
+  cloneUrl?: string | null
+  sourceOfTruth?: string
   onChange: () => void
 }
 
-export function RepoFilesPanel({ repoId, files, isOwner, license, onChange }: RepoFilesPanelProps) {
+function LegacyFilesPanel({
+  repoId,
+  files,
+  isOwner,
+  license,
+  onChange,
+  showLegacyNote,
+}: {
+  repoId: string
+  files: RepoFile[]
+  isOwner: boolean
+  license?: string | null
+  onChange: () => void
+  showLegacyNote?: boolean
+}) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +67,12 @@ export function RepoFilesPanel({ repoId, files, isOwner, license, onChange }: Re
 
   return (
     <div className="space-y-4">
+      {showLegacyNote && (
+        <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          Unggahan PSD legacy — setelah Git jadi sumber utama, kelola file via clone & push.
+        </p>
+      )}
+
       {isOwner && (
         <div
           role="button"
@@ -70,7 +93,7 @@ export function RepoFilesPanel({ repoId, files, isOwner, license, onChange }: Re
             'flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors',
             dragOver
               ? 'border-primary-400 bg-primary-50 dark:border-primary-600 dark:bg-primary-950/30'
-              : 'border-neutral-300 hover:border-primary-300 dark:border-neutral-600'
+              : 'border-neutral-300 hover:border-primary-300 dark:border-neutral-600',
           )}
         >
           <CloudArrowUpIcon className="mb-2 size-8 text-neutral-400" aria-hidden />
@@ -91,7 +114,7 @@ export function RepoFilesPanel({ repoId, files, isOwner, license, onChange }: Re
 
       {files.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-neutral-300 px-4 py-8 text-center text-sm text-neutral-500 dark:border-neutral-600">
-          {isOwner ? 'Belum ada file. Unggah file pertama Anda di atas.' : 'Belum ada file yang dibagikan.'}
+          {isOwner ? 'Belum ada file legacy.' : 'Belum ada file yang dibagikan.'}
         </p>
       ) : (
         <Table>
@@ -138,5 +161,52 @@ export function RepoFilesPanel({ repoId, files, isOwner, license, onChange }: Re
 
       {license && <p className="text-sm text-neutral-500 dark:text-neutral-400">Lisensi: {license}</p>}
     </div>
+  )
+}
+
+export function RepoFilesPanel({
+  repoId,
+  files,
+  isOwner,
+  license,
+  cloneUrl,
+  sourceOfTruth = 'psd',
+  onChange,
+}: RepoFilesPanelProps) {
+  if (cloneUrl) {
+    return (
+      <div className="space-y-8">
+        <RepoGiteaFilesPanel
+          repoId={repoId}
+          cloneUrl={cloneUrl}
+          sourceOfTruth={sourceOfTruth}
+          isOwner={isOwner}
+          onSourceChange={onChange}
+        />
+        {sourceOfTruth !== 'gitea' && (files.length > 0 || isOwner) && (
+          <LegacyFilesPanel
+            repoId={repoId}
+            files={files}
+            isOwner={isOwner}
+            license={undefined}
+            onChange={onChange}
+            showLegacyNote
+          />
+        )}
+        {license && sourceOfTruth === 'gitea' && (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">Lisensi: {license}</p>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <LegacyFilesPanel
+      repoId={repoId}
+      files={files}
+      isOwner={isOwner}
+      license={license}
+      onChange={onChange}
+    />
   )
 }

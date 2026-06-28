@@ -4,9 +4,11 @@ import { SidebarStatTile, sidebarCalloutClass, sidebarSectionClass, sidebarTipCl
 import { getNotebooks } from '@/lib/api/notebooks'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useMe } from '@/lib/api/dashboard'
+import { hubEnabled, hubNotebookUrl } from '@/lib/hub'
 import {
   AcademicCapIcon,
   ArrowRightIcon,
+  ArrowTopRightOnSquareIcon,
   BeakerIcon,
   BookOpenIcon,
   CodeBracketSquareIcon,
@@ -19,10 +21,10 @@ import clsx from 'clsx'
 import Link from 'next/link'
 
 const NOTEBOOK_TIPS = [
-  'Notebook di PSD adalah referensi terbuka — fork di Colab, jalankan sel per sel, dan catat insight di komentar sel.',
-  'URL GitHub .ipynb otomatis mendapat tombol Colab — format: github.com/owner/repo/blob/branch/path.ipynb',
-  'Setelah eksperimen, bagikan notebook Anda ke katalog agar tim dan komunitas belajar dari workflow Anda.',
-  'Gabungkan notebook dengan dataset sintesis untuk latihan pipeline end-to-end tanpa data sensitif.',
+  'Notebook PSD dijalankan di Jupyter Notebook — login OAuth, folder kerja persisten di ~/work.',
+  'Muat dataset PSD dengan psd.load("psd://pemilik/dataset/berkas.csv") tanpa unduh manual.',
+  'Setelah eksperimen, push .ipynb ke Git lalu daftarkan ke katalog agar komunitas belajar dari workflow Anda.',
+  'Gabungkan notebook dengan data sintesis untuk latihan pipeline end-to-end tanpa data sensitif.',
 ]
 
 type Props = {
@@ -42,27 +44,49 @@ export function NotebooksLearnSidebar({ className, onScrollToCatalog }: Props) {
   })
 
   const items = catalog.data?.items ?? []
-  const colabReady = items.filter((n) => n.has_colab)
+  const withSource = items.filter((n) => n.source_url)
   const tags = new Set(items.flatMap((n) => n.tags))
 
   return (
     <aside className={clsx('space-y-5', className)}>
       <div className="grid grid-cols-2 gap-2">
         <SidebarStatTile label="Notebook" value={items.length} icon={<BookOpenIcon className="size-4" />} />
-        <SidebarStatTile label="Siap Colab" value={colabReady.length} icon={<CodeBracketSquareIcon className="size-4" />} accent="sky" />
+        <SidebarStatTile
+          label="Di Jupyter Notebook"
+          value={hubEnabled() ? 'Aktif' : '—'}
+          icon={<CodeBracketSquareIcon className="size-4" />}
+          accent="violet"
+        />
         <SidebarStatTile label="Topik" value={tags.size} icon={<BeakerIcon className="size-4" />} accent="indigo" />
         <SidebarStatTile label="Resmi PSD" value={items.filter((n) => n.owner.is_official).length} icon={<SparklesIcon className="size-4" />} />
       </div>
 
-      {colabReady.length > 0 && (
+      {hubEnabled() && (
         <section className={sidebarCalloutClass}>
           <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
-            <CodeBracketSquareIcon className="size-4 text-sky-600 dark:text-sky-400" />
-            Buka di Colab
+            <CodeBracketSquareIcon className="size-4 text-violet-600 dark:text-violet-400" />
+            Jupyter Notebook PSD
           </h3>
-          <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">Notebook dengan sumber GitHub — latihan langsung di browser.</p>
+          <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
+            Buka server notebook pribadi — terintegrasi login PSD dan SDK dataset.
+          </p>
+          <Link
+            href={hubNotebookUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:underline dark:text-primary-400"
+          >
+            Buka Jupyter Notebook
+            <ArrowTopRightOnSquareIcon className="size-3.5" aria-hidden />
+          </Link>
+        </section>
+      )}
+
+      {withSource.length > 0 && (
+        <section className={sidebarCalloutClass}>
+          <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">Dengan sumber Git</h3>
           <ul className="mt-3 space-y-2">
-            {colabReady.slice(0, 2).map((nb) => (
+            {withSource.slice(0, 2).map((nb) => (
               <li key={nb.id}>
                 <Link href={`/notebooks/${nb.id}`} className="line-clamp-2 text-sm font-medium hover:text-primary-600 dark:hover:text-primary-400">
                   {nb.title}
@@ -84,16 +108,16 @@ export function NotebooksLearnSidebar({ className, onScrollToCatalog }: Props) {
             Jelajahi katalog referensi
           </li>
           <li className="flex gap-2">
-            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-sky-100 text-[10px] font-bold text-sky-700 dark:bg-sky-900/50 dark:text-sky-300">2</span>
-            Buka & fork di Colab
+            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[10px] font-bold text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">2</span>
+            Buka Jupyter Notebook & jalankan sel
           </li>
           <li className="flex gap-2">
             <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">3</span>
-            Modifikasi & eksperimen
+            Eksperimen dengan psd://
           </li>
           <li className="flex gap-2">
             <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">4</span>
-            Bagikan notebook Anda
+            Push Git & bagikan ke katalog
           </li>
         </ol>
         {onScrollToCatalog && (
@@ -114,6 +138,10 @@ export function NotebooksLearnSidebar({ className, onScrollToCatalog }: Props) {
           <Link href="/learn" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-primary-50 hover:text-primary-700 dark:text-neutral-300 dark:hover:bg-neutral-700/80 dark:hover:text-primary-300">
             <AcademicCapIcon className="size-4" />
             Kursus belajar
+          </Link>
+          <Link href="/help/notebook-membuka" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-primary-50 hover:text-primary-700 dark:text-neutral-300 dark:hover:bg-neutral-700/80 dark:hover:text-primary-300">
+            <CodeBracketSquareIcon className="size-4" />
+            Panduan Jupyter Notebook
           </Link>
           <Link href="/synthesis" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-primary-50 hover:text-primary-700 dark:text-neutral-300 dark:hover:bg-neutral-700/80 dark:hover:text-primary-300">
             <SparklesIcon className="size-4" />

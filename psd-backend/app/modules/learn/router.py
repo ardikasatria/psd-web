@@ -578,6 +578,7 @@ async def _notebook_summary(db: AsyncSession, n: Notebook) -> dict:
         "title": n.title,
         "tags": n.tags,
         "owner": _nb_owner(n),
+        "source_url": n.source_url,
         "category": cat,
         "subcategory": sub,
         "team": tm,

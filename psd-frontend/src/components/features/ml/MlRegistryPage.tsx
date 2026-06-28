@@ -3,6 +3,7 @@
 import { QueryState } from '@/components/features/QueryState'
 import { FeaturePageShell } from '@/components/features/layout'
 import { createModelRegistry, listModelRegistries } from '@/lib/api/ml'
+import { getServingQuota } from '@/lib/api/serving'
 import { useAuth } from '@/lib/auth/useAuth'
 import type { ModelRegistrySummary } from '@/lib/api/ml'
 import ButtonPrimary from '@/shared/ButtonPrimary'
@@ -33,6 +34,12 @@ function MlRegistryPageInner() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['ml-registries'],
     queryFn: () => listModelRegistries({ page: 1 }),
+    enabled: isLoggedIn,
+  })
+
+  const quota = useQuery({
+    queryKey: ['serving-quota'],
+    queryFn: getServingQuota,
     enabled: isLoggedIn,
   })
 
@@ -80,8 +87,14 @@ function MlRegistryPageInner() {
             </div>
             <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50">Registry Model</h1>
             <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-              Versi model MLflow dari repo & kompetisi — drift & monitoring via Ruang Analitik.
+              Versi model MLflow — drift, monitoring, dan endpoint inferensi terkelola.
             </p>
+            {quota.data && (
+              <p className="mt-2 text-xs text-neutral-500">
+                Kuota prediksi tier <strong>{quota.data.tier}</strong>: {quota.data.used}/{quota.data.limit}{' '}
+                per jam ({quota.data.remaining} tersisa)
+              </p>
+            )}
           </div>
           <Button type="button" onClick={() => setShowForm((v) => !v)}>
             <PlusIcon className="size-4" aria-hidden />
@@ -116,13 +129,22 @@ function MlRegistryPageInner() {
             <ul className="space-y-3">
               {items.map((r: ModelRegistrySummary) => (
                 <li key={r.slug}>
-                  <Link
-                    href={`/ml/${r.slug}`}
-                    className="block rounded-2xl border border-neutral-200/80 bg-white p-5 transition hover:border-violet-300 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:border-violet-700"
-                  >
-                    <div className="font-semibold text-neutral-900 dark:text-neutral-50">{r.title}</div>
-                    <div className="mt-1 font-mono text-xs text-neutral-500">{r.mlflow_name}</div>
-                  </Link>
+                  <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 transition hover:border-violet-300 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:border-violet-700">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <Link href={`/ml/${r.slug}`} className="min-w-0 flex-1">
+                        <div className="font-semibold text-neutral-900 hover:text-violet-700 dark:text-neutral-50 dark:hover:text-violet-300">
+                          {r.title}
+                        </div>
+                        <div className="mt-1 font-mono text-xs text-neutral-500">{r.mlflow_name}</div>
+                      </Link>
+                      <Link
+                        href={`/ml/${r.slug}/serving`}
+                        className="shrink-0 text-xs font-medium text-violet-600 hover:underline dark:text-violet-400"
+                      >
+                        Serving →
+                      </Link>
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>

@@ -1,6 +1,7 @@
 'use client'
 
 import { BlogCard } from '@/components/features/blog/BlogCard'
+import { PersonalizedFeedSection } from '@/components/features/assistant/PersonalizedFeedSection'
 import { CompetitionCard } from '@/components/features/CompetitionCard'
 import { AnnouncementBanner } from '@/components/common/AnnouncementBanner'
 import { EventCard } from '@/components/features/EventCard'
@@ -17,6 +18,7 @@ import { getCompetitions } from '@/lib/api/competitions'
 import { getBlog } from '@/lib/api/blog'
 import { getEvents } from '@/lib/api/events'
 import { getDiscover } from '@/lib/api/repos'
+import { useAuth } from '@/lib/auth/useAuth'
 import {
   BlogSummary,
   CompetitionSummary,
@@ -86,6 +88,7 @@ const quickNavItems: QuickNavItem[] = [
 ]
 
 export function HomeContent() {
+  const { isLoggedIn } = useAuth()
   const discover = useQuery<Discover>({
     queryKey: ['discover'],
     queryFn: getDiscover,
@@ -120,6 +123,8 @@ export function HomeContent() {
       />
 
       <AnnouncementBanner className="mb-2" />
+
+      {isLoggedIn && <PersonalizedFeedSection className="mb-8" />}
 
       <FeatureSection title="Jelajahi fitur" subtitle="Akses cepat ke seluruh ekosistem PSD">
         <QuickNavGrid items={quickNavItems} />

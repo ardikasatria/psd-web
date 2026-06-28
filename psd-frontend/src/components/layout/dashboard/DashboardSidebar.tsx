@@ -141,7 +141,7 @@ export function DashboardSidebar({ open, onClose }: Props) {
           <div className="rounded-xl bg-primary-600/5 p-4 dark:bg-primary-600/10">
             <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Butuh bantuan?</p>
             <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
-              Panduan memulai, Git push, dan notebook JupyterHub.
+              Panduan memulai, Git push, dan Jupyter Notebook.
             </p>
             <div className="mt-3 flex flex-col gap-2 text-xs font-medium">
               <Link href="/help/panduan-memulai" className="text-primary-600 hover:underline dark:text-primary-400">

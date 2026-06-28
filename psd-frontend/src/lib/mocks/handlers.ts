@@ -11,6 +11,7 @@ import { addReply, addThread, buildForumStats, mockForumReaction, mockForumVote,
 import { mockCategoryDetail, mockCategories, slugifyCategoryName } from './data/categories'
 import { mockJourneyNext, mockQuestCatalog, mockQuestStore } from './data/quests'
 import { mockActivitySummary } from './data/activity'
+import { mockAssistantAsk, mockAssistantQuota, mockPersonalizedFeed } from './data/assistant'
 import {
   getMockDailyMicro,
   isMicroComplete,
@@ -105,6 +106,7 @@ import type { CourseDetail, SocialComment, SocialPost } from '@/types/api'
 import { isStaff, isSuperadmin } from '@/lib/auth/roles'
 
 const API = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000') + '/api/v1'
+const API_ROOT = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
 const TOS_CURRENT = '2026-06'
 const mockTosVersions = new Map<string, string>()
 const mockMemberShareTokens = new Map<string, string>()
@@ -3695,5 +3697,34 @@ export const handlers = [
     const w = d.widgets.find((x) => x.id === params.wid)
     if (!w) return errorResponse(404, 'not_found', 'Widget tidak ditemukan')
     return HttpResponse.json(mockWidgetData(w, d.pipeline_id))
+  }),
+
+  // Langkah 57 — Asisten & feed personal
+  http.get(`${API_ROOT}/api/assistant/quota`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    return HttpResponse.json(mockAssistantQuota())
+  }),
+
+  http.post(`${API_ROOT}/api/assistant/ask`, async ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    const body = (await request.json()) as { question?: string; context?: Record<string, string> | null }
+    return HttpResponse.json(mockAssistantAsk(body.question ?? '', body.context))
+  }),
+
+  http.get(`${API_ROOT}/api/feed`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    return HttpResponse.json(mockPersonalizedFeed())
+  }),
+
+  // Langkah 59 — unsubscribe email (token di URL, tanpa sesi)
+  http.get(`${API_ROOT}/email/unsubscribe`, ({ request }) => {
+    const token = new URL(request.url).searchParams.get('token')
+    if (!token || token.length < 8) {
+      return new HttpResponse(null, { status: 400 })
+    }
+    return new HttpResponse(null, { status: 200 })
   }),
 ]

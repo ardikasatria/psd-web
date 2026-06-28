@@ -138,7 +138,7 @@ export function NotebookDetailContent({ id }: { id: string }) {
                   <div className="bg-gradient-to-br from-violet-500 to-indigo-600 px-5 py-6 text-white">
                     <CodeBracketSquareIcon className="size-8" aria-hidden />
                     <p className="mt-3 text-sm font-medium text-white/90">Notebook PSD</p>
-                    <p className="mt-1 text-lg font-semibold">Jalankan di JupyterHub</p>
+                    <p className="mt-1 text-lg font-semibold">Jalankan di Jupyter Notebook</p>
                   </div>
                   <div className="space-y-4 p-5">
                     {hubEnabled() ? (
@@ -149,41 +149,33 @@ export function NotebookDetailContent({ id }: { id: string }) {
                         className="w-full justify-center"
                       >
                         <ArrowTopRightOnSquareIcon className="size-5" data-slot="icon" />
-                        Buka Notebook
+                        Buka Jupyter Notebook
                       </ButtonPrimary>
                     ) : (
                       <>
                         <ButtonPrimary disabled className="w-full justify-center">
-                          Buka Notebook
+                          Buka Jupyter Notebook
                         </ButtonPrimary>
                         <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                          JupyterHub belum aktif di lingkungan ini.
+                          Jupyter Notebook belum aktif di lingkungan ini. Lihat{' '}
+                          <Link href="/help/notebook-membuka" className="text-primary-600 hover:underline dark:text-primary-400">
+                            panduan notebook
+                          </Link>
+                          .
                         </p>
                       </>
                     )}
-
-                    {data.colab_url ? (
-                      <Button
-                        href={data.colab_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        outline
-                        className="w-full justify-center"
-                      >
-                        <ArrowTopRightOnSquareIcon className="size-4" data-slot="icon" />
-                        Buka di Colab (fallback)
-                      </Button>
-                    ) : null}
 
                     {data.source_url && (
                       <Button
                         href={data.source_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        plain
+                        outline
                         className="w-full justify-center"
                       >
-                        Lihat sumber
+                        <ArrowTopRightOnSquareIcon className="size-4" data-slot="icon" />
+                        Lihat berkas di Git
                       </Button>
                     )}
                   </div>

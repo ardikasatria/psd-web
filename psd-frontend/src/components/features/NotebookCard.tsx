@@ -39,10 +39,10 @@ export function NotebookCard({ notebook, index = 0 }: { notebook: NotebookSummar
               <h3 className="line-clamp-2 font-semibold text-neutral-900 transition-colors group-hover:text-primary-600 dark:text-neutral-100">
                 {notebook.title}
               </h3>
-              {notebook.has_colab && (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+              {notebook.source_url && (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
                   <ArrowTopRightOnSquareIcon className="size-3" aria-hidden />
-                  Colab
+                  Git
                 </span>
               )}
             </div>

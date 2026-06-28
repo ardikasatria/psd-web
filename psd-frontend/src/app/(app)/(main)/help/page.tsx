@@ -10,7 +10,7 @@ export default function HelpIndexPage() {
     <FeaturePageShell>
       <FeaturePageHero
         title="Pusat bantuan"
-        subtitle="Panduan lengkap memulai, Git, notebook JupyterHub, dan berkontribusi di Projek Sains Data."
+        subtitle="Panduan lengkap memulai, Git, Jupyter Notebook, dan berkontribusi di Projek Sains Data."
         variant="compact"
       />
 

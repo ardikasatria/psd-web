@@ -2,9 +2,10 @@
 
 import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import { CategoryPicker } from '@/components/common/CategoryPicker'
+import { NotebookHubCallout } from '@/components/features/notebooks/NotebookHubCallout'
 import { createNotebook, getNotebook, updateNotebook } from '@/lib/api/notebooks'
 import { getMyTeams } from '@/lib/api/teams'
-import { GITHUB_IPYNB_HINT, previewColabUrl } from '@/lib/notebooks/colab'
+import { GIT_IPYNB_HINT, isGitNotebookUrl } from '@/lib/notebooks/source'
 import { useAuth } from '@/lib/auth/useAuth'
 import { Field, Label } from '@/shared/fieldset'
 import Input from '@/shared/Input'
@@ -13,7 +14,7 @@ import Select from '@/shared/Select'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import { Button } from '@/shared/Button'
 import { Badge } from '@/shared/Badge'
-import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import { CheckCircleIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -70,6 +71,13 @@ function TagsInput({ value, onChange }: { value: string[]; onChange: (tags: stri
   )
 }
 
+const WORKFLOW_STEPS = [
+  'Buka Jupyter Notebook dan buat atau edit notebook di folder kerja.',
+  'Gunakan SDK psd:// untuk memuat dataset PSD.',
+  'Push berkas .ipynb ke Git (Gitea PSD) — lihat panduan Simpan & push.',
+  'Isi form di bawah untuk mendaftarkan notebook ke katalog komunitas.',
+] as const
+
 export function NotebookForm({ id }: { id?: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -116,36 +124,34 @@ export function NotebookForm({ id }: { id?: string }) {
     }
   }, [existing.data])
 
-  const colabPreview = previewColabUrl(sourceUrl)
+  const gitSourceOk = !sourceUrl.trim() || isGitNotebookUrl(sourceUrl)
 
   const save = useMutation({
     mutationFn: async () => {
       const trimmedTitle = title.trim()
       if (!trimmedTitle) throw new Error('Judul wajib diisi.')
-      if (sourceUrl.trim()) {
+      const trimmedSource = sourceUrl.trim()
+      if (trimmedSource) {
         try {
-          new URL(sourceUrl.trim())
+          new URL(trimmedSource)
         } catch {
           throw new Error('URL sumber tidak valid.')
         }
       }
-      if (isEdit && id) {
-        return updateNotebook(id, {
-          title: trimmedTitle,
-          description: description.trim(),
-          tags,
-          source_url: sourceUrl.trim() || null,
-          category: categorySlug,
-          subcategory: subcategorySlug,
-        })
-      }
-      return createNotebook({
+      const payload = {
         title: trimmedTitle,
         description: description.trim(),
         tags,
-        source_url: sourceUrl.trim(),
+        source_url: trimmedSource || null,
         category: categorySlug,
         subcategory: subcategorySlug,
+      }
+      if (isEdit && id) {
+        return updateNotebook(id, payload)
+      }
+      return createNotebook({
+        ...payload,
+        source_url: trimmedSource || null,
         team_id: ownerTeamId || null,
       })
     },
@@ -192,8 +198,23 @@ export function NotebookForm({ id }: { id?: string }) {
       <form onSubmit={onSubmit} className="mt-6 space-y-8">
         <DetailPageHeader
           title={isEdit ? 'Edit notebook' : 'Bagikan notebook'}
-          subtitle="Tautkan file .ipynb di GitHub agar anggota komunitas dapat membukanya langsung di Colab."
+          subtitle="Daftarkan notebook ke katalog PSD — kerjakan di Jupyter Notebook, simpan ke Git, lalu bagikan metadata ke komunitas."
         />
+
+        <NotebookHubCallout />
+
+        {!isEdit && (
+          <ol className="max-w-2xl space-y-2 rounded-2xl border border-neutral-200/80 bg-white p-5 text-sm dark:border-neutral-700 dark:bg-neutral-800">
+            {WORKFLOW_STEPS.map((step, i) => (
+              <li key={step} className="flex gap-3 text-neutral-700 dark:text-neutral-300">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900/50 dark:text-primary-300">
+                  {i + 1}
+                </span>
+                {step}
+              </li>
+            ))}
+          </ol>
+        )}
 
         <div className="max-w-2xl space-y-6 rounded-2xl border border-neutral-200/80 bg-white p-6 dark:border-neutral-700 dark:bg-neutral-800">
           <Field>
@@ -207,6 +228,7 @@ export function NotebookForm({ id }: { id?: string }) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
+              placeholder="Apa yang dipelajari, dataset yang dipakai, dan insight utama…"
               className="!rounded-xl"
             />
           </Field>
@@ -244,35 +266,23 @@ export function NotebookForm({ id }: { id?: string }) {
           )}
 
           <Field>
-            <Label>URL sumber (.ipynb)</Label>
+            <Label>Link berkas .ipynb di Git (opsional)</Label>
             <Input
               value={sourceUrl}
               onChange={(e) => setSourceUrl(e.target.value)}
-              placeholder={GITHUB_IPYNB_HINT}
+              placeholder={GIT_IPYNB_HINT}
               className="!rounded-xl"
             />
             <p className="mt-2 text-xs text-neutral-500">
-              Format GitHub yang didukung Colab:{' '}
-              <code className="rounded bg-neutral-100 px-1 py-0.5 dark:bg-neutral-700">{GITHUB_IPYNB_HINT}</code>
+              URL ke berkas notebook setelah di-push ke Gitea PSD atau GitHub — contoh:{' '}
+              <code className="rounded bg-neutral-100 px-1 py-0.5 dark:bg-neutral-700">
+                git.projeksainsdata.com/…/notebook.ipynb
+              </code>
             </p>
-            {sourceUrl.trim() && (
-              <div
-                className={`mt-3 flex items-start gap-2 rounded-xl px-3 py-2 text-sm ${
-                  colabPreview
-                    ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
-                    : 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
-                }`}
-              >
-                {colabPreview ? (
-                  <CheckCircleIcon className="mt-0.5 size-5 shrink-0" aria-hidden />
-                ) : (
-                  <XCircleIcon className="mt-0.5 size-5 shrink-0" aria-hidden />
-                )}
-                <span>
-                  {colabPreview
-                    ? 'Tombol "Buka di Colab" akan aktif setelah disimpan.'
-                    : 'URL ini bukan GitHub .ipynb — Colab tidak akan tersedia; pengguna tetap bisa melihat sumber.'}
-                </span>
+            {sourceUrl.trim() && gitSourceOk && (
+              <div className="mt-3 flex items-start gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <CheckCircleIcon className="mt-0.5 size-5 shrink-0" aria-hidden />
+                <span>Link Git valid — pembaca bisa melihat sumber dan membuka notebook di Jupyter Notebook.</span>
               </div>
             )}
           </Field>

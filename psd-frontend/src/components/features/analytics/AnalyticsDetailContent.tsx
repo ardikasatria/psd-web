@@ -3,10 +3,10 @@
 import { AddWidgetDialog } from '@/components/features/analytics/AddWidgetDialog'
 import { DashboardGrid } from '@/components/features/analytics/DashboardGrid'
 import { EmbeddedDashboard } from '@/components/features/analytics/EmbeddedDashboard'
+import { SupersetIntegrationPanel } from '@/components/features/analytics/SupersetIntegrationPanel'
 import { darkPanelClass } from '@/components/common/featureGradients'
 import { QueryState } from '@/components/features/QueryState'
 import { deleteDashboard, getDashboard, updateDashboard } from '@/lib/api/dashboards'
-import { promoteDashboardToSuperset } from '@/lib/api/bi'
 import { getPipeline, listPipelines, listSources } from '@/lib/api/factory'
 import { pipelineUsesSynthesis } from '@/lib/analytics/pipelineGold'
 import type { Dashboard } from '@/types/api'
@@ -34,7 +34,6 @@ export function AnalyticsDetailContent({ slug }: Props) {
   const qc = useQueryClient()
   const [addOpen, setAddOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'native' | 'superset'>('native')
-  const [promoteError, setPromoteError] = useState<string | null>(null)
 
   const { data, isLoading, isError, error } = useQuery<Dashboard>({
     queryKey: ['analytics-dashboard', slug],
@@ -76,15 +75,6 @@ export function AnalyticsDetailContent({ slug }: Props) {
       qc.invalidateQueries({ queryKey: ['analytics-dashboards'] })
       window.location.href = '/analytics'
     },
-  })
-
-  const promote = useMutation({
-    mutationFn: () => promoteDashboardToSuperset(slug, {}),
-    onSuccess: () => {
-      setPromoteError(null)
-      qc.invalidateQueries({ queryKey: ['analytics-dashboard', slug] })
-    },
-    onError: (e: Error) => setPromoteError(e.message),
   })
 
   const isPublic = data?.visibility === 'public'
@@ -184,25 +174,11 @@ export function AnalyticsDetailContent({ slug }: Props) {
                     <TrashIcon className="size-4" aria-hidden />
                     Hapus
                   </Button>
-                  {data.pipeline_id && !data.superset_dataset_id && (
-                    <Button
-                      type="button"
-                      outline
-                      disabled={promote.isPending}
-                      onClick={() => promote.mutate()}
-                    >
-                      {promote.isPending ? 'Mem-promote…' : 'Promote ke Superset'}
-                    </Button>
-                  )}
                 </div>
               </div>
             </div>
 
-            {promoteError && (
-              <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-                {promoteError}
-              </p>
-            )}
+            <SupersetIntegrationPanel slug={slug} dashboard={data} />
 
             {viewMode === 'superset' && hasSupersetEmbed ? (
               <EmbeddedDashboard dashboardKey={slug} />

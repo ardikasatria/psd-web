@@ -20,7 +20,14 @@ from app.modules.teams.deps import membership, team_ref
 from app.modules.teams.models import Team
 from app.modules.users.models import User
 from app.modules.users.refs import is_staff
-from app.gitea.service import flip_source, list_repo_files, maybe_provision, mirror_upload, repo_diff
+from app.gitea.service import (
+    client_or_none,
+    flip_source,
+    list_repo_files,
+    maybe_provision,
+    mirror_upload,
+    repo_diff,
+)
 
 router = APIRouter(tags=["registry"])
 KIND_MAP = {"projects": "project", "datasets": "dataset", "models": "model"}
@@ -245,6 +252,7 @@ def _register(seg: str, kind: str):
         await after_repo_created(db, user)
         try:
             await maybe_provision(db, r, user)
+            await db.refresh(r)
         except Exception:
             pass
         tm = await team_ref(db, r.team_id)
@@ -436,6 +444,27 @@ async def gitea_diff(
     return await repo_diff(r, base, head)
 
 
+@router.post("/repos/{repo_id}/gitea/provision")
+async def gitea_provision(
+    repo_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    r = await _can_edit_repo(db, repo_id, user)
+    if r.gitea_repo_id and r.clone_url:
+        return {"linked": True, "clone_url": r.clone_url}
+    if not client_or_none():
+        raise ApiError(503, "gitea_unavailable", "Layanan Git sementara tidak tersedia")
+    try:
+        await maybe_provision(db, r, user)
+    except Exception as e:
+        raise ApiError(502, "provision_failed", "Gagal menghubungkan repositori Git") from e
+    await db.refresh(r)
+    if not r.clone_url:
+        raise ApiError(502, "provision_failed", "Gagal menghubungkan repositori Git")
+    return {"linked": True, "clone_url": r.clone_url}
+
+
 @router.post("/repos/{repo_id}/gitea/flip")
 async def gitea_flip_source(
     repo_id: str,
@@ -444,6 +473,6 @@ async def gitea_flip_source(
 ):
     r = await _can_edit_repo(db, repo_id, user)
     if not r.gitea_repo_id:
-        raise ApiError(400, "not_linked", "Repo belum terhubung ke Gitea")
+        raise ApiError(400, "not_linked", "Repositori Git belum diaktifkan untuk aset ini")
     await flip_source(db, r)
     return {"source_of_truth": r.source_of_truth, "clone_url": r.clone_url}

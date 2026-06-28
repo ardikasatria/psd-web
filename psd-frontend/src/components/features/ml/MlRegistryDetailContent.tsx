@@ -1,23 +1,15 @@
 'use client'
 
 import { DriftStatusBadge } from '@/components/features/ml/DriftStatusBadge'
+import { ModelServingPanel } from '@/components/features/ml/ModelServingPanel'
 import { QueryState } from '@/components/features/QueryState'
-import {
-  createMonitoringDashboard,
-  getModelRegistry,
-  listDriftReports,
-  mlflowPublicUrl,
-  runDriftCheck,
-} from '@/lib/api/ml'
-import { getServingQuota, predictModel } from '@/lib/api/serving'
+import { getModelRegistry, listDriftReports, mlflowPublicUrl, registerModelVersion, runDriftCheck, createMonitoringDashboard } from '@/lib/api/ml'
 import type { DriftReport, ModelRegistryDetail } from '@/lib/api/ml'
-import type { PredictResult, ServingQuota } from '@/lib/api/serving'
 import { normalizeDriftStatus } from '@/lib/ml/driftStatus'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import { Button } from '@/shared/Button'
 import Input from '@/shared/Input'
-import Textarea from '@/shared/Textarea'
-import { ArrowTopRightOnSquareIcon, ChartBarSquareIcon, PlayIcon } from '@heroicons/react/24/outline'
+import { ArrowTopRightOnSquareIcon, ChartBarSquareIcon, ServerStackIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -120,14 +112,7 @@ function DriftReportCard({ report }: { report: DriftReport }) {
 export function MlRegistryDetailContent({ slug }: Props) {
   const qc = useQueryClient()
   const [currentSourceId, setCurrentSourceId] = useState('')
-  const [predictInput, setPredictInput] = useState('[[1, 2, 3, 4]]')
-  const [predictResult, setPredictResult] = useState<PredictResult | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-
-  const servingQuota = useQuery<ServingQuota>({
-    queryKey: ['serving-quota'],
-    queryFn: getServingQuota,
-  })
 
   const { data, isLoading, isError, error } = useQuery<ModelRegistryDetail>({
     queryKey: ['ml-registry', slug],
@@ -159,25 +144,20 @@ export function MlRegistryDetailContent({ slug }: Props) {
     onError: (e: Error) => setActionError(e.message),
   })
 
-  const predictMutation = useMutation({
-    mutationFn: () => {
-      let inputs: unknown
-      try {
-        inputs = JSON.parse(predictInput)
-      } catch {
-        throw new Error('Input harus JSON valid (array atau objek).')
-      }
-      return predictModel(slug, { inputs, stage: 'Production' })
-    },
-    onSuccess: (res) => {
+  const registerVersionMutation = useMutation({
+    mutationFn: () =>
+      registerModelVersion(slug, {
+        repo_id: data?.repo_id ?? undefined,
+      }),
+    onSuccess: () => {
       setActionError(null)
-      setPredictResult(res)
-      qc.invalidateQueries({ queryKey: ['serving-quota'] })
+      qc.invalidateQueries({ queryKey: ['ml-registry', slug] })
     },
     onError: (e: Error) => setActionError(e.message),
   })
 
   const latestDrift = drift.data?.items.find((r) => r.status === 'done' && r.drift_status)
+  const hasProduction = data?.versions.some((v) => v.stage === 'Production') ?? false
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-4 py-8">
@@ -240,11 +220,29 @@ export function MlRegistryDetailContent({ slug }: Props) {
                     Buat dashboard monitoring
                   </Button>
                 )}
+                <Link
+                  href={`/ml/${slug}/serving`}
+                  className="inline-flex items-center gap-1 text-sm text-violet-700 hover:underline dark:text-violet-300"
+                >
+                  <ServerStackIcon className="size-4" aria-hidden />
+                  Endpoint inferensi
+                </Link>
               </div>
             </div>
 
             <section className="rounded-2xl border border-neutral-200/80 bg-white p-6 dark:border-neutral-700 dark:bg-neutral-800">
-              <h2 className="text-lg font-semibold">Versi model</h2>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold">Versi model</h2>
+                {data.repo_id && (
+                  <Button
+                    type="button"
+                    onClick={() => registerVersionMutation.mutate()}
+                    disabled={registerVersionMutation.isPending}
+                  >
+                    {registerVersionMutation.isPending ? 'Mendaftarkan…' : 'Daftarkan versi dari repo'}
+                  </Button>
+                )}
+              </div>
               <ul className="mt-4 space-y-3">
                 {data.versions.length === 0 ? (
                   <li className="text-sm text-neutral-500">Belum ada versi terdaftar.</li>
@@ -269,52 +267,12 @@ export function MlRegistryDetailContent({ slug }: Props) {
               </ul>
             </section>
 
-            <section className="rounded-2xl border border-neutral-200/80 bg-white p-6 dark:border-neutral-700 dark:bg-neutral-800">
-              <h2 className="text-lg font-semibold">Inferensi (serving)</h2>
-              <p className="mt-1 text-sm text-neutral-500">
-                Uji prediksi dari model Production di registry. Kuota per tier gamifikasi.
-              </p>
-              {servingQuota.data && (
-                <p className="mt-2 text-xs text-neutral-500">
-                  Kuota tier <strong>{servingQuota.data.tier}</strong>:{' '}
-                  {servingQuota.data.used}/{servingQuota.data.limit} per jam ({servingQuota.data.remaining}{' '}
-                  tersisa)
-                </p>
-              )}
-              <div className="mt-4 space-y-3">
-                <Textarea
-                  value={predictInput}
-                  onChange={(e) => setPredictInput(e.target.value)}
-                  rows={4}
-                  className="font-mono text-xs"
-                  placeholder='[[1, 2, 3]]'
-                />
-                <ButtonPrimary
-                  type="button"
-                  onClick={() => predictMutation.mutate()}
-                  disabled={predictMutation.isPending}
-                >
-                  <PlayIcon className="size-4" aria-hidden />
-                  {predictMutation.isPending ? 'Memproses…' : 'Jalankan prediksi'}
-                </ButtonPrimary>
-              </div>
-              {predictResult && (
-                <div className="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-900/50">
-                  <p className="text-xs text-neutral-500">
-                    Latensi: <strong>{predictResult.latency_ms} ms</strong>
-                    {predictResult.quota && (
-                      <>
-                        {' '}
-                        · Kuota tersisa: <strong>{predictResult.quota.remaining}</strong>
-                      </>
-                    )}
-                  </p>
-                  <pre className="mt-2 overflow-x-auto text-xs text-neutral-700 dark:text-neutral-300">
-                    {JSON.stringify(predictResult.prediction, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </section>
+            <ModelServingPanel
+              modelSlug={slug}
+              mlflowName={data.mlflow_name}
+              hasProductionVersion={hasProduction}
+              driftReports={drift.data?.items ?? []}
+            />
 
             <section className="rounded-2xl border border-neutral-200/80 bg-white p-6 dark:border-neutral-700 dark:bg-neutral-800">
               <h2 className="text-lg font-semibold">Drift monitoring</h2>
