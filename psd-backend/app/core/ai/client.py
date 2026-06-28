@@ -26,3 +26,14 @@ def chat_json(system: str, user: str, max_tokens: int = 1800):
         max_tokens=max_tokens,
     )
     return r.choices[0].message.content, r.usage
+
+
+def chat_messages(messages: list[dict], *, max_tokens: int = 800) -> str:
+    """Panggilan chat umum untuk asisten (Langkah 57)."""
+    r = _get_client().chat.completions.create(
+        model=settings.AI_MODEL,
+        temperature=0.5,
+        messages=messages,
+        max_tokens=max_tokens,
+    )
+    return r.choices[0].message.content or ""

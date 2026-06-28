@@ -1,5 +1,8 @@
+import uuid
+
 from sqlalchemy import select
 
+from app.email.integration import schedule_event_email
 from app.modules.notifications.models import Notification
 from app.modules.users.models import User
 from app.modules.users.settings import merged
@@ -15,10 +18,12 @@ async def _inapp_enabled(db, user_id: str) -> bool:
 async def notify(db, user_id, type, title, body="", link=None, actor_id=None):
     if user_id == actor_id:
         return
-    if not await _inapp_enabled(db, user_id):
-        return
-    db.add(
-        Notification(
+    inapp = await _inapp_enabled(db, user_id)
+    notification_id = f"ntf_{uuid.uuid4().hex[:12]}"
+
+    if inapp:
+        n = Notification(
+            id=notification_id,
             user_id=user_id,
             type=type,
             title=title,
@@ -26,8 +31,17 @@ async def notify(db, user_id, type, title, body="", link=None, actor_id=None):
             link=link,
             actor_id=actor_id,
         )
-    )
+        db.add(n)
     await db.commit()
+
+    schedule_event_email(
+        notification_id=notification_id,
+        user_id=user_id,
+        event_type=type,
+        title=title,
+        body=body,
+        link=link,
+    )
 
 
 async def notify_staff(db, type, title, body="", link=None, actor_id=None):
@@ -37,16 +51,4 @@ async def notify_staff(db, type, title, body="", link=None, actor_id=None):
     for u in staff:
         if u.id == actor_id:
             continue
-        if not await _inapp_enabled(db, u.id):
-            continue
-        db.add(
-            Notification(
-                user_id=u.id,
-                type=type,
-                title=title,
-                body=body,
-                link=link,
-                actor_id=actor_id,
-            )
-        )
-    await db.commit()
+        await notify(db, u.id, type, title, body=body, link=link, actor_id=actor_id)

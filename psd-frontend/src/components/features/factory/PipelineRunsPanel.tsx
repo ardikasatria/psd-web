@@ -1,6 +1,6 @@
 'use client'
 
-import { RunStatusBadge } from '@/components/features/factory/pipeline-utils'
+import { ExecutionEngineBadge, RunStatusBadge } from '@/components/features/factory/pipeline-utils'
 import { downloadLayer, getFactoryQuota, getRun, listRuns, runPipeline } from '@/lib/api/factory'
 import type { FactoryQuota, Pipeline, RunDetail, RunSummary } from '@/types/api'
 import ButtonPrimary from '@/shared/ButtonPrimary'
@@ -157,7 +157,10 @@ export function PipelineRunsPanel({ slug, pipeline }: Props) {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-xs text-neutral-500">{run.id}</span>
-                      <RunStatusBadge status={run.status} />
+                      <div className="flex items-center gap-1.5">
+                        <ExecutionEngineBadge engine={run.execution_engine} />
+                        <RunStatusBadge status={run.status} />
+                      </div>
                     </div>
                     <p className="mt-1.5 text-xs text-neutral-600 dark:text-neutral-400">
                       {formatTime(run.created_at)} · {run.rows_out.toLocaleString('id-ID')} baris ·{' '}
@@ -178,6 +181,7 @@ export function PipelineRunsPanel({ slug, pipeline }: Props) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <RunStatusBadge status={activeRun.data.status} />
+                  <ExecutionEngineBadge engine={activeRun.data.execution_engine} />
                   {(activeRun.data.status === 'queued' || activeRun.data.status === 'running') && (
                     <ArrowPathIcon className="size-4 animate-spin text-amber-500" aria-hidden />
                   )}

@@ -20,6 +20,7 @@ from app.modules.teams.deps import membership, team_ref
 from app.modules.teams.models import Team
 from app.modules.users.models import User
 from app.modules.users.refs import is_staff
+from app.gitea.service import flip_source, list_repo_files, maybe_provision, mirror_upload, repo_diff
 
 router = APIRouter(tags=["registry"])
 KIND_MAP = {"projects": "project", "datasets": "dataset", "models": "model"}
@@ -242,6 +243,10 @@ def _register(seg: str, kind: str):
         except Exception:
             pass
         await after_repo_created(db, user)
+        try:
+            await maybe_provision(db, r, user)
+        except Exception:
+            pass
         tm = await team_ref(db, r.team_id)
         return {**to_detail(r, team=tm), "liked": False}
 
@@ -324,12 +329,17 @@ async def add_file(
         raise ApiError(502, "storage_error", "Gagal mengunggah file") from exc
     entry = {
         "path": name,
+        "path_key": key,
         "size_bytes": len(data),
         "type": file.content_type or "application/octet-stream",
         "url": url,
     }
     r.files = [f for f in (r.files or []) if f.get("path") != name] + [entry]
     await db.commit()
+    try:
+        await mirror_upload(db, r, name, data)
+    except Exception:
+        pass
     return entry
 
 
@@ -397,3 +407,43 @@ async def unlike_repo(
         except Exception:
             pass
     return {"liked": False, "likes": r.likes}
+
+
+@router.get("/repos/{repo_id}/gitea/files")
+async def gitea_list_files(
+    repo_id: str,
+    path: str = "",
+    ref: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    r = await _get_repo(db, repo_id)
+    if not r.gitea_repo_id:
+        raise ApiError(404, "not_linked", "Repo belum terhubung ke Gitea")
+    items = await list_repo_files(r, path, ref)
+    return {"items": items, "source_of_truth": r.source_of_truth}
+
+
+@router.get("/repos/{repo_id}/gitea/diff")
+async def gitea_diff(
+    repo_id: str,
+    base: str,
+    head: str,
+    db: AsyncSession = Depends(get_db),
+):
+    r = await _get_repo(db, repo_id)
+    if not r.gitea_repo_id:
+        raise ApiError(404, "not_linked", "Repo belum terhubung ke Gitea")
+    return await repo_diff(r, base, head)
+
+
+@router.post("/repos/{repo_id}/gitea/flip")
+async def gitea_flip_source(
+    repo_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    r = await _can_edit_repo(db, repo_id, user)
+    if not r.gitea_repo_id:
+        raise ApiError(400, "not_linked", "Repo belum terhubung ke Gitea")
+    await flip_source(db, r)
+    return {"source_of_truth": r.source_of_truth, "clone_url": r.clone_url}

@@ -23,3 +23,5 @@ def register_models() -> None:
     from app.modules.synthesis import models as _synthesis  # noqa: F401
     from app.modules.teams import models as _teams  # noqa: F401
     from app.modules.users import models as _users  # noqa: F401
+    from app.oauth import models as _oauth  # noqa: F401
+    from app.mlops import models as _mlops  # noqa: F401

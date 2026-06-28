@@ -2,9 +2,11 @@
 
 import { AddWidgetDialog } from '@/components/features/analytics/AddWidgetDialog'
 import { DashboardGrid } from '@/components/features/analytics/DashboardGrid'
+import { EmbeddedDashboard } from '@/components/features/analytics/EmbeddedDashboard'
 import { darkPanelClass } from '@/components/common/featureGradients'
 import { QueryState } from '@/components/features/QueryState'
 import { deleteDashboard, getDashboard, updateDashboard } from '@/lib/api/dashboards'
+import { promoteDashboardToSuperset } from '@/lib/api/bi'
 import { getPipeline, listPipelines, listSources } from '@/lib/api/factory'
 import { pipelineUsesSynthesis } from '@/lib/analytics/pipelineGold'
 import type { Dashboard } from '@/types/api'
@@ -31,6 +33,8 @@ type Props = {
 export function AnalyticsDetailContent({ slug }: Props) {
   const qc = useQueryClient()
   const [addOpen, setAddOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<'native' | 'superset'>('native')
+  const [promoteError, setPromoteError] = useState<string | null>(null)
 
   const { data, isLoading, isError, error } = useQuery<Dashboard>({
     queryKey: ['analytics-dashboard', slug],
@@ -74,9 +78,19 @@ export function AnalyticsDetailContent({ slug }: Props) {
     },
   })
 
+  const promote = useMutation({
+    mutationFn: () => promoteDashboardToSuperset(slug, {}),
+    onSuccess: () => {
+      setPromoteError(null)
+      qc.invalidateQueries({ queryKey: ['analytics-dashboard', slug] })
+    },
+    onError: (e: Error) => setPromoteError(e.message),
+  })
+
   const isPublic = data?.visibility === 'public'
   const widgets = data?.widgets ?? []
   const layout = (data?.layout ?? []) as { i: string; x: number; y: number; w: number; h: number }[]
+  const hasSupersetEmbed = Boolean(data?.superset_embed_uuid)
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6">
@@ -128,6 +142,24 @@ export function AnalyticsDetailContent({ slug }: Props) {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {hasSupersetEmbed && (
+                    <>
+                      <Button
+                        type="button"
+                        outline={viewMode !== 'native'}
+                        onClick={() => setViewMode('native')}
+                      >
+                        Native
+                      </Button>
+                      <Button
+                        type="button"
+                        outline={viewMode !== 'superset'}
+                        onClick={() => setViewMode('superset')}
+                      >
+                        Superset
+                      </Button>
+                    </>
+                  )}
                   <ButtonPrimary type="button" onClick={() => setAddOpen(true)}>
                     <PlusIcon className="size-4" aria-hidden />
                     Widget
@@ -152,11 +184,29 @@ export function AnalyticsDetailContent({ slug }: Props) {
                     <TrashIcon className="size-4" aria-hidden />
                     Hapus
                   </Button>
+                  {data.pipeline_id && !data.superset_dataset_id && (
+                    <Button
+                      type="button"
+                      outline
+                      disabled={promote.isPending}
+                      onClick={() => promote.mutate()}
+                    >
+                      {promote.isPending ? 'Mem-promote…' : 'Promote ke Superset'}
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
 
-            {widgets.length === 0 ? (
+            {promoteError && (
+              <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                {promoteError}
+              </p>
+            )}
+
+            {viewMode === 'superset' && hasSupersetEmbed ? (
+              <EmbeddedDashboard dashboardKey={slug} />
+            ) : widgets.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-neutral-300 bg-neutral-50/50 px-6 py-16 text-center dark:border-neutral-600 dark:bg-neutral-900/30">
                 <ChartBarSquareIcon className="mx-auto size-10 text-neutral-300 dark:text-neutral-600" aria-hidden />
                 <p className="mt-4 font-medium text-neutral-800 dark:text-neutral-200">Belum ada widget</p>

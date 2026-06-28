@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { QueryState } from '@/components/features/QueryState'
+import { AuthEmailNotice, AuthEmailTips } from '@/components/features/auth/AuthEmailNotice'
 import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import {
   changeEmail,
@@ -19,6 +21,7 @@ import { useAuthGuard } from '@/lib/auth/useAuthGuard'
 
 export function SecuritySettingsContent() {
   useAuthGuard('/settings/security')
+  const router = useRouter()
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -63,10 +66,11 @@ export function SecuritySettingsContent() {
   const emailMutation = useMutation({
     mutationFn: () => changeEmail({ new_email: newEmail, password: emailPassword }),
     onSuccess: () => {
-      setMessage('Cek email baru Anda untuk verifikasi.')
+      const target = newEmail
       setError(null)
       setNewEmail('')
       setEmailPassword('')
+      router.push(`/check-email?kind=change&email=${encodeURIComponent(target)}`)
     },
     onError: (e: Error) => {
       setError(e.message)
@@ -110,23 +114,20 @@ export function SecuritySettingsContent() {
         <QueryState isLoading={isLoading} isError={false} error={loadError}>
           <div className="space-y-6">
           {user && !user.email_verified && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
-              <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                Email belum diverifikasi
-              </p>
-              <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">
-                Verifikasi email Anda untuk mengamankan akun.
-              </p>
-              <Button
-                type="button"
-                outline
-                className="mt-3"
-                onClick={() => resendMutation.mutate()}
-                disabled={resendMutation.isPending}
-              >
-                {resendMutation.isPending ? 'Mengirim...' : 'Kirim ulang verifikasi'}
-              </Button>
-            </div>
+            <AuthEmailNotice variant="warning" title="Email belum diverifikasi">
+              Beberapa fitur mungkin terbatas sampai email Anda diverifikasi. Kami mengirim email dengan tombol
+              verifikasi berbahasa Indonesia — cek kotak masuk dan folder spam.
+              <div className="mt-4">
+                <Button
+                  type="button"
+                  outline
+                  onClick={() => resendMutation.mutate()}
+                  disabled={resendMutation.isPending}
+                >
+                  {resendMutation.isPending ? 'Mengirim...' : 'Kirim ulang email verifikasi'}
+                </Button>
+              </div>
+            </AuthEmailNotice>
           )}
 
           <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
@@ -171,6 +172,9 @@ export function SecuritySettingsContent() {
             <ButtonPrimary type="submit" disabled={passwordMutation.isPending}>
               {passwordMutation.isPending ? 'Menyimpan...' : 'Perbarui kata sandi'}
             </ButtonPrimary>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Email konfirmasi akan dikirim setelah kata sandi berhasil diubah.
+            </p>
           </form>
 
           <form
@@ -184,6 +188,9 @@ export function SecuritySettingsContent() {
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
               Email saat ini: <span className="font-medium text-neutral-800 dark:text-neutral-200">{user?.email}</span>
             </p>
+            <AuthEmailNotice variant="info" title="Konfirmasi via email">
+              Setelah submit, email konfirmasi elegan dikirim ke alamat baru. Tautan berlaku 60 menit.
+            </AuthEmailNotice>
             <Field>
               <Label>Email baru</Label>
               <Input
@@ -211,7 +218,12 @@ export function SecuritySettingsContent() {
           </div>
 
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-          {message && <p className="text-sm text-green-600 dark:text-green-400">{message}</p>}
+          {message && (
+            <AuthEmailNotice variant="success" title="Berhasil">
+              {message}
+            </AuthEmailNotice>
+          )}
+          <AuthEmailTips />
           </div>
         </QueryState>
       </SettingsShell>

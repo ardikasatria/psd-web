@@ -1,6 +1,7 @@
 'use client'
 
 import { AuthPageShell } from '@/components/features/auth/AuthPageShell'
+import { AuthEmailNotice } from '@/components/features/auth/AuthEmailNotice'
 import { useToast } from '@/components/common/Toast'
 import { register } from '@/lib/api/auth'
 import { getApiErrorMessage, isRateLimited } from '@/lib/api/errors'
@@ -8,7 +9,7 @@ import ButtonPrimary from '@/shared/ButtonPrimary'
 import { Field, Label } from '@/shared/fieldset'
 import Input from '@/shared/Input'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -16,8 +17,6 @@ export function RegisterForm() {
   const router = useRouter()
   const qc = useQueryClient()
   const { toast } = useToast()
-  const searchParams = useSearchParams()
-  const next = searchParams.get('next') || '/dashboard'
   const [form, setForm] = useState({ username: '', email: '', password: '', name: '' })
   const [acceptTos, setAcceptTos] = useState(false)
   const [error, setError] = useState('')
@@ -36,7 +35,7 @@ export function RegisterForm() {
     try {
       await register({ ...form, accept_tos: true })
       await qc.invalidateQueries({ queryKey: ['me'] })
-      router.push(next.startsWith('/') ? next : '/dashboard')
+      router.push(`/check-email?email=${encodeURIComponent(form.email)}`)
     } catch (err) {
       if (isRateLimited(err)) {
         setRateLimited(true)
@@ -99,6 +98,9 @@ export function RegisterForm() {
             required
           />
         </Field>
+        <AuthEmailNotice variant="info" title="Verifikasi email">
+          Setelah mendaftar, kami mengirim email verifikasi berbahasa Indonesia dengan tombol aksi aman ke alamat di atas.
+        </AuthEmailNotice>
         <label className="flex items-start gap-3 text-sm text-neutral-700 dark:text-neutral-300">
           <input
             type="checkbox"

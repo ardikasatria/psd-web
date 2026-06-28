@@ -7,6 +7,11 @@ DEFAULT_SETTINGS = {
         "email_forum_reply": True,
         "inapp": True,
     },
+    "email": {
+        "email_enabled": True,
+        "default_mode": "immediate",
+        "events": {},
+    },
     "privacy": {
         "profile_visibility": "public",
         "show_email": False,

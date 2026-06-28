@@ -33,10 +33,18 @@ check "API db" "${API}/health/db" || fail=1
 check "App (frontend)" "${APP}" || fail=1
 check "Storage (MinIO)" "https://storage.${DOMAIN}/psd-media/" || fail=1
 
+OIDC="https://api.${DOMAIN}/.well-known/openid-configuration"
+if curl -fsS --max-time 15 "${OIDC}" | grep -q '"issuer"'; then
+  echo "  OK  OIDC discovery"
+else
+  echo "  FAIL OIDC discovery (${OIDC})"
+  fail=1
+fi
+
 echo ""
-echo "Migrasi Alembic (harus head = 042_dashboards):"
-if docker compose -f docker-compose.prod.yml exec -T backend alembic current 2>/dev/null | grep -q "042_dashboards"; then
-  echo "  OK  alembic head (042_dashboards)"
+echo "Migrasi Alembic (harus head = 048_mlops_features):"
+if docker compose -f docker-compose.prod.yml exec -T backend alembic current 2>/dev/null | grep -q "048_mlops_features"; then
+  echo "  OK  alembic head (048_mlops_features)"
 else
   echo "  WARN alembic current — cek: docker compose -f docker-compose.prod.yml exec backend alembic current"
   fail=1

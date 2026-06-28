@@ -76,6 +76,8 @@ def to_summary(r, category=None, subcategory=None, team=None) -> dict:
         "team": team,
         "synthetic": bool(getattr(r, "synthetic", False)),
         "generation_spec": getattr(r, "generation_spec", None),
+        "clone_url": getattr(r, "clone_url", None),
+        "source_of_truth": getattr(r, "source_of_truth", "psd"),
     }
 
 

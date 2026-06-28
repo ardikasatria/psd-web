@@ -95,6 +95,10 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
       FACTORY_RUN_TIMEOUT_S: ${FACTORY_RUN_TIMEOUT_S:-90}
+      PSD_OIDC_ISSUER: http://${VM_IP:-localhost}:8000
+      PSD_OAUTH_GIT_BASE_URL: http://${VM_IP:-localhost}:3001
+      PSD_OAUTH_HUB_BASE_URL: http://${VM_IP:-localhost}:3002
+      PSD_OAUTH_BI_BASE_URL: http://${VM_IP:-localhost}:3003
     ports:
       - "8000:8000"
     depends_on:

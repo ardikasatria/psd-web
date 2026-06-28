@@ -47,7 +47,12 @@ export const getPipeline = (slug: string) => apiFetch<Pipeline>(`/pipelines/${sl
 
 export const updatePipeline = (
   slug: string,
-  body: Partial<{ title: string; spec: { nodes: unknown[]; edges: unknown[] } }>,
+  body: Partial<{
+    title: string
+    spec: { nodes: unknown[]; edges: unknown[] }
+    engine: 'auto' | 'duckdb' | 'spark'
+    schedule_cron: string | null
+  }>,
 ) =>
   apiFetch(`/pipelines/${slug}`, PipelineUpdateResultSchema, {
     method: 'PATCH',
@@ -58,6 +63,9 @@ export const validatePipeline = (slug: string) =>
   apiFetch(`/pipelines/${slug}/validate`, PipelineValidateResultSchema, { method: 'POST' })
 
 export const deletePipeline = (slug: string) => apiDelete(`/pipelines/${slug}`)
+
+export const exportAirflowDag = (slug: string) =>
+  apiFetch(`/pipelines/${slug}/airflow-dag`, z.object({ dag_id: z.string(), code: z.string() }))
 
 export const getFactoryQuota = () => apiFetch('/me/factory/quota', FactoryQuotaSchema)
 

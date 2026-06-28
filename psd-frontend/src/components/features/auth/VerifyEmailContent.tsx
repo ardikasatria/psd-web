@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { AuthEmailNotice } from '@/components/features/auth/AuthEmailNotice'
 import { AuthPageShell } from '@/components/features/auth/AuthPageShell'
 import { verifyEmail } from '@/lib/api/auth'
 import ButtonPrimary from '@/shared/ButtonPrimary'
@@ -25,30 +26,44 @@ export function VerifyEmailContent() {
   return (
     <AuthPageShell>
       <h1 className="text-center text-2xl font-semibold text-neutral-900 dark:text-white">Verifikasi email</h1>
+      <p className="mt-2 text-center text-sm text-neutral-500 dark:text-neutral-400">
+        Mengonfirmasi alamat email akun PSD Anda
+      </p>
 
       {status === 'loading' && (
-        <p className="mt-8 text-center text-neutral-600 dark:text-neutral-400">Memverifikasi...</p>
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <div className="size-8 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600" aria-hidden />
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">Memverifikasi tautan Anda…</p>
+        </div>
       )}
+
       {status === 'ok' && (
         <div className="mt-8 space-y-5">
-          <p className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-950/30 dark:text-green-200">
-            Email berhasil diverifikasi. Akun Anda siap digunakan.
-          </p>
+          <AuthEmailNotice variant="success" title="Email berhasil diverifikasi">
+            Akun Anda sudah aktif sepenuhnya. Anda dapat mengakses semua fitur PSD dengan aman.
+          </AuthEmailNotice>
           <ButtonPrimary href="/dashboard" className="w-full">
             Lanjut ke dasbor
           </ButtonPrimary>
         </div>
       )}
+
       {status === 'error' && (
         <div className="mt-8 space-y-5">
-          <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200">
-            Tautan verifikasi tidak valid atau kedaluwarsa.
-          </p>
-          <p className="text-center text-sm">
-            <Link href="/login" className="font-medium text-primary-600 hover:underline dark:text-primary-400">
-              Masuk ke akun
-            </Link>
-          </p>
+          <AuthEmailNotice variant="warning" title="Tautan tidak valid atau kedaluwarsa">
+            Tautan verifikasi mungkin sudah dipakai atau melewati batas waktu (60 menit). Minta email baru dari
+            pengaturan keamanan.
+          </AuthEmailNotice>
+          <div className="flex flex-col gap-3">
+            <ButtonPrimary href="/settings/security" className="w-full">
+              Kirim ulang verifikasi
+            </ButtonPrimary>
+            <p className="text-center text-sm">
+              <Link href="/login" className="font-medium text-primary-600 hover:underline dark:text-primary-400">
+                Masuk ke akun
+              </Link>
+            </p>
+          </div>
         </div>
       )}
     </AuthPageShell>

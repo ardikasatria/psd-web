@@ -267,6 +267,13 @@ export const SettingsNotificationsSchema = z.object({
   inapp: z.boolean(),
 })
 
+export const SettingsEmailSchema = z.object({
+  email_enabled: z.boolean(),
+  default_mode: z.enum(['immediate', 'digest', 'off']),
+  events: z.record(z.enum(['immediate', 'digest', 'off'])).optional(),
+})
+export type SettingsEmail = z.infer<typeof SettingsEmailSchema>
+
 export const SettingsPrivacySchema = z.object({
   profile_visibility: z.enum(['public', 'private']),
   show_email: z.boolean(),
@@ -283,12 +290,14 @@ export type SettingsAppearance = z.infer<typeof SettingsAppearanceSchema>
 
 export const SettingsSchema = z.object({
   notifications: SettingsNotificationsSchema,
+  email: SettingsEmailSchema,
   privacy: SettingsPrivacySchema,
   appearance: SettingsAppearanceSchema,
 })
 export type Settings = z.infer<typeof SettingsSchema>
 export type SettingsPatch = {
   notifications?: Partial<Settings['notifications']>
+  email?: Partial<Settings['email']>
   privacy?: Partial<Settings['privacy']>
   appearance?: Partial<Settings['appearance']>
 }
@@ -348,6 +357,8 @@ export const RepoSummarySchema = z.object({
   team: TeamRefSchema.nullable().optional(),
   synthetic: z.boolean().optional(),
   generation_spec: z.record(z.unknown()).nullable().optional(),
+  clone_url: z.string().nullable().optional(),
+  source_of_truth: z.string().optional(),
   metrics_preview: z.record(z.string(), z.number()).optional(),
   dataset_preview: z
     .object({
@@ -1628,6 +1639,8 @@ export const PipelineSchema = PipelineSummarySchema.extend({
   validation_error: z.string().nullable().optional(),
   team_id: z.string().nullable().optional(),
   room_id: z.string().nullable().optional(),
+  engine: z.enum(['auto', 'duckdb', 'spark']).optional(),
+  schedule_cron: z.string().nullable().optional(),
 })
 export type Pipeline = z.infer<typeof PipelineSchema>
 
@@ -1659,6 +1672,7 @@ export const RunSummarySchema = z.object({
   rows_out: z.number(),
   duration_ms: z.number(),
   created_at: z.string(),
+  execution_engine: z.string().nullable().optional(),
 })
 export type RunSummary = z.infer<typeof RunSummarySchema>
 
@@ -1676,6 +1690,7 @@ export const RunDetailSchema = z.object({
   lineage: z.record(z.any()),
   error: z.string().nullable(),
   duration_ms: z.number(),
+  execution_engine: z.string().nullable().optional(),
 })
 export type RunDetail = z.infer<typeof RunDetailSchema>
 
@@ -1686,6 +1701,8 @@ export const RunListSchema = z.object({
 export const RunStartSchema = z.object({
   run_id: z.string(),
   status: z.string(),
+  engine: z.string().optional(),
+  queue: z.string().optional(),
 })
 
 export const LayerDownloadSchema = z.object({
@@ -1719,6 +1736,10 @@ export const DashboardSchema = DashboardSummarySchema.extend({
   description_md: z.string(),
   layout: z.array(z.record(z.unknown())),
   owner_id: z.string().optional(),
+  superset_dataset_id: z.number().nullable().optional(),
+  superset_dashboard_id: z.number().nullable().optional(),
+  superset_embed_uuid: z.string().nullable().optional(),
+  superset_gold_table: z.string().nullable().optional(),
   widgets: z.array(DashboardWidgetSchema),
 })
 export type Dashboard = z.infer<typeof DashboardSchema>

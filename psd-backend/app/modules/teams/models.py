@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -17,6 +17,7 @@ class Team(Base):
     avatar_url: Mapped[str | None] = mapped_column(String, nullable=True)
     visibility: Mapped[str] = mapped_column(String, default="public")
     created_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    rls_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

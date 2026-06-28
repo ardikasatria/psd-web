@@ -26,6 +26,11 @@ export function WidgetTile({ slug, widget, editable, inGrid, className }: Props)
     staleTime: 30_000,
   })
 
+  const perfMeta = (data as WidgetData & { _perf?: { from_cache?: boolean } })?._perf
+  const chartData = data
+    ? Object.fromEntries(Object.entries(data).filter(([k]) => k !== '_perf'))
+    : data
+
   const remove = useMutation({
     mutationFn: () => deleteWidget(slug, widget.id),
     onSuccess: () => {
@@ -64,6 +69,11 @@ export function WidgetTile({ slug, widget, editable, inGrid, className }: Props)
             <h3 className="truncate font-semibold text-neutral-900 dark:text-neutral-100">
               {widget.title || 'Widget tanpa judul'}
             </h3>
+            {perfMeta?.from_cache && (
+              <span className="mt-1 inline-flex rounded-full bg-sky-100/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">
+                Cache
+              </span>
+            )}
           </div>
         </div>
         {editable && (
@@ -85,7 +95,7 @@ export function WidgetTile({ slug, widget, editable, inGrid, className }: Props)
         {isError ? (
           <p className="text-sm text-red-600 dark:text-red-400">Gagal memuat data widget.</p>
         ) : (
-          <Chart kind={widget.kind} data={isLoading ? undefined : data} options={widget.options} title={widget.title} />
+          <Chart kind={widget.kind} data={isLoading ? undefined : chartData} options={widget.options} title={widget.title} />
         )}
       </div>
     </article>

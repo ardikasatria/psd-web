@@ -11,6 +11,7 @@ import { buildColumnsByNode, type ColumnDef } from '@/lib/factory/columnInferenc
 import { errorsByNodeId, type PsdNodeData } from '@/lib/factory/specFlow'
 import { DEFAULT_MAX_NODES, validatePipelineSpec } from '@/lib/factory/validate'
 import {
+  exportAirflowDag,
   getFactoryQuota,
   getPipeline,
   getSourceSchema,
@@ -40,6 +41,9 @@ export function PipelineDetailContent({ slug }: Props) {
   const [localErrors, setLocalErrors] = useState<string[]>([])
   const [schemas, setSchemas] = useState<Record<string, ColumnDef[]>>({})
   const [runError, setRunError] = useState<string | null>(null)
+  const [engine, setEngine] = useState<'auto' | 'duckdb' | 'spark'>('auto')
+  const [scheduleCron, setScheduleCron] = useState('')
+  const [dagError, setDagError] = useState<string | null>(null)
   const [mobilePanel, setMobilePanel] = useState<'palette' | 'properties' | null>(null)
 
   const { data, isLoading, isError, error } = useQuery<Pipeline>({
@@ -59,7 +63,9 @@ export function PipelineDetailContent({ slug }: Props) {
 
   useEffect(() => {
     if (data?.spec) setDraftSpec(data.spec)
-  }, [data?.spec, slug])
+    if (data?.engine) setEngine(data.engine)
+    if (data?.schedule_cron != null) setScheduleCron(data.schedule_cron)
+  }, [data?.spec, data?.engine, data?.schedule_cron, slug])
 
   const sourceIds = useMemo(
     () =>
@@ -104,10 +110,56 @@ export function PipelineDetailContent({ slug }: Props) {
         : []
 
   const saveMutation = useMutation({
-    mutationFn: (spec: PipelineSpec) => updatePipeline(slug, { spec }),
+    mutationFn: (spec: PipelineSpec) => updatePipeline(slug, { spec, engine }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['factory-pipeline', slug] })
       qc.invalidateQueries({ queryKey: ['factory-pipelines'] })
+    },
+  })
+
+  const engineMutation = useMutation({
+    mutationFn: (eng: 'auto' | 'duckdb' | 'spark') => updatePipeline(slug, { engine: eng }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['factory-pipeline', slug] })
+    },
+  })
+
+  const handleEngineChange = useCallback(
+    (eng: 'auto' | 'duckdb' | 'spark') => {
+      setEngine(eng)
+      engineMutation.mutate(eng)
+    },
+    [engineMutation],
+  )
+
+  const scheduleMutation = useMutation({
+    mutationFn: (cron: string | null) => updatePipeline(slug, { schedule_cron: cron }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['factory-pipeline', slug] })
+    },
+  })
+
+  const handleScheduleBlur = useCallback(() => {
+    const trimmed = scheduleCron.trim()
+    const next = trimmed || null
+    if (next === (data?.schedule_cron ?? null)) return
+    scheduleMutation.mutate(next)
+  }, [scheduleCron, data?.schedule_cron, scheduleMutation])
+
+  const exportDagMutation = useMutation({
+    mutationFn: () => exportAirflowDag(slug),
+    onSuccess: (dag) => {
+      setDagError(null)
+      const blob = new Blob([dag.code], { type: 'text/x-python;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `${dag.dag_id}.py`
+      anchor.click()
+      URL.revokeObjectURL(url)
+    },
+    onError: (e: Error) => {
+      setDagError(e instanceof ApiError ? e.message : e.message)
     },
   })
 
@@ -216,6 +268,15 @@ export function PipelineDetailContent({ slug }: Props) {
             <PipelineToolbar
               status={data.status}
               pipelineId={data.id}
+              engine={engine}
+              onEngineChange={handleEngineChange}
+              scheduleCron={scheduleCron}
+              onScheduleCronChange={setScheduleCron}
+              onScheduleCronBlur={handleScheduleBlur}
+              isSavingSchedule={scheduleMutation.isPending}
+              canExportDag={!!scheduleCron.trim() && data.status === 'valid'}
+              isExportingDag={exportDagMutation.isPending}
+              onExportDag={() => exportDagMutation.mutate()}
               runsLeft={runsLeft}
               isSaving={saveMutation.isPending}
               isValidating={validateMutation.isPending}
@@ -225,6 +286,12 @@ export function PipelineDetailContent({ slug }: Props) {
               onValidate={handleValidate}
               onRun={() => runMutation.mutate()}
             />
+
+            {dagError && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+                {dagError}
+              </div>
+            )}
 
             {runError && (
               <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">

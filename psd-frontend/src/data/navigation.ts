@@ -23,6 +23,8 @@ export async function getNavigation(): Promise<TNavigationItem[]> {
         { id: '3b', href: '/synthesis', name: 'Data Sintesis' },
         { id: '5c', href: '/factory/pipelines', name: 'Pabrik Data' },
         { id: '5d', href: '/analytics', name: 'Ruang Analitik' },
+        { id: '5e', href: '/ml', name: 'Registry Model' },
+        { id: '5f', href: '/assistant', name: 'Asisten AI' },
         { id: '10', href: '/leaderboard', name: 'Peringkat' },
         { id: '6', href: '/events', name: 'Event' },
         { id: '7', href: '/learn', name: 'Belajar' },

@@ -10,6 +10,7 @@ from app.modules.rooms.models import IdeaRoom, RoomProblem
 from app.modules.synthesis.engine import generate
 from app.modules.synthesis.spec import DatasetSpec
 from app.modules.teams.models import Team
+from app.tasks.seams import PermanentError, RetryableError, is_retryable
 
 
 async def run_room_data_job(room_id: str, n_rows: int):
@@ -53,7 +54,13 @@ async def run_room_data_job(room_id: str, n_rows: int):
             r.status = "solving"
             r.generation_error = None
             await db.commit()
+        except (RetryableError, PermanentError):
+            raise
         except Exception as e:
+            if is_retryable(e):
+                await db.commit()
+                raise RetryableError(str(e)) from e
             r.status = "closed"
             r.generation_error = str(e)[:500]
             await db.commit()
+            raise PermanentError(str(e)) from e

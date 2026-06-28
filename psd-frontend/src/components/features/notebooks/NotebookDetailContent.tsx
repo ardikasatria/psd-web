@@ -6,6 +6,7 @@ import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import { useMe } from '@/lib/api/dashboard'
 import { useTrackView } from '@/lib/analytics/useTrackView'
 import { deleteNotebook, getNotebook } from '@/lib/api/notebooks'
+import { hubEnabled, hubNotebookUrl } from '@/lib/hub'
 import { isStaff } from '@/lib/auth/roles'
 import { NotebookDetail } from '@/types/api'
 import { Badge } from '@/shared/Badge'
@@ -134,39 +135,52 @@ export function NotebookDetailContent({ id }: { id: string }) {
 
               <aside className="lg:sticky lg:top-24 lg:self-start">
                 <div className="overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-700 dark:bg-neutral-800">
-                  <div className="bg-gradient-to-br from-orange-400 to-rose-500 px-5 py-6 text-white">
+                  <div className="bg-gradient-to-br from-violet-500 to-indigo-600 px-5 py-6 text-white">
                     <CodeBracketSquareIcon className="size-8" aria-hidden />
-                    <p className="mt-3 text-sm font-medium text-white/90">Google Colab</p>
-                    <p className="mt-1 text-lg font-semibold">Buka & jalankan notebook</p>
+                    <p className="mt-3 text-sm font-medium text-white/90">Notebook PSD</p>
+                    <p className="mt-1 text-lg font-semibold">Jalankan di JupyterHub</p>
                   </div>
                   <div className="space-y-4 p-5">
-                    {data.colab_url ? (
+                    {hubEnabled() ? (
                       <ButtonPrimary
-                        href={data.colab_url}
+                        href={hubNotebookUrl()}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="w-full justify-center"
                       >
                         <ArrowTopRightOnSquareIcon className="size-5" data-slot="icon" />
-                        Buka di Colab
+                        Buka Notebook
                       </ButtonPrimary>
                     ) : (
                       <>
                         <ButtonPrimary disabled className="w-full justify-center">
-                          Buka di Colab
+                          Buka Notebook
                         </ButtonPrimary>
                         <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                          Buka di Colab tersedia untuk notebook bersumber GitHub. Lihat sumber di bawah.
+                          JupyterHub belum aktif di lingkungan ini.
                         </p>
                       </>
                     )}
+
+                    {data.colab_url ? (
+                      <Button
+                        href={data.colab_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        outline
+                        className="w-full justify-center"
+                      >
+                        <ArrowTopRightOnSquareIcon className="size-4" data-slot="icon" />
+                        Buka di Colab (fallback)
+                      </Button>
+                    ) : null}
 
                     {data.source_url && (
                       <Button
                         href={data.source_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        outline
+                        plain
                         className="w-full justify-center"
                       >
                         Lihat sumber

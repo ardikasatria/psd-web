@@ -8,7 +8,12 @@ from app.core.config import settings
 from app.core.cookies import clear_auth_cookie, set_auth_cookie
 from app.core.db import get_db
 from app.core.deps import get_current_user
-from app.core.email import send_email
+from app.email.auth_mail import (
+    send_change_email_verification,
+    send_password_changed_email,
+    send_reset_password_email,
+    send_verify_email,
+)
 from app.core.errors import ApiError
 from app.core.ratelimit import rate_limit
 from app.core.security import (
@@ -66,11 +71,7 @@ async def register(body: RegisterIn, response: Response, db: AsyncSession = Depe
     await db.commit()
     await db.refresh(user)
     verify_tok = create_purpose_token(user.id, "verify", 60)
-    send_email(
-        user.email,
-        "Verifikasi email PSD",
-        f"{settings.APP_BASE_URL}/verify-email?token={verify_tok}",
-    )
+    send_verify_email(user.email, name=user.name, token=verify_tok, expiry_minutes=60)
     return _auth_response(response, user)
 
 
@@ -111,6 +112,7 @@ async def change_password(
         raise ApiError(400, "bad_password", "Kata sandi saat ini salah")
     user.hashed_password = hash_password(body.new_password)
     await db.commit()
+    send_password_changed_email(user.email, name=user.name)
     return {"ok": True}
 
 
@@ -119,11 +121,7 @@ async def forgot_password(body: ForgotPasswordIn, db: AsyncSession = Depends(get
     u = (await db.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
     if u:
         tok = create_purpose_token(u.id, "reset", 30)
-        send_email(
-            u.email,
-            "Reset kata sandi PSD",
-            f"{settings.APP_BASE_URL}/reset-password?token={tok}",
-        )
+        send_reset_password_email(u.email, name=u.name, token=tok, expiry_minutes=30)
     return {"ok": True}
 
 
@@ -137,6 +135,7 @@ async def reset_password(body: ResetPasswordIn, db: AsyncSession = Depends(get_d
         raise ApiError(404, "not_found", "Pengguna tidak ditemukan")
     u.hashed_password = hash_password(body.new_password)
     await db.commit()
+    send_password_changed_email(u.email, name=u.name)
     return {"ok": True}
 
 
@@ -154,11 +153,7 @@ async def change_email(
     if taken:
         raise ApiError(409, "conflict", "Email sudah dipakai")
     tok = create_purpose_token(user.id, "change_email", 60, {"email": body.new_email})
-    send_email(
-        body.new_email,
-        "Verifikasi email baru PSD",
-        f"{settings.APP_BASE_URL}/verify-email?token={tok}",
-    )
+    send_change_email_verification(body.new_email, name=user.name, token=tok, expiry_minutes=60)
     return {"ok": True}
 
 
@@ -182,9 +177,5 @@ async def verify_email(body: VerifyEmailIn, db: AsyncSession = Depends(get_db)):
 @router.post("/auth/resend-verification", response_model=OkOut)
 async def resend_verification(user: User = Depends(get_current_user)):
     tok = create_purpose_token(user.id, "verify", 60)
-    send_email(
-        user.email,
-        "Verifikasi email PSD",
-        f"{settings.APP_BASE_URL}/verify-email?token={tok}",
-    )
+    send_verify_email(user.email, name=user.name, token=tok, expiry_minutes=60)
     return {"ok": True}

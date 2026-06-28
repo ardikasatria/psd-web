@@ -42,6 +42,9 @@ docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" up -d --build
 echo "==> Migrasi database"
 docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" exec backend alembic upgrade head
 
+echo "==> Seed klien OAuth internal (Langkah 48)"
+bash scripts/seed-oauth-clients.sh "${COMPOSE_FILE}" "${ENV_FILE}"
+
 if $SEED; then
   echo "==> Seed pilot Fase 0 (seed + seed_content + reindex)"
   bash scripts/seed-pilot.sh "${COMPOSE_FILE}" "${ENV_FILE}"

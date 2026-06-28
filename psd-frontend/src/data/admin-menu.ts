@@ -8,6 +8,7 @@ import {
   ChartBarIcon,
   ChatBubbleLeftRightIcon,
   CubeIcon,
+  CpuChipIcon,
   DocumentTextIcon,
   HomeIcon,
   MapIcon,
@@ -43,6 +44,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   { name: 'Instruktur', href: '/admin/instructors', icon: UsersIcon },
   { name: 'Jalur Belajar', href: '/admin/learning-paths', icon: MapIcon },
   { name: 'Forum', href: '/admin/forum', icon: ChatBubbleLeftRightIcon },
+  { name: 'Performa', href: '/admin/perf', icon: CpuChipIcon },
 ]
 
 export const adminExternalLinks: AdminMenuItem[] = [

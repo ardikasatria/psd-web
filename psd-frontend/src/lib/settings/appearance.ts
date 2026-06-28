@@ -8,6 +8,11 @@ export const DEFAULT_SETTINGS: Settings = {
     email_forum_reply: true,
     inapp: true,
   },
+  email: {
+    email_enabled: true,
+    default_mode: 'immediate',
+    events: {},
+  },
   privacy: {
     profile_visibility: 'public',
     show_email: false,
@@ -24,12 +29,20 @@ export const DEFAULT_SETTINGS: Settings = {
 export function mergeSettings(stored: Partial<Settings> | null | undefined): Settings {
   const out: Settings = {
     notifications: { ...DEFAULT_SETTINGS.notifications },
+    email: { ...DEFAULT_SETTINGS.email, events: { ...DEFAULT_SETTINGS.email.events } },
     privacy: { ...DEFAULT_SETTINGS.privacy },
     appearance: { ...DEFAULT_SETTINGS.appearance },
   }
   if (!stored) return out
   if (stored.notifications) {
     out.notifications = { ...out.notifications, ...stored.notifications }
+  }
+  if (stored.email) {
+    out.email = {
+      ...out.email,
+      ...stored.email,
+      events: { ...out.email.events, ...(stored.email.events ?? {}) },
+    }
   }
   if (stored.privacy) {
     out.privacy = { ...out.privacy, ...stored.privacy }

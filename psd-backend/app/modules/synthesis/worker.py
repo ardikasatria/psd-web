@@ -8,6 +8,7 @@ from app.core.storage import upload_asset
 from app.modules.synthesis.engine import generate
 from app.modules.synthesis.models import SynthesisJob
 from app.modules.synthesis.spec import DatasetSpec
+from app.tasks.seams import PermanentError, RetryableError, is_retryable
 
 PLAN_SYSTEM = (
     "Anda perancang dataset sintesis untuk konteks Indonesia. Keluarkan HANYA JSON valid "
@@ -50,7 +51,18 @@ async def run_synthesis_job(job_id: str):
             job.preview = preview_df.astype(str).to_dict(orient="records")
             job.status = "done"
             await db.commit()
-        except Exception as e:
+        except ValueError as e:
             job.status = "failed"
             job.error = str(e)[:500]
             await db.commit()
+            raise PermanentError(str(e)) from e
+        except (RetryableError, PermanentError):
+            raise
+        except Exception as e:
+            if is_retryable(e):
+                await db.commit()
+                raise RetryableError(str(e)) from e
+            job.status = "failed"
+            job.error = str(e)[:500]
+            await db.commit()
+            raise PermanentError(str(e)) from e

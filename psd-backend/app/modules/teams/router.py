@@ -11,6 +11,7 @@ from app.core.pagination import PageParams, page_params, paginated
 from app.modules.categories.util import slugify
 from app.modules.notifications.service import notify
 from app.modules.teams.deps import get_team, membership, require_admin
+from app.modules.teams.rls import next_team_rls_id
 from app.modules.teams.models import Team, TeamInvite, TeamJoinRequest, TeamMember
 from app.modules.users.models import User
 
@@ -38,6 +39,7 @@ async def create_team(
         description=body.get("description", ""),
         visibility=body.get("visibility", "public"),
         created_by=user.id,
+        rls_id=await next_team_rls_id(db),
     )
     db.add(t)
     await db.flush()

@@ -21,11 +21,12 @@ from app.modules.repos.models import Repo
 from app.modules.rooms.deps import get_room, require_master
 from app.modules.notifications.service import notify
 from app.modules.rooms.models import IdeaRoom, ProblemComponent, RoomProblem, RoomSubmission
-from app.modules.rooms.worker import run_room_data_job
+from app.tasks.dispatch import submit_room_data
 from app.modules.synthesis.models import SynthesisJob
 from app.modules.synthesis.quota import quota_for
 from app.modules.teams.deps import membership
 from app.modules.teams.models import Team, TeamMember
+from app.modules.teams.rls import next_team_rls_id
 from app.modules.users.models import User
 
 router = APIRouter(tags=["idea-rooms"])
@@ -134,6 +135,7 @@ async def create_room(
         name=body.get("team_name") or body["title"],
         visibility=body.get("visibility", "public"),
         created_by=user.id,
+        rls_id=await next_team_rls_id(db),
     )
     db.add(team)
     await db.flush()
@@ -487,8 +489,8 @@ async def generate_data(
     r.status = "generating"
     r.generation_error = None
     await db.commit()
-    bg.add_task(run_room_data_job, r.id, n_rows)
-    return {"status": r.status, "data_mode": "synthetic"}
+    extra = submit_room_data(r.id, n_rows, bg)
+    return {"status": r.status, "data_mode": "synthetic", **extra}
 
 
 @router.get("/idea-rooms/{slug}/solution-template")

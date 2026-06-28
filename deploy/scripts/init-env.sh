@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 if [[ -f .env ]]; then
   echo "deploy/.env sudah ada — tidak ditimpa."
-  echo "Jika perlu MEILI_KEY, tambahkan manual: MEILI_KEY=\$(openssl rand -hex 24)"
+  echo "Upgrade Langkah 48? Jalankan: ./scripts/init-oauth-key.sh && ./scripts/deploy.sh"
   exit 0
 fi
 
@@ -20,6 +20,7 @@ MINIO_ROOT_USER=psd
 MINIO_ROOT_PASSWORD=$(openssl rand -hex 24)
 JWT_SECRET=$(openssl rand -hex 32)
 MEILI_KEY=$(openssl rand -hex 24)
+GITEA_DB_PASSWORD=$(openssl rand -hex 24)
 
 # Opsional — fitur AI (Langkah 38/40); isi sebelum pilot jika sintesis/ruang ide AI aktif
 OPENAI_API_KEY=
@@ -28,5 +29,7 @@ FACTORY_RUN_TIMEOUT_S=90
 EOF
 
 chmod 600 .env
+bash scripts/init-oauth-key.sh
 echo "deploy/.env dibuat untuk DOMAIN=${DOMAIN}"
+echo "Kunci OIDC: deploy/secrets/psd_oidc.pem (di-mount ke backend saat deploy)"
 echo "Edit DOMAIN bila perlu, lalu jalankan: ./scripts/deploy.sh"

@@ -1,3 +1,80 @@
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  REDIS_URL: redis://redis:6379/0
+  BACKEND_CORS_ORIGINS: '["https://${DOMAIN}"]'
+  JWT_SECRET: ${JWT_SECRET}
+  MINIO_ENDPOINT: minio:9000
+  MINIO_KEY: ${MINIO_ROOT_USER}
+  MINIO_SECRET: ${MINIO_ROOT_PASSWORD}
+  MINIO_BUCKET: psd-assets
+  STORAGE_ENABLED: "true"
+  S3_ENDPOINT_URL: http://minio:9000
+  S3_REGION: us-east-1
+  S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+  S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+  S3_MEDIA_BUCKET: psd-media
+  S3_PUBLIC_BASE_URL: https://storage.${DOMAIN}/psd-media
+  S3_ASSETS_BUCKET: psd-assets
+  S3_ASSETS_PUBLIC_BASE_URL: https://storage.${DOMAIN}/psd-assets
+  S3_SUBMISSIONS_BUCKET: psd-submissions
+  APP_BASE_URL: https://${DOMAIN}
+  COOKIE_NAME: psd_token
+  COOKIE_SECURE: "true"
+  COOKIE_SAMESITE: lax
+  COOKIE_DOMAIN: .${DOMAIN}
+  DEV_EMAIL_ECHO: "false"
+  MEILI_URL: http://meilisearch:7700
+  MEILI_KEY: ${MEILI_KEY}
+  PSD_OFFICIAL_USERNAME: psd
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
+  FACTORY_RUN_TIMEOUT_S: ${FACTORY_RUN_TIMEOUT_S:-90}
+  PSD_OIDC_ISSUER: https://api.${DOMAIN}
+  PSD_OIDC_PRIVATE_KEY_FILE: /run/secrets/psd_oidc.pem
+  PSD_OIDC_KEY_ID: ${PSD_OIDC_KEY_ID:-psd-key-1}
+  PSD_OAUTH_GIT_BASE_URL: https://git.${DOMAIN}
+  PSD_OAUTH_HUB_BASE_URL: https://hub.${DOMAIN}
+  PSD_OAUTH_BI_BASE_URL: https://bi.${DOMAIN}
+  PSD_USE_CELERY: "true"
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  PSD_GITEA_ENABLED: "true"
+  PSD_GITEA_BASE_URL: http://gitea:3000
+  PSD_GITEA_ADMIN_TOKEN: ${GITEA_ADMIN_TOKEN:-}
+  PSD_GITEA_DEFAULT_BRANCH: main
+  PSD_GITEA_NAMESPACE_MODE: user
+  PSD_GITEA_ORG: psd
+  PSD_GITEA_EMAIL_DOMAIN: ${DOMAIN}
+  PSD_HUB_ENABLED: "true"
+  PSD_SUPERSET_ENABLED: "true"
+  PSD_SUPERSET_PUBLIC_URL: https://bi.${DOMAIN}
+  PSD_SUPERSET_SERVICE_USER: ${SUPERSET_SERVICE_USER:-psd_service}
+  PSD_SUPERSET_SERVICE_PASSWORD: ${SUPERSET_SERVICE_PASSWORD:-}
+  PSD_SUPERSET_GOLD_DB_ID: ${SUPERSET_GOLD_DB_ID:-1}
+  PSD_SUPERSET_GOLD_SCHEMA: gold
+  PSD_SUPERSET_EMBED_DOMAINS: https://${DOMAIN}
+  PSD_SUPERSET_API_URL: http://superset:8088
+  PSD_SPARK_ENABLED: ${PSD_SPARK_ENABLED:-false}
+  PSD_SPARK_MASTER: ${PSD_SPARK_MASTER:-local[*]}
+  PSD_MLFLOW_ENABLED: ${PSD_MLFLOW_ENABLED:-false}
+  PSD_MLFLOW_TRACKING_URI: http://mlflow:5000
+  PSD_MLFLOW_PUBLIC_URL: https://ml.${DOMAIN}
+  PSD_MLFLOW_ARTIFACT_ROOT: s3://psd-assets/mlflow/
+  PSD_SERVING_ENABLED: ${PSD_SERVING_ENABLED:-false}
+  PSD_SERVING_REDIS_QUOTA: ${PSD_SERVING_REDIS_QUOTA:-true}
+  PSD_ASSISTANT_ENABLED: ${PSD_ASSISTANT_ENABLED:-false}
+  PSD_ASSISTANT_REDIS_QUOTA: ${PSD_ASSISTANT_REDIS_QUOTA:-true}
+  PSD_PERF_ENABLED: ${PSD_PERF_ENABLED:-true}
+  PSD_PERF_CACHE_ENABLED: ${PSD_PERF_CACHE_ENABLED:-false}
+  PSD_PERF_CACHE_AUTO: ${PSD_PERF_CACHE_AUTO:-true}
+  PSD_PERF_REDIS: ${PSD_PERF_REDIS:-true}
+  PSD_EMAIL_ENABLED: ${PSD_EMAIL_ENABLED:-false}
+  PSD_EMAIL_PROVIDER: ${PSD_EMAIL_PROVIDER:-smtp}
+  PSD_EMAIL_SENDER: ${PSD_EMAIL_SENDER:-no-reply@${DOMAIN}}
+  RESEND_API_KEY: ${RESEND_API_KEY:-}
+  PSD_EMAIL_UNSUBSCRIBE_SECRET: ${PSD_EMAIL_UNSUBSCRIBE_SECRET:-}
+  PSD_EMAIL_REDIS: ${PSD_EMAIL_REDIS:-true}
+
 services:
   db:
     image: postgres:16
@@ -40,7 +117,8 @@ services:
       mc anonymous set download local/psd-assets || true &&
       mc mb -p local/psd-media || true &&
       mc anonymous set download local/psd-media || true &&
-      mc mb -p local/psd-submissions || true
+      mc mb -p local/psd-submissions || true &&
+      mc mb -p local/psd-gitea-lfs || true
       "
 
   meilisearch:
@@ -51,45 +129,145 @@ services:
       - meilidata:/meili_data
     restart: unless-stopped
 
+  gitea-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: gitea
+      POSTGRES_PASSWORD: ${GITEA_DB_PASSWORD}
+      POSTGRES_DB: gitea
+    volumes:
+      - giteapg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gitea"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  gitea:
+    image: gitea/gitea:1.22
+    environment:
+      GITEA__database__DB_TYPE: postgres
+      GITEA__database__HOST: gitea-db:5432
+      GITEA__database__NAME: gitea
+      GITEA__database__USER: gitea
+      GITEA__database__PASSWD: ${GITEA_DB_PASSWORD}
+      GITEA__server__ROOT_URL: https://git.${DOMAIN}/
+      GITEA__server__HTTP_PORT: "3000"
+      GITEA__server__LFS_START_SERVER: "true"
+      GITEA__lfs__STORAGE_TYPE: minio
+      GITEA__lfs__MINIO_ENDPOINT: minio:9000
+      GITEA__lfs__MINIO_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      GITEA__lfs__MINIO_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      GITEA__lfs__MINIO_BUCKET: psd-gitea-lfs
+      GITEA__lfs__MINIO_USE_SSL: "false"
+      GITEA__lfs__MINIO_LOCATION: us-east-1
+    volumes:
+      - giteadata:/data
+    depends_on:
+      gitea-db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    restart: unless-stopped
+
   backend:
     build: ../psd-backend
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      REDIS_URL: redis://redis:6379/0
-      BACKEND_CORS_ORIGINS: '["https://${DOMAIN}"]'
-      JWT_SECRET: ${JWT_SECRET}
-      MINIO_ENDPOINT: minio:9000
-      MINIO_KEY: ${MINIO_ROOT_USER}
-      MINIO_SECRET: ${MINIO_ROOT_PASSWORD}
-      MINIO_BUCKET: psd-assets
-      STORAGE_ENABLED: "true"
-      S3_ENDPOINT_URL: http://minio:9000
-      S3_REGION: us-east-1
-      S3_ACCESS_KEY: ${MINIO_ROOT_USER}
-      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      S3_MEDIA_BUCKET: psd-media
-      S3_PUBLIC_BASE_URL: https://storage.${DOMAIN}/psd-media
-      S3_ASSETS_BUCKET: psd-assets
-      S3_ASSETS_PUBLIC_BASE_URL: https://storage.${DOMAIN}/psd-assets
-      S3_SUBMISSIONS_BUCKET: psd-submissions
-      APP_BASE_URL: https://${DOMAIN}
-      COOKIE_NAME: psd_token
-      COOKIE_SECURE: "true"
-      COOKIE_SAMESITE: lax
-      COOKIE_DOMAIN: .${DOMAIN}
-      DEV_EMAIL_ECHO: "false"
-      MEILI_URL: http://meilisearch:7700
-      MEILI_KEY: ${MEILI_KEY}
-      PSD_OFFICIAL_USERNAME: psd
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
-      FACTORY_RUN_TIMEOUT_S: ${FACTORY_RUN_TIMEOUT_S:-90}
+    environment: *backend-env
+    volumes:
+      - ./secrets/psd_oidc.pem:/run/secrets/psd_oidc.pem:ro
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
       meilisearch:
         condition: service_started
+      gitea:
+        condition: service_started
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+
+  worker-ai:
+    build: ../psd-backend
+    environment: *backend-env
+    volumes:
+      - ./secrets/psd_oidc.pem:/run/secrets/psd_oidc.pem:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: >
+      celery -A app.tasks.celery_app:celery_app worker
+      -Q ai -c 4 -n ai@%h --max-tasks-per-child=50
+    restart: unless-stopped
+
+  worker-pabrik:
+    build: ../psd-backend
+    environment: *backend-env
+    volumes:
+      - ./secrets/psd_oidc.pem:/run/secrets/psd_oidc.pem:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: >
+      celery -A app.tasks.celery_app:celery_app worker
+      -Q pabrik_data -c 1 -n pabrik@%h --max-tasks-per-child=20
+    restart: unless-stopped
+
+  worker-spark:
+    build: ../psd-backend
+    environment: *backend-env
+    volumes:
+      - ./secrets/psd_oidc.pem:/run/secrets/psd_oidc.pem:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: >
+      celery -A app.tasks.celery_app:celery_app worker
+      -Q spark -c 1 -n spark@%h --max-tasks-per-child=10
+    restart: unless-stopped
+    profiles:
+      - spark
+
+  worker-email:
+    build: ../psd-backend
+    environment: *backend-env
+    volumes:
+      - ./secrets/psd_oidc.pem:/run/secrets/psd_oidc.pem:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: >
+      celery -A app.tasks.celery_app:celery_app worker
+      -Q email -c 2 -n email@%h --max-tasks-per-child=100
+    restart: unless-stopped
+
+  celery-beat:
+    build: ../psd-backend
+    environment: *backend-env
+    depends_on:
+      redis:
+        condition: service_started
+    command: celery -A app.tasks.celery_app:celery_app beat --loglevel=info
+    restart: unless-stopped
+
+  flower:
+    build: ../psd-backend
+    environment: *backend-env
+    depends_on:
+      redis:
+        condition: service_started
+    command: celery -A app.tasks.celery_app:celery_app flower --port=5555
+    ports:
+      - "127.0.0.1:5555:5555"
     restart: unless-stopped
 
   frontend:
@@ -101,6 +279,105 @@ services:
         NEXT_PUBLIC_USE_MOCKS: "false"
         NEXT_PUBLIC_APP_NAME: Projek Sains Data
         NEXT_PUBLIC_SITE_URL: https://${DOMAIN}
+        NEXT_PUBLIC_HUB_URL: https://hub.${DOMAIN}
+    restart: unless-stopped
+
+  jupyterhub:
+    build:
+      context: ../psd-jupyterhub
+      dockerfile: docker/Dockerfile.hub
+    environment:
+      PSD_OIDC_ISSUER: https://api.${DOMAIN}
+      PSD_OIDC_CLIENT_SECRET: ${HUB_OIDC_SECRET}
+      PSD_HUB_CALLBACK_URL: https://hub.${DOMAIN}/hub/oauth_callback
+      PSD_API_BASE: https://api.${DOMAIN}
+      PSD_SINGLEUSER_IMAGE: psd-singleuser:latest
+      PSD_HUB_NETWORK: psd-net
+      PSD_HUB_CULL_TIMEOUT: "3600"
+      JUPYTERHUB_CRYPT_KEY: ${JUPYTERHUB_CRYPT_KEY}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  superset-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: superset
+      POSTGRES_PASSWORD: ${SUPERSET_DB_PASSWORD}
+      POSTGRES_DB: superset
+    volumes:
+      - supersetpg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U superset"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  superset:
+    image: apache/superset:4.0.2
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+      SUPERSET_DATABASE_URI: postgresql+psycopg2://superset:${SUPERSET_DB_PASSWORD}@superset-db:5432/superset
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      GUEST_TOKEN_JWT_SECRET: ${SUPERSET_GUEST_JWT_SECRET}
+      PSD_OIDC_ISSUER: https://api.${DOMAIN}
+      PSD_OIDC_CLIENT_SECRET: ${BI_OIDC_SECRET}
+      SUPERSET_LOAD_EXAMPLES: "no"
+      DOMAIN: ${DOMAIN}
+      SUPERSET_SERVICE_USER: ${SUPERSET_SERVICE_USER:-psd_service}
+      SUPERSET_SERVICE_PASSWORD: ${SUPERSET_SERVICE_PASSWORD}
+    volumes:
+      - ../psd-superset/superset_config.py:/app/pythonpath/superset_config.py:ro
+    depends_on:
+      superset-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: >
+      /bin/sh -c "
+      superset db upgrade &&
+      superset fab create-admin --username $${SUPERSET_SERVICE_USER:-psd_service} --firstname PSD --lastname Service --email service@$${DOMAIN} --password $${SUPERSET_SERVICE_PASSWORD} || true &&
+      superset init &&
+      gunicorn -b 0.0.0.0:8088 --workers 2 --timeout 120 'superset.app:create_app()'
+      "
+    restart: unless-stopped
+
+  mlflow-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: ${MLFLOW_DB_PASSWORD}
+      POSTGRES_DB: mlflow
+    volumes:
+      - mlflowpg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.14.3
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql://mlflow:${MLFLOW_DB_PASSWORD}@mlflow-db:5432/mlflow
+      --default-artifact-root s3://psd-assets/mlflow/
+    depends_on:
+      mlflow-db:
+        condition: service_healthy
+      minio:
+        condition: service_started
     restart: unless-stopped
 
   caddy:
@@ -121,11 +398,23 @@ services:
       - frontend
       - backend
       - minio
+      - gitea
+      - jupyterhub
+      - superset
+      - mlflow
     restart: unless-stopped
+
+networks:
+  default:
+    name: psd-net
 
 volumes:
   pgdata:
   miniodata:
   meilidata:
+  giteapg:
+  giteadata:
+  supersetpg:
+  mlflowpg:
   caddydata:
   caddyconfig:

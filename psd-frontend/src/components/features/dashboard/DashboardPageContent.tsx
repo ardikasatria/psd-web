@@ -1,6 +1,7 @@
 'use client'
 
 import { OnboardingChecklist } from '@/components/features/onboarding/OnboardingChecklist'
+import { PersonalizedFeedSection } from '@/components/features/assistant/PersonalizedFeedSection'
 import { JourneyNextCard } from '@/components/features/quests/JourneyNextCard'
 import { DailyLearningWidget } from '@/components/features/micro/DailyLearningWidget'
 import { EmptyCTA } from '@/components/dashboard/EmptyCTA'
@@ -88,6 +89,8 @@ export function DashboardPageContent() {
       </section>
 
       <JourneyNextCard />
+
+      <PersonalizedFeedSection />
 
       <DailyLearningWidget />
 

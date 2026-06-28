@@ -12,7 +12,7 @@ from app.modules.categories.util import slugify
 from app.modules.repos.models import Repo
 from app.modules.synthesis.models import SynthesisJob
 from app.modules.synthesis.quota import quota_for
-from app.modules.synthesis.worker import run_synthesis_job
+from app.tasks.dispatch import submit_synthesis
 from app.modules.teams.deps import membership
 from app.modules.teams.models import Team
 from app.modules.users.models import User
@@ -102,8 +102,8 @@ async def create_job(
     )
     db.add(job)
     await db.commit()
-    bg.add_task(run_synthesis_job, job.id)
-    return {"job_id": job.id, "status": job.status}
+    extra = submit_synthesis(job.id, bg)
+    return {"job_id": job.id, "status": job.status, **extra}
 
 
 @router.get("/synthesis/jobs/{jid}")

@@ -33,6 +33,11 @@ if [[ -z "${MEILI_KEY:-}" ]]; then
   exit 1
 fi
 
+if [[ ! -f secrets/psd_oidc.pem ]]; then
+  echo "Kunci OIDC belum ada. Jalankan: ./scripts/init-oauth-key.sh"
+  exit 1
+fi
+
 echo "==> Build & start stack (DOMAIN=${DOMAIN})"
 docker compose -f docker-compose.prod.yml up -d --build
 
@@ -42,6 +47,9 @@ docker compose -f docker-compose.prod.yml exec -T caddy caddy reload --config /e
 
 echo "==> Migrasi database (alembic upgrade head)"
 docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
+
+echo "==> Seed klien OAuth internal (Langkah 48)"
+bash scripts/seed-oauth-clients.sh docker-compose.prod.yml
 
 if $SEED; then
   echo "==> Seed pilot Fase 0 (seed + seed_content + reindex)"
@@ -63,6 +71,8 @@ echo "  Belajar:      https://${DOMAIN}/learn"
 echo "  Pabrik Data:  https://${DOMAIN}/factory/pipelines"
 echo "  Analitik:     https://${DOMAIN}/analytics"
 echo "  Transformer:  https://${DOMAIN}/hub/transformer"
+echo "  OIDC:         https://api.${DOMAIN}/.well-known/openid-configuration"
+echo "  Flower:       http://127.0.0.1:5555 (SSH tunnel ke VM)"
 echo ""
 if ! $SEED; then
   echo "Seed pilot: ./scripts/deploy.sh --seed"

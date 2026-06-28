@@ -4,6 +4,7 @@ import { SyntheticBadge } from '@/components/common/SyntheticBadge'
 import { RoomSolvingView } from '@/components/features/rooms/RoomProblemPanel'
 import { getNotebooks } from '@/lib/api/notebooks'
 import { getRepos } from '@/lib/api/repos'
+import { hubEnabled, hubNotebookUrl } from '@/lib/hub'
 import {
   finishRoom,
   getSubmission,
@@ -397,6 +398,24 @@ export function RoomSolutionPanel({
       )}
 
       <RoomSolvingView slug={slug} dataMode={room.data_mode} datasetRepoSlug={room.dataset_repo_slug} />
+
+      {hubEnabled() && isMember && (
+        <div className="rounded-2xl border border-violet-200/80 bg-violet-50/40 p-5 dark:border-violet-800/50 dark:bg-violet-950/20">
+          <h3 className="text-sm font-semibold text-violet-900 dark:text-violet-200">Notebook tim</h3>
+          <p className="mt-1 text-sm text-violet-800/90 dark:text-violet-300/90">
+            Analisis dataset Ruang Ide di JupyterHub PSD. Akses dataset via{' '}
+            <code className="text-xs">psd://owner/dataset/path</code> di notebook.
+          </p>
+          <ButtonPrimary
+            href={hubNotebookUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4"
+          >
+            Buka Notebook
+          </ButtonPrimary>
+        </div>
+      )}
 
       {room.dataset_repo_slug && room.data_mode !== 'collect' && (
         <DatasetCard slug={room.dataset_repo_slug} dataMode={room.data_mode} />

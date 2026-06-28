@@ -36,6 +36,15 @@ from app.modules.social.router import router as social_router
 from app.modules.synthesis.router import router as synthesis_router
 from app.modules.teams.router import router as teams_router
 from app.modules.users.router import router as users_router
+from app.contrib.router import router as contrib_router
+from app.hub.router import router as hub_router
+from app.superset.router import router as superset_router
+from app.mlops.router import router as mlops_router
+from app.serving.endpoint import router as serving_router
+from app.assistant.endpoint import router as assistant_router
+from app.perf.router import router as perf_router
+from app.email.router import router as email_router
+from app.oauth.router import oauth_router, wellknown_router
 
 dictConfig(
     {
@@ -115,6 +124,16 @@ app.include_router(rooms_router, prefix=settings.API_PREFIX)
 app.include_router(collections_router, prefix=settings.API_PREFIX)
 app.include_router(factory_router, prefix=settings.API_PREFIX)
 app.include_router(admin_router, prefix=settings.API_PREFIX)
+app.include_router(contrib_router, prefix=settings.API_PREFIX)
+app.include_router(hub_router, prefix="/api")
+app.include_router(superset_router)
+app.include_router(mlops_router)
+app.include_router(serving_router)
+app.include_router(assistant_router)
+app.include_router(perf_router)
+app.include_router(email_router)
+app.include_router(oauth_router)
+app.include_router(wellknown_router)
 
 
 @app.get(settings.API_PREFIX + "/health/db")

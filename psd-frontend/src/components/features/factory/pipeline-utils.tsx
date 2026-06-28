@@ -54,3 +54,30 @@ export function RunStatusBadge({ status }: { status: RunStatus }) {
     </span>
   )
 }
+
+const ENGINE_STYLE: Record<string, string> = {
+  duckdb: 'bg-blue-50 text-blue-800 ring-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:ring-blue-800',
+  spark: 'bg-orange-50 text-orange-800 ring-orange-200 dark:bg-orange-950/50 dark:text-orange-300 dark:ring-orange-800',
+}
+
+const ENGINE_LABEL: Record<string, string> = {
+  duckdb: 'DuckDB',
+  spark: 'Spark',
+  auto: 'Auto',
+}
+
+export function ExecutionEngineBadge({ engine }: { engine?: string | null }) {
+  if (!engine) return null
+  const key = engine.toLowerCase()
+  return (
+    <span
+      className={clsx(
+        'inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset',
+        ENGINE_STYLE[key] ??
+          'bg-neutral-100 text-neutral-700 ring-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:ring-neutral-600',
+      )}
+    >
+      {ENGINE_LABEL[key] ?? engine}
+    </span>
+  )
+}

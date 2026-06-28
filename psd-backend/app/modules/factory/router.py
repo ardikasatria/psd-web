@@ -5,18 +5,27 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.db import get_db
 from app.core.deps import get_current_user, get_current_user_optional
 from app.core.errors import ApiError
 from app.core.pagination import PageParams, page_params, paginated
 from app.core.storage import asset_key_from_uri, presigned_asset_get
 from app.modules.categories.util import slugify
-from app.modules.factory.analytics import widget_data
+from app.engine.adaptor import from_psd_pipeline
+from app.engine.airflow_gen import render_dag
+from app.engine.dispatch import plan_execution
+from app.engine.estimate import estimate_pipeline_bytes
+from app.modules.factory.analytics import widget_data  # noqa: F401 — via perf.integration
+from app.modules.factory.dashboard_helpers import can_edit_dashboard, get_dashboard_by_slug, latest_done_run, latest_gold_map
 from app.modules.factory.engine import _connect, _resolve_source
 from app.modules.factory.models import Dashboard, DataSource, Pipeline, PipelineRun, Widget
+from app.perf.integration import fetch_schema_payload, fetch_widget_payload
+from app.perf.deps import get_cache
+from app.perf import targets as perf_targets
 from app.modules.factory.quota import quota_for
 from app.modules.factory.validate import validate_spec
-from app.modules.factory.worker import run_pipeline_job
+from app.tasks.dispatch import submit_pipeline
 from app.modules.repos.models import Repo
 from app.modules.teams.deps import membership
 from app.modules.users.models import User
@@ -111,6 +120,9 @@ async def delete_source(
 ):
     s = (await db.execute(select(DataSource).where(DataSource.id == sid))).scalar_one_or_none()
     if s and s.owner_id == user.id:
+        cache = get_cache()
+        if cache:
+            perf_targets.invalidate_schema(cache, sid)
         await db.delete(s)
         await db.commit()
 
@@ -126,19 +138,23 @@ async def source_schema(
         raise ApiError(403, "forbidden", "Tidak berhak mengakses sumber ini")
     if s.schema_json and s.schema_json.get("columns"):
         return s.schema_json
-    try:
-        reader, _fmt, _syn = await _resolve_source(db, sid)
-    except ValueError as e:
-        raise ApiError(400, "bad_source", str(e)) from e
-    con = _connect()
-    try:
-        rows = con.execute(f"DESCRIBE SELECT * FROM {reader} LIMIT 0;").fetchall()
-        cols = [{"name": r[0], "type": str(r[1])} for r in rows]
-    finally:
-        con.close()
-    s.schema_json = {"columns": cols}
+
+    async def introspect():
+        try:
+            reader, _fmt, _syn = await _resolve_source(db, sid)
+        except ValueError as e:
+            raise ApiError(400, "bad_source", str(e)) from e
+        con = _connect()
+        try:
+            rows = con.execute(f"DESCRIBE SELECT * FROM {reader} LIMIT 0;").fetchall()
+            return {"columns": [{"name": r[0], "type": str(r[1])} for r in rows]}
+        finally:
+            con.close()
+
+    schema, _from_cache = await fetch_schema_payload(sid, introspect)
+    s.schema_json = schema
     await db.commit()
-    return s.schema_json
+    return schema
 
 
 @router.post("/pipelines", status_code=201)
@@ -159,6 +175,8 @@ async def create_pipeline(
         room_id=body.get("room_id"),
         title=body["title"],
         spec_json=body.get("spec") or {"nodes": [], "edges": []},
+        engine=(body.get("engine") or "auto").lower(),
+        schedule_cron=body.get("schedule_cron"),
     )
     await _validate_and_set(db, pl, user)
     db.add(pl)
@@ -194,6 +212,8 @@ async def get_pipeline(slug: str, db: AsyncSession = Depends(get_db)):
         "validation_error": pl.validation_error,
         "team_id": pl.team_id,
         "room_id": pl.room_id,
+        "engine": pl.engine,
+        "schedule_cron": pl.schedule_cron,
     }
 
 
@@ -212,6 +232,13 @@ async def update_pipeline(
         pl.title = body["title"]
     if "spec" in body:
         pl.spec_json = body["spec"]
+    if "engine" in body:
+        eng = (body["engine"] or "auto").lower()
+        if eng not in ("auto", "duckdb", "spark"):
+            raise ApiError(422, "bad_engine", "Engine harus auto, duckdb, atau spark")
+        pl.engine = eng
+    if "schedule_cron" in body:
+        pl.schedule_cron = body["schedule_cron"]
     errors = await _validate_and_set(db, pl, user)
     await db.commit()
     return {"slug": pl.slug, "status": pl.status, "errors": errors}
@@ -257,8 +284,34 @@ async def run_pipeline(
     run = PipelineRun(pipeline_id=pl.id, status="queued")
     db.add(run)
     await db.commit()
-    bg.add_task(run_pipeline_job, run.id, q["max_rows"])
-    return {"run_id": run.id, "status": run.status}
+    ep = from_psd_pipeline(pl)
+    est = await estimate_pipeline_bytes(db, pl)
+    plan = plan_execution(ep, est_bytes=est or None)
+    if plan["engine"] == "spark" and not settings.PSD_SPARK_ENABLED:
+        raise ApiError(
+            503,
+            "spark_disabled",
+            "Engine Spark dipilih tetapi PSD_SPARK_ENABLED=false. Gunakan duckdb atau aktifkan Spark.",
+        )
+    run.execution_engine = plan["engine"]
+    await db.commit()
+    extra = submit_pipeline(run.id, q["max_rows"], bg, engine=plan["engine"], queue=plan["queue"])
+    return {"run_id": run.id, "status": run.status, **extra}
+
+
+@router.get("/pipelines/{slug}/airflow-dag")
+async def export_airflow_dag(
+    slug: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    pl = await _get_pipeline_by_slug(db, slug)
+    await _can_edit_pipeline(db, pl, user)
+    if not pl.schedule_cron:
+        raise ApiError(400, "no_schedule", "Pipeline belum punya schedule_cron untuk Airflow.")
+    ep = from_psd_pipeline(pl)
+    code = render_dag(ep, dag_id=f"psd_{pl.slug.replace('-', '_')}", schedule=pl.schedule_cron)
+    return {"dag_id": f"psd_{pl.slug.replace('-', '_')}", "code": code}
 
 
 @router.get("/pipelines/{slug}/runs")
@@ -280,6 +333,7 @@ async def list_runs(slug: str, db: AsyncSession = Depends(get_db)):
                 "rows_out": r.rows_out,
                 "duration_ms": r.duration_ms,
                 "created_at": r.created_at.isoformat() if r.created_at else None,
+                "execution_engine": r.execution_engine,
             }
             for r in rows
         ]
@@ -304,6 +358,7 @@ async def run_detail(slug: str, run_id: str, db: AsyncSession = Depends(get_db))
         "lineage": r.lineage_json or {},
         "error": r.error,
         "duration_ms": r.duration_ms,
+        "execution_engine": r.execution_engine,
     }
 
 
@@ -337,34 +392,15 @@ async def download_layer(
 
 
 async def _can_edit_dashboard(db: AsyncSession, d: Dashboard, user: User) -> None:
-    if d.owner_id == user.id:
-        return
-    if d.team_id and await membership(db, d.team_id, user.id):
-        return
-    raise ApiError(403, "forbidden", "Tidak berhak menyunting dashboard")
+    await can_edit_dashboard(db, d, user)
 
 
 async def _latest_gold_map(db: AsyncSession, dashboard: Dashboard) -> dict[str, str]:
-    if not dashboard.pipeline_id:
-        return {}
-    run = (
-        await db.execute(
-            select(PipelineRun)
-            .where(PipelineRun.pipeline_id == dashboard.pipeline_id, PipelineRun.status == "done")
-            .order_by(PipelineRun.created_at.desc())
-            .limit(1)
-        )
-    ).scalars().first()
-    if not run:
-        return {}
-    return {g["node"]: g["uri"] for g in (run.layers_json or {}).get("gold", [])}
+    return await latest_gold_map(db, dashboard)
 
 
 async def _get_dashboard_by_slug(db: AsyncSession, slug: str) -> Dashboard:
-    d = (await db.execute(select(Dashboard).where(Dashboard.slug == slug))).scalar_one_or_none()
-    if not d:
-        raise ApiError(404, "not_found", "Dashboard tidak ditemukan")
-    return d
+    return await get_dashboard_by_slug(db, slug)
 
 
 @router.post("/dashboards", status_code=201)
@@ -429,6 +465,10 @@ async def get_dashboard(
         "layout": d.layout_json,
         "pipeline_id": d.pipeline_id,
         "owner_id": d.owner_id,
+        "superset_dataset_id": d.superset_dataset_id,
+        "superset_dashboard_id": d.superset_dashboard_id,
+        "superset_embed_uuid": d.superset_embed_uuid,
+        "superset_gold_table": d.superset_gold_table,
         "widgets": [
             {
                 "id": w.id,
@@ -541,8 +581,10 @@ async def widget_data_endpoint(
     if not w:
         raise ApiError(404, "not_found", "Widget tidak ditemukan")
     gold = await _latest_gold_map(db, d)
-    node = (w.query_json or {}).get("node")
-    uri = gold.get(node)
+    qjson = w.query_json or {}
+    uri = qjson.get("uri") or gold.get(qjson.get("node"))
     if not uri:
         return {"empty": True, "reason": "Belum ada run gold untuk node ini"}
-    return widget_data(uri, w.kind, w.query_json or {})
+    run = await latest_done_run(db, d.pipeline_id)
+    run_id = run.id if run else "none"
+    return fetch_widget_payload(run_id, wid, uri, w.kind, qjson)

@@ -13,6 +13,13 @@ export function patchMockUserSettings(userId: string, patch: SettingsPatch) {
   if (patch.notifications) {
     current.notifications = { ...current.notifications, ...patch.notifications }
   }
+  if (patch.email) {
+    current.email = {
+      ...current.email,
+      ...patch.email,
+      events: { ...current.email.events, ...(patch.email.events ?? {}) },
+    }
+  }
   if (patch.privacy) {
     current.privacy = { ...current.privacy, ...patch.privacy }
   }

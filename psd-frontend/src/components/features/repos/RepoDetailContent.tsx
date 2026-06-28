@@ -6,8 +6,11 @@ import { SyntheticBadge } from '@/components/common/SyntheticBadge'
 import { useTrackView } from '@/lib/analytics/useTrackView'
 import { LikeButton } from '@/components/features/repos/LikeButton'
 import { ShareToFeedButton } from '@/components/features/social/ShareToFeedButton'
+import { RepoCloneBanner } from '@/components/features/repos/RepoCloneBanner'
 import { RepoEditDialog } from '@/components/features/repos/RepoEditDialog'
 import { RepoFilesPanel } from '@/components/features/repos/RepoFilesPanel'
+import { RepoMlRegistryLink } from '@/components/features/repos/RepoMlRegistryLink'
+import { RepoPullRequestsPanel } from '@/components/features/repos/RepoPullRequestsPanel'
 import { ThreadCard } from '@/components/features/ThreadCard'
 import { QueryState } from '@/components/features/QueryState'
 import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
@@ -34,7 +37,7 @@ const kindLabel: Record<RepoKind, string> = {
   model: 'Model',
 }
 
-type TabId = 'readme' | 'files' | 'discussions'
+type TabId = 'readme' | 'files' | 'pulls' | 'discussions'
 
 function PublishedAssetBanner() {
   const searchParams = useSearchParams()
@@ -104,6 +107,7 @@ export function RepoDetailContent({
   const tabs: { id: TabId; label: string }[] = [
     { id: 'readme', label: 'README' },
     { id: 'files', label: 'File' },
+    { id: 'pulls', label: 'Kontribusi' },
     { id: 'discussions', label: 'Diskusi' },
   ]
 
@@ -128,6 +132,7 @@ export function RepoDetailContent({
               }
               actions={
                 <div className="flex flex-wrap gap-2">
+                  {data.kind === 'model' && <RepoMlRegistryLink repoId={data.id} isOwner={isOwner} />}
                   {isOwner && (
                     <Button outline onClick={() => setEditOpen(true)}>
                       <PencilSquareIcon className="size-4" data-slot="icon" aria-hidden />
@@ -143,6 +148,8 @@ export function RepoDetailContent({
             <Suspense fallback={null}>
               <PublishedAssetBanner />
             </Suspense>
+
+            {data.clone_url && <RepoCloneBanner cloneUrl={data.clone_url} />}
 
             <div className="flex flex-wrap gap-2">
               {data.tags.map((tag: string) => (
@@ -221,6 +228,14 @@ export function RepoDetailContent({
                   isOwner={isOwner}
                   license={data.license}
                   onChange={refreshRepo}
+                />
+              )}
+
+              {tab === 'pulls' && (
+                <RepoPullRequestsPanel
+                  repoId={data.id}
+                  isMaintainer={isOwner}
+                  cloneUrl={data.clone_url}
                 />
               )}
 
