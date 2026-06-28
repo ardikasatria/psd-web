@@ -51,7 +51,7 @@ def test_render_change_email():
 
 def test_send_verify_uses_provider(monkeypatch):
     provider = MagicMock()
-    monkeypatch.setattr("app.email.auth_mail.get_provider", lambda: provider)
+    monkeypatch.setattr("app.email.auth_mail.get_auth_provider", lambda: provider)
     monkeypatch.setattr("app.email.auth_mail.settings.DEV_EMAIL_ECHO", False)
     monkeypatch.setattr("app.email.auth_mail.settings.RESEND_API_KEY", "re_test")
     monkeypatch.setattr("app.email.auth_mail.settings.PSD_EMAIL_ENABLED", True)
@@ -67,7 +67,7 @@ def test_send_verify_uses_provider(monkeypatch):
 
 def test_send_reset_password(monkeypatch):
     provider = MagicMock()
-    monkeypatch.setattr("app.email.auth_mail.get_provider", lambda: provider)
+    monkeypatch.setattr("app.email.auth_mail.get_auth_provider", lambda: provider)
     monkeypatch.setattr("app.email.auth_mail.settings.DEV_EMAIL_ECHO", False)
     monkeypatch.setattr("app.email.auth_mail.settings.RESEND_API_KEY", "re_test")
     monkeypatch.setattr("app.email.auth_mail.settings.PSD_EMAIL_ENABLED", True)
@@ -84,7 +84,7 @@ def test_send_verify_does_not_raise_when_provider_fails(monkeypatch):
         def send(self, *args, **kwargs):
             raise RuntimeError("smtp down")
 
-    monkeypatch.setattr("app.email.auth_mail.get_provider", lambda: FailProvider())
+    monkeypatch.setattr("app.email.auth_mail.get_auth_provider", lambda: FailProvider())
     monkeypatch.setattr("app.email.auth_mail.settings.DEV_EMAIL_ECHO", False)
     monkeypatch.setattr("app.email.auth_mail.settings.APP_BASE_URL", "https://psd.test")
 

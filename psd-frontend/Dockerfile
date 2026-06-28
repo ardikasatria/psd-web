@@ -7,7 +7,7 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY psd-frontend/ .
-COPY psd-gamification /psd-gamification
+COPY psd-gamification/psd_gamification/gamification.json ./src/lib/gamification/gamification.json
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_USE_MOCKS=false
 ARG NEXT_PUBLIC_APP_NAME="Projek Sains Data"

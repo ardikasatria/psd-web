@@ -19,11 +19,12 @@ import ButtonPrimary from '@/shared/ButtonPrimary'
 import { BoltIcon, TrophyIcon } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
 import Link from 'next/link'
+import { TIER_LEVEL_BY_LABEL } from '@/lib/gamification/config'
 import { useQuery } from '@tanstack/react-query'
 
 const TOP_N = 10
 
-import { TIER_LEVEL_BY_LABEL } from '@/lib/gamification/config'
+export function LeaderboardPageContent() {
   const { user, isLoggedIn } = useAuth()
 
   const { data, isLoading, isError, error } = useQuery<PaginatedContributor>({

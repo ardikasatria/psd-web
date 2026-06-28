@@ -34,7 +34,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "../psd-gamification/psd_gamification/gamification.json"
+    "src/lib/gamification/gamification.json"
   ],
   "exclude": [
     "node_modules"

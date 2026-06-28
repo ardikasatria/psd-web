@@ -143,6 +143,7 @@ class Settings(BaseSettings):
     PSD_EMAIL_SMTP_PORT: int = 587
     PSD_EMAIL_SMTP_USER: str = "resend"
     PSD_EMAIL_SMTP_TLS: bool = True
+    PSD_EMAIL_SMTP_SSL: bool = False  # true atau port 465/2465 → SMTP_SSL (implicit TLS)
     PSD_EMAIL_UNSUBSCRIBE_SECRET: str = ""
     PSD_EMAIL_REDIS: bool = True
     PSD_EMAIL_DIGEST_HOUR: int = 8  # WIB, via Celery beat

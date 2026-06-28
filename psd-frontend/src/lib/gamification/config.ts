@@ -1,8 +1,9 @@
 /**
  * Sumber kebenaran tunggal gamifikasi PSD (frontend).
  * Manifest kanonik: psd-gamification/psd_gamification/gamification.json
+ * Salinan build: src/lib/gamification/gamification.json (sync via npm run sync:gamification)
  */
-import manifest from '../../../../psd-gamification/psd_gamification/gamification.json'
+import manifest from './gamification.json'
 
 export type TierSlug = 'pemula' | 'kontributor' | 'ahli' | 'master' | 'grandmaster'
 export type AchievementBadgeTier = 'bronze' | 'silver' | 'gold'

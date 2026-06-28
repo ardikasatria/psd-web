@@ -5,7 +5,7 @@ import logging
 
 from app.core.config import settings
 from app.email.auth_templates import render_auth_email
-from app.email.provider import get_provider
+from app.email.provider import email_credentials_ready, get_auth_provider
 
 log = logging.getLogger("psd.email.auth")
 
@@ -28,12 +28,12 @@ def send_auth_email(
         extra_line=extra_line,
     )
 
-    if settings.DEV_EMAIL_ECHO and not settings.RESEND_API_KEY:
+    if settings.DEV_EMAIL_ECHO and not email_credentials_ready():
         log.warning("AUTH EMAIL [%s] → %s | %s\n%s", kind, to, subject, text)
         return
 
     try:
-        get_provider().send(to, subject, html, text)
+        get_auth_provider().send(to, subject, html, text)
     except Exception as exc:
         log.exception("auth_email_send_failed kind=%s to=%s", kind, to, exc_info=exc)
         if settings.DEV_EMAIL_ECHO:

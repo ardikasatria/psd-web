@@ -28,7 +28,10 @@ def test_smtp_build_mime():
         def __exit__(self, *a):
             return False
 
-        def starttls(self):
+        def ehlo(self):
+            pass
+
+        def starttls(self, context=None):
             pass
 
         def login(self, user, password):
@@ -51,6 +54,54 @@ def test_smtp_build_mime():
     assert msg["Subject"] == "Subjek"
     parts = [p.get_payload(decode=True).decode() for p in msg.walk() if p.get_content_type() in ("text/plain", "text/html")]
     assert any("Hi" in part for part in parts)
+
+
+def test_smtp_ssl_port_465():
+    logged: list[tuple] = []
+
+    class FakeSMTPSSL:
+        def __init__(self, host, port, timeout=30, context=None):
+            logged.append(("ssl", host, port))
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def ehlo(self):
+            pass
+
+        def login(self, user, password):
+            logged.append(("login", user))
+
+        def sendmail(self, sender, recipients, raw):
+            logged.append(("send", sender))
+
+    with patch("app.email.provider.smtplib.SMTP_SSL", FakeSMTPSSL):
+        SMTPProvider(
+            host="smtp.resend.com",
+            port=465,
+            user="resend",
+            password="re_key",
+            sender="noreply@test.com",
+            use_ssl=True,
+        ).send("u@x.com", "Subjek", "<p>Hi</p>", "Hi")
+
+    assert logged[0] == ("ssl", "smtp.resend.com", 465)
+
+
+def test_get_auth_provider_without_email_enabled(monkeypatch):
+    monkeypatch.setattr("app.email.provider.settings.PSD_EMAIL_ENABLED", False)
+    monkeypatch.setattr("app.email.provider.settings.DEV_EMAIL_ECHO", False)
+    monkeypatch.setattr("app.email.provider.settings.RESEND_API_KEY", "re_test")
+    monkeypatch.setattr("app.email.provider.settings.PSD_EMAIL_SENDER", "noreply@test.com")
+    monkeypatch.setattr("app.email.provider.settings.PSD_EMAIL_PROVIDER", "http")
+
+    from app.email.provider import ResendHttpProvider, get_auth_provider, get_provider
+
+    assert isinstance(get_auth_provider(), ResendHttpProvider)
+    assert isinstance(get_provider(), EchoProvider)
 
 
 def test_resend_http_request():
