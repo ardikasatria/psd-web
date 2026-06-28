@@ -5,10 +5,11 @@
   "scripts": {
     "dev": "npm run sync:gamification && next dev --turbopack",
     "build": "next build",
-    "prebuild": "npm run sync:gamification",
+    "prebuild": "npm run sync:gamification && npm run sync:favicon",
     "start": "next start",
     "lint": "tsc --noEmit",
     "sync:gamification": "node scripts/sync-gamification.mjs",
+    "sync:favicon": "node scripts/sync-favicon.mjs",
     "test:notebook": "node --experimental-strip-types --test src/lib/notebooks/editor/notebookModel.test.ts"
   },
   "dependencies": {
