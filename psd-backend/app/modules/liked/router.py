@@ -1,6 +1,8 @@
 """Endpoint koleksi aset disukai."""
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +19,7 @@ from app.modules.users.models import User
 from app.modules.users.router import _check_profile_access
 
 router = APIRouter(tags=["liked"])
+log = logging.getLogger(__name__)
 
 
 async def _user_by_username(db: AsyncSession, username: str) -> User:
@@ -46,7 +49,11 @@ async def _paginated_liked(
     page_items = filtered[p.offset : p.offset + p.page_size]
     out = []
     for item in page_items:
-        row = await enrich_liked_asset(db, item)
+        try:
+            row = await enrich_liked_asset(db, item)
+        except Exception:
+            log.exception("liked_enrich_failed", extra={"asset_key": item.asset_key})
+            continue
         if row:
             out.append(row)
     return paginated(out, total, p)

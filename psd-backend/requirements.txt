@@ -30,4 +30,5 @@ flower
 redis
 duckdb
 pyarrow
+PyYAML
 mlflow

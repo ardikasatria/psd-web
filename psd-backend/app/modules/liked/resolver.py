@@ -48,12 +48,12 @@ async def enrich_liked_asset(db: AsyncSession, item) -> dict | None:
         return {
             "kind": kind,
             "slug": slug,
-            "title": repo.title or repo.name,
-            "owner": owner_ref_dict(repo.owner),
+            "title": repo.name,
+            "owner": owner_ref_dict(repo.owner) if repo.owner else {"username": slug.split("/")[0], "type": "user", "avatar_url": None},
             "stats": stats,
             "href": asset_href(kind, slug),
             "is_public": item.is_public,
-            "liked_at": item.liked_at,
+            "liked_at": item.liked_at or "",
         }
 
     if kind == "notebook":
@@ -66,11 +66,13 @@ async def enrich_liked_asset(db: AsyncSession, item) -> dict | None:
             "kind": kind,
             "slug": slug,
             "title": nb.title,
-            "owner": owner_ref_dict(nb.owner),
+            "owner": owner_ref_dict(nb.owner)
+            if nb.owner
+            else {"username": "unknown", "type": "user", "avatar_url": None},
             "stats": stats,
             "href": asset_href(kind, slug),
             "is_public": item.is_public,
-            "liked_at": item.liked_at,
+            "liked_at": item.liked_at or "",
         }
 
     return None

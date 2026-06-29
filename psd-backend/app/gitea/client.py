@@ -201,6 +201,40 @@ class GiteaClient:
         r = await self._req("POST", f"/repos/{owner}/{repo}/forks", json=body)
         return r.json()
 
+    async def get_branch(self, owner: str, repo: str, branch: str) -> dict:
+        r = await self._req("GET", f"/repos/{owner}/{repo}/branches/{branch}")
+        return r.json()
+
+    async def list_branches(self, owner: str, repo: str) -> list:
+        r = await self._req("GET", f"/repos/{owner}/{repo}/branches")
+        return r.json()
+
+    async def list_tags(self, owner: str, repo: str) -> list:
+        r = await self._req("GET", f"/repos/{owner}/{repo}/tags")
+        return r.json()
+
+    async def list_commits(
+        self,
+        owner: str,
+        repo: str,
+        *,
+        sha: str | None = None,
+        page: int = 1,
+        limit: int = 50,
+    ) -> list:
+        params: dict = {"page": page, "limit": limit}
+        if sha:
+            params["sha"] = sha
+        r = await self._req("GET", f"/repos/{owner}/{repo}/commits", params=params)
+        return r.json()
+
+    async def get_git_tree(
+        self, owner: str, repo: str, sha: str, *, recursive: bool = False
+    ) -> dict:
+        params = {"recursive": "true"} if recursive else None
+        r = await self._req("GET", f"/repos/{owner}/{repo}/git/trees/{sha}", params=params)
+        return r.json()
+
     async def create_branch(self, owner: str, repo: str, *, new: str, old: str) -> dict:
         r = await self._req(
             "POST",

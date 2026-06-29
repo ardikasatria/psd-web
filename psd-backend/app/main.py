@@ -3,6 +3,7 @@ from logging.config import dictConfig
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -94,7 +95,16 @@ class CorsFallbackMiddleware(BaseHTTPMiddleware):
     """Pastikan header CORS ada pada respons error (500) bila origin diizinkan."""
 
     async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception("middleware_unhandled")
+            response = JSONResponse(
+                status_code=500,
+                content={"error": {"code": "internal", "message": "Terjadi kesalahan pada server"}},
+            )
         origin = request.headers.get("origin")
         if origin and settings.cors_allows(origin):
             if not response.headers.get("access-control-allow-origin"):

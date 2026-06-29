@@ -1,5 +1,9 @@
 """Uji logika detail aset."""
-from app.modules.asset_detail import contributors, filetree, language, modelcard, versioning
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from app.modules.asset_detail import contributors, filetree, gitea_content, language, modelcard, versioning
 
 
 def test_detect_language():
@@ -32,3 +36,26 @@ def test_build_tree():
     tree = filetree.build_tree(["README.md", "src/a.py"])
     names = [n["name"] for n in tree]
     assert "src" in names and "README.md" in names
+
+
+@pytest.mark.asyncio
+async def test_fetch_readme_from_gitea():
+    repo = MagicMock()
+    repo.gitea_repo_id = 1
+    repo.clone_url = "https://git.example.com/u/r.git"
+    repo.gitea_owner = "u"
+    repo.gitea_name = "r"
+    repo.slug = "u/r"
+
+    client = AsyncMock()
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=None)
+    client.get_repo = AsyncMock(return_value={"default_branch": "main"})
+
+    with patch("app.modules.asset_detail.gitea_content.client_or_none", return_value=client):
+        with patch(
+            "app.modules.asset_detail.gitea_content.files_view.get_file_text",
+            new=AsyncMock(return_value="# Halo\n"),
+        ):
+            text = await gitea_content.fetch_readme_text(repo)
+    assert text == "# Halo\n"
