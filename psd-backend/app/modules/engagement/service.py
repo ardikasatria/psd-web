@@ -1,6 +1,8 @@
 """Orkestrasi suka/bagikan/unduh aset."""
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,10 +18,20 @@ from app.modules.engagement.counters import (
 )
 from app.modules.engagement.models import AssetEngagement, AssetLove
 from app.modules.gamification.service import after_repo_liked
+from app.modules.liked.store import DbLikedStore
+from app.modules.learn.models import Notebook
 from app.modules.repos.models import Repo
 from app.modules.users.models import User
 
-KINDS = frozenset({"project", "dataset", "model"})
+REPO_KINDS = frozenset({"project", "dataset", "model"})
+ASSET_KINDS = REPO_KINDS | {"notebook"}
+
+
+@dataclass(frozen=True)
+class ResolvedAsset:
+    owner_id: str
+    key: str
+    repo: Repo | None = None
 
 
 def asset_key(kind: str, slug: str) -> str:
@@ -50,15 +62,21 @@ def _apply_counters_to_row(row: AssetEngagement, c: AssetCounters) -> None:
     row.share_link = c.shares.get("link", 0)
 
 
-async def resolve_repo(db: AsyncSession, kind: str, slug: str) -> Repo:
-    if kind not in KINDS:
+async def resolve_asset(db: AsyncSession, kind: str, slug: str) -> ResolvedAsset:
+    if kind not in ASSET_KINDS:
         raise ApiError(404, "not_found", "Jenis aset tidak dikenal")
+    key = asset_key(kind, slug)
+    if kind == "notebook":
+        n = (await db.execute(select(Notebook).where(Notebook.id == slug))).scalar_one_or_none()
+        if not n:
+            raise ApiError(404, "not_found", "Notebook tidak ditemukan")
+        return ResolvedAsset(owner_id=n.owner_id, key=key)
     r = (
         await db.execute(select(Repo).where(Repo.kind == kind, Repo.slug == slug))
     ).scalar_one_or_none()
     if not r:
         raise ApiError(404, "not_found", "Aset tidak ditemukan")
-    return r
+    return ResolvedAsset(owner_id=r.owner_id, key=key, repo=r)
 
 
 async def _get_or_create_engagement(db: AsyncSession, key: str, owner_id: str) -> AssetEngagement:
@@ -120,27 +138,29 @@ def stats_payload(c: AssetCounters, *, liked: bool) -> dict:
 
 
 async def get_stats(db: AsyncSession, kind: str, slug: str, viewer: User | None) -> dict:
-    repo = await resolve_repo(db, kind, slug)
-    key = asset_key(kind, slug)
-    row = (await db.execute(select(AssetEngagement).where(AssetEngagement.asset_key == key))).scalar_one_or_none()
+    asset = await resolve_asset(db, kind, slug)
+    row = (await db.execute(select(AssetEngagement).where(AssetEngagement.asset_key == asset.key))).scalar_one_or_none()
     if row:
         c = _row_to_counters(row)
+    elif asset.repo:
+        c = AssetCounters(love_count=asset.repo.likes or 0, download_count=asset.repo.downloads or 0)
     else:
-        c = AssetCounters(love_count=repo.likes or 0, download_count=repo.downloads or 0)
-    liked = await has_loved(db, viewer.id, key) if viewer else False
+        c = AssetCounters()
+    liked = await has_loved(db, viewer.id, asset.key) if viewer else False
     return stats_payload(c, liked=liked)
 
 
 async def toggle_love(db: AsyncSession, *, kind: str, slug: str, actor: User) -> dict:
-    repo = await resolve_repo(db, kind, slug)
-    if repo.owner_id == actor.id:
+    asset = await resolve_asset(db, kind, slug)
+    if asset.owner_id == actor.id:
         raise ApiError(422, "cannot_love_own", "Tak bisa menyukai aset sendiri")
-    key = asset_key(kind, slug)
+    key = asset.key
     had = await has_loved(db, actor.id, key)
     loved = not had
 
     if loved:
-        db.add(AssetLove(user_id=actor.id, asset_key=key))
+        settings = await DbLikedStore(db).get_settings(actor.id)
+        db.add(AssetLove(user_id=actor.id, asset_key=key, is_public=settings.default_public))
     else:
         existing = (
             await db.execute(
@@ -150,19 +170,20 @@ async def toggle_love(db: AsyncSession, *, kind: str, slug: str, actor: User) ->
         if existing:
             await db.delete(existing)
 
-    row = await _get_or_create_engagement(db, key, repo.owner_id)
-    summary = await _owner_summary(db, repo.owner_id)
+    row = await _get_or_create_engagement(db, key, asset.owner_id)
+    summary = await _owner_summary(db, asset.owner_id)
     c = _row_to_counters(row)
     apply_love(c, summary, loved=loved)
     _apply_counters_to_row(row, c)
-    await _save_summary(db, repo.owner_id, summary)
-    await _sync_repo_counters(db, repo, c)
+    await _save_summary(db, asset.owner_id, summary)
+    if asset.repo:
+        await _sync_repo_counters(db, asset.repo, c)
     await db.commit()
 
-    if loved:
-        await db.refresh(repo, ["owner"])
-        if repo.owner:
-            await after_repo_liked(db, repo, actor)
+    if loved and asset.repo:
+        await db.refresh(asset.repo, ["owner"])
+        if asset.repo.owner:
+            await after_repo_liked(db, asset.repo, actor)
 
     return {"liked": loved, "love_count": c.love_count}
 
@@ -176,41 +197,42 @@ async def record_share(
 ) -> dict:
     if channel not in SHARE_CHANNELS:
         raise ApiError(422, "bad_channel", f"Saluran tak dikenal: {channel}")
-    repo = await resolve_repo(db, kind, slug)
-    key = asset_key(kind, slug)
-    row = await _get_or_create_engagement(db, key, repo.owner_id)
-    summary = await _owner_summary(db, repo.owner_id)
+    asset = await resolve_asset(db, kind, slug)
+    key = asset.key
+    row = await _get_or_create_engagement(db, key, asset.owner_id)
+    summary = await _owner_summary(db, asset.owner_id)
     c = _row_to_counters(row)
     apply_share(c, summary, channel=channel)
     _apply_counters_to_row(row, c)
-    await _save_summary(db, repo.owner_id, summary)
+    await _save_summary(db, asset.owner_id, summary)
     await db.commit()
     return {"share_count": c.share_count, "shares": dict(c.shares)}
 
 
 async def record_download(db: AsyncSession, *, kind: str, slug: str) -> dict:
-    repo = await resolve_repo(db, kind, slug)
-    key = asset_key(kind, slug)
-    row = await _get_or_create_engagement(db, key, repo.owner_id)
-    summary = await _owner_summary(db, repo.owner_id)
+    asset = await resolve_asset(db, kind, slug)
+    key = asset.key
+    row = await _get_or_create_engagement(db, key, asset.owner_id)
+    summary = await _owner_summary(db, asset.owner_id)
     c = _row_to_counters(row)
     apply_download(c, summary)
     _apply_counters_to_row(row, c)
-    await _save_summary(db, repo.owner_id, summary)
-    await _sync_repo_counters(db, repo, c)
+    await _save_summary(db, asset.owner_id, summary)
+    if asset.repo:
+        await _sync_repo_counters(db, asset.repo, c)
     await db.commit()
     return {"download_count": c.download_count}
 
 
 async def record_view(db: AsyncSession, *, kind: str, slug: str) -> dict:
-    repo = await resolve_repo(db, kind, slug)
-    key = asset_key(kind, slug)
-    row = await _get_or_create_engagement(db, key, repo.owner_id)
-    summary = await _owner_summary(db, repo.owner_id)
+    asset = await resolve_asset(db, kind, slug)
+    key = asset.key
+    row = await _get_or_create_engagement(db, key, asset.owner_id)
+    summary = await _owner_summary(db, asset.owner_id)
     c = _row_to_counters(row)
     apply_view(c, summary)
     _apply_counters_to_row(row, c)
-    await _save_summary(db, repo.owner_id, summary)
+    await _save_summary(db, asset.owner_id, summary)
     await db.commit()
     return {"view_count": c.view_count}
 

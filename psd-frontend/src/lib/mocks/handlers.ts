@@ -49,6 +49,13 @@ import {
   mockView,
   toggleMockLove,
 } from './data/engagement'
+import {
+  getMockLikedPage,
+  getMockLikedSummary,
+  patchMockLikedItemVisibility,
+  patchMockLikedListSettings,
+  syncMockLikedOnLove,
+} from './data/liked'
 import { getMockArticle, listMockBlog, mockBlogPosts } from './data/blog'
 import { mockNotifications, notificationsForUser, unreadCountForUser } from './data/notifications'
 import {
@@ -2254,7 +2261,9 @@ export const handlers = [
     if (!viewer) return errorResponse(401, 'unauthorized', 'Belum masuk')
     const slug = `${params.owner}/${params.name}`
     try {
-      return HttpResponse.json(toggleMockLove(String(params.kind), slug, viewer.id))
+      const result = toggleMockLove(String(params.kind), slug, viewer.id)
+      syncMockLikedOnLove(viewer.id, String(params.kind), slug, result.liked)
+      return HttpResponse.json(result)
     } catch {
       return errorResponse(422, 'cannot_love_own', 'Tak bisa menyukai aset sendiri')
     }
@@ -2276,6 +2285,36 @@ export const handlers = [
     return HttpResponse.json(mockView(String(params.kind), slug))
   }),
 
+  http.get(`${API}/assets/notebook/:id/stats`, ({ request, params }) => {
+    const viewer = resolveUserFromRequest(request)
+    return HttpResponse.json(getMockAssetStats('notebook', String(params.id), viewer?.id))
+  }),
+
+  http.post(`${API}/assets/notebook/:id/love`, ({ request, params }) => {
+    const viewer = resolveUserFromRequest(request)
+    if (!viewer) return errorResponse(401, 'unauthorized', 'Belum masuk')
+    try {
+      const result = toggleMockLove('notebook', String(params.id), viewer.id)
+      syncMockLikedOnLove(viewer.id, 'notebook', String(params.id), result.liked)
+      return HttpResponse.json(result)
+    } catch {
+      return errorResponse(422, 'cannot_love_own', 'Tak bisa menyukai aset sendiri')
+    }
+  }),
+
+  http.post(`${API}/assets/notebook/:id/share`, async ({ request, params }) => {
+    const body = (await request.json()) as { channel: 'feed' | 'forum' | 'external' | 'link' }
+    return HttpResponse.json(mockShare('notebook', String(params.id), body.channel ?? 'link'))
+  }),
+
+  http.post(`${API}/assets/notebook/:id/download`, ({ params }) => {
+    return HttpResponse.json(mockDownload('notebook', String(params.id)))
+  }),
+
+  http.post(`${API}/assets/notebook/:id/view`, ({ params }) => {
+    return HttpResponse.json(mockView('notebook', String(params.id)))
+  }),
+
   http.get(`${API}/users/:username/stats`, ({ params, request }) => {
     const user = users.find((u) => u.username === params.username)
     if (!user) return errorResponse(404, 'not_found', 'Pengguna tidak ditemukan')
@@ -2284,6 +2323,64 @@ export const handlers = [
       return errorResponse(403, 'private_profile', 'Profil ini privat')
     }
     return HttpResponse.json(getMockUserEngagement(user.username))
+  }),
+
+  http.get(`${API}/me/liked-assets`, ({ request }) => {
+    const viewer = resolveUserFromRequest(request)
+    if (!viewer) return errorResponse(401, 'unauthorized', 'Belum masuk')
+    const page = Number(new URL(request.url).searchParams.get('page') ?? 1)
+    return HttpResponse.json(getMockLikedPage(viewer.id, viewer.id, page))
+  }),
+
+  http.get(`${API}/users/:username/liked-assets`, ({ request, params }) => {
+    const user = users.find((u) => u.username === params.username)
+    if (!user) return errorResponse(404, 'not_found', 'Pengguna tidak ditemukan')
+    const viewer = resolveUserFromRequest(request)
+    if (!canViewMockProfile(user.id, viewer?.id ?? null, viewer?.role)) {
+      return errorResponse(403, 'private_profile', 'Profil ini privat')
+    }
+    const page = Number(new URL(request.url).searchParams.get('page') ?? 1)
+    return HttpResponse.json(getMockLikedPage(user.id, viewer?.id ?? null, page))
+  }),
+
+  http.get(`${API}/users/:username/liked-assets/summary`, ({ request, params }) => {
+    const user = users.find((u) => u.username === params.username)
+    if (!user) return errorResponse(404, 'not_found', 'Pengguna tidak ditemukan')
+    const viewer = resolveUserFromRequest(request)
+    if (!canViewMockProfile(user.id, viewer?.id ?? null, viewer?.role)) {
+      return errorResponse(403, 'private_profile', 'Profil ini privat')
+    }
+    return HttpResponse.json(getMockLikedSummary(user.id, viewer?.id ?? null))
+  }),
+
+  http.patch(async ({ request }) => {
+    const url = new URL(request.url)
+    if (!url.pathname.includes('/me/liked-assets/') || !url.pathname.endsWith('/visibility')) {
+      return
+    }
+    const match = url.pathname.match(/\/me\/liked-assets\/([^/]+)\/(.+)\/visibility\/?$/)
+    if (!match) return
+    const viewer = resolveUserFromRequest(request)
+    if (!viewer) return errorResponse(401, 'unauthorized', 'Belum masuk')
+    const kind = decodeURIComponent(match[1])
+    const slug = decodeURIComponent(match[2])
+    const body = (await request.json()) as { is_public?: boolean }
+    try {
+      return HttpResponse.json(
+        patchMockLikedItemVisibility(viewer.id, kind, slug, Boolean(body.is_public)),
+      )
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'not_found'
+      if (msg === 'not_asset') return errorResponse(422, 'not_asset', 'Hanya aset yang bisa ditandai')
+      return errorResponse(404, 'not_found', 'Aset tidak ada di daftar suka')
+    }
+  }),
+
+  http.patch(`${API}/me/settings/liked-list`, async ({ request }) => {
+    const viewer = resolveUserFromRequest(request)
+    if (!viewer) return errorResponse(401, 'unauthorized', 'Belum masuk')
+    const body = (await request.json()) as { list_public?: boolean; default_public?: boolean }
+    return HttpResponse.json(patchMockLikedListSettings(viewer.id, body))
   }),
 
   http.get(`${API}/feed`, ({ request }) => {

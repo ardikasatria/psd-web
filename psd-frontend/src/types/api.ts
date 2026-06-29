@@ -131,6 +131,40 @@ export const AssetStatsSchema = z.object({
 })
 export type AssetStats = z.infer<typeof AssetStatsSchema>
 
+export const LikedAssetSchema = z.object({
+  kind: z.string(),
+  slug: z.string(),
+  title: z.string(),
+  owner: OwnerRefSchema,
+  stats: z
+    .object({
+      love_count: z.number(),
+      download_count: z.number(),
+    })
+    .partial(),
+  href: z.string().optional(),
+  is_public: z.boolean(),
+  liked_at: z.string(),
+})
+export type LikedAsset = z.infer<typeof LikedAssetSchema>
+
+export const PaginatedLikedAssetSchema = Paginated(LikedAssetSchema)
+export type PaginatedLikedAsset = z.infer<typeof PaginatedLikedAssetSchema>
+
+export const LikedSummarySchema = z.object({
+  list_public: z.boolean(),
+  public_count: z.number(),
+  total_count: z.number(),
+  default_public: z.boolean().optional(),
+})
+export type LikedSummary = z.infer<typeof LikedSummarySchema>
+
+export const LikedListSettingsSchema = z.object({
+  list_public: z.boolean(),
+  default_public: z.boolean(),
+})
+export type LikedListSettings = z.infer<typeof LikedListSettingsSchema>
+
 export const PerksSchema = z.object({
   upload_max_mb: z.number(),
   daily_submission_bonus: z.number(),

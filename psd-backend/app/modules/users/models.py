@@ -44,6 +44,8 @@ class User(Base):
     total_downloads: Mapped[int] = mapped_column(Integer, default=0)
     total_views: Mapped[int] = mapped_column(Integer, default=0)
     engagement_asset_count: Mapped[int] = mapped_column(Integer, default=0)
+    liked_list_public: Mapped[bool] = mapped_column(Boolean, default=True)
+    liked_default_public: Mapped[bool] = mapped_column(Boolean, default=True)
     accepted_tos_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     accepted_tos_version: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

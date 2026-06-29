@@ -2,6 +2,7 @@
 
 import { PostComposer } from '@/components/features/social/PostComposer'
 import { shareAsset, trackDownload, trackAssetView, loveAsset, getAssetStats } from '@/lib/api/engagement'
+import { setItemVisibility } from '@/lib/api/liked'
 import { useAuth } from '@/lib/auth/useAuth'
 import { formatCompactCount } from '@/lib/utils/format'
 import type { AssetStats } from '@/types/api'
@@ -12,6 +13,7 @@ import {
   ChatBubbleLeftIcon,
   ClipboardDocumentIcon,
   EyeIcon,
+  EyeSlashIcon,
   HeartIcon,
   ShareIcon,
 } from '@heroicons/react/24/outline'
@@ -39,6 +41,7 @@ export function AssetStatBar({ kind, slug, ownerUsername, pageUrl, forumHref, on
   const [shareOpen, setShareOpen] = useState(false)
   const [feedOpen, setFeedOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [likedPublic, setLikedPublic] = useState(true)
   const viewed = useRef(false)
 
   const isOwner = user?.username === ownerUsername
@@ -77,9 +80,27 @@ export function AssetStatBar({ kind, slug, ownerUsername, pageUrl, forumHref, on
         old ? { ...old, liked: data.liked, love_count: data.love_count } : old,
       )
       qc.invalidateQueries({ queryKey: ['user', ownerUsername] })
+      qc.invalidateQueries({ queryKey: ['liked-assets'] })
+      if (data.liked) setLikedPublic(true)
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(['asset-stats', kind, slug], ctx.prev)
+    },
+  })
+
+  const visibilityMutation = useMutation({
+    mutationFn: (is_public: boolean) => setItemVisibility(kind, slug, is_public),
+    onMutate: (is_public) => {
+      const prev = likedPublic
+      setLikedPublic(is_public)
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev !== undefined) setLikedPublic(ctx.prev)
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['liked-assets'] })
+      qc.invalidateQueries({ queryKey: ['liked-summary'] })
     },
   })
 
@@ -164,6 +185,19 @@ export function AssetStatBar({ kind, slug, ownerUsername, pageUrl, forumHref, on
           {stats.liked ? <HeartSolidIcon className="size-5" /> : <HeartIcon className="size-5" />}
           {formatCompactCount(stats.love_count)}
         </button>
+
+        {stats.liked && isLoggedIn && !isOwner && (
+          <button
+            type="button"
+            onClick={() => visibilityMutation.mutate(!likedPublic)}
+            disabled={visibilityMutation.isPending}
+            title={likedPublic ? 'Sembunyikan dari arsip publik' : 'Tampilkan di arsip publik'}
+            className="inline-flex items-center gap-1 rounded-xl px-2.5 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
+          >
+            {likedPublic ? <EyeIcon className="size-4" /> : <EyeSlashIcon className="size-4" />}
+            {likedPublic ? 'Publik' : 'Privat'}
+          </button>
+        )}
 
         <Button outline className="!rounded-xl" onClick={() => setShareOpen(true)}>
           <ShareIcon className="size-4" data-slot="icon" aria-hidden />

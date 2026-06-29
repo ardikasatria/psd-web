@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -30,4 +30,5 @@ class AssetLove(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: f"alv_{uuid.uuid4().hex[:12]}")
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     asset_key: Mapped[str] = mapped_column(String, index=True)
+    is_public: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

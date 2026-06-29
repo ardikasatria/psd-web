@@ -1,5 +1,6 @@
 import type { AssetStats } from '@/types/api'
 import { repos } from './repos'
+import { notebookRecords } from './notebooks'
 import { users } from './users'
 
 const loves = new Set<string>()
@@ -10,6 +11,18 @@ function key(kind: string, slug: string) {
 }
 
 function defaultStats(kind: string, slug: string): AssetStats {
+  if (kind === 'notebook') {
+    const nb = notebookRecords.find((n) => n.id === slug)
+    const seed = nb ? nb.id.length * 7 + nb.title.length : 0
+    return {
+      love_count: seed % 40,
+      share_count: 0,
+      shares: { feed: 0, forum: 0, external: 0, link: 0 },
+      download_count: seed % 120,
+      view_count: (seed % 40) * 4,
+      liked: false,
+    }
+  }
   const repo = repos.find((r) => r.kind === kind && r.slug === slug)
   return {
     love_count: repo?.likes ?? 0,
@@ -32,9 +45,16 @@ export function getMockAssetStats(kind: string, slug: string, viewerId?: string)
 
 export function toggleMockLove(kind: string, slug: string, viewerId: string) {
   const k = key(kind, slug)
-  const repo = repos.find((r) => r.kind === kind && r.slug === slug)
-  if (repo && users.find((u) => u.id === viewerId)?.username === repo.owner.username) {
-    throw new Error('cannot_love_own')
+  if (kind === 'notebook') {
+    const nb = notebookRecords.find((n) => n.id === slug)
+    if (nb && users.find((u) => u.id === viewerId)?.username === nb.owner.username) {
+      throw new Error('cannot_love_own')
+    }
+  } else {
+    const repo = repos.find((r) => r.kind === kind && r.slug === slug)
+    if (repo && users.find((u) => u.id === viewerId)?.username === repo.owner.username) {
+      throw new Error('cannot_love_own')
+    }
   }
   const lk = `${viewerId}:${k}`
   const stats = getMockAssetStats(kind, slug, viewerId)

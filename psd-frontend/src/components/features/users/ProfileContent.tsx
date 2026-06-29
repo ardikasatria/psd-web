@@ -7,6 +7,7 @@ import { NotebookCard } from '@/components/features/NotebookCard'
 import { ThreadCard } from '@/components/features/ThreadCard'
 import { DetailPageShell } from '@/components/features/layout'
 import { ProfileEngagementStats } from '@/components/features/engagement/ProfileEngagementStats'
+import { ProfileLikedTab } from '@/components/features/users/ProfileLikedTab'
 import { ProfileCard } from '@/components/features/users/ProfileCard'
 import { ProfileCover } from '@/components/features/users/ProfileCover'
 import { ProfileRepoRow } from '@/components/features/users/ProfileRepoRow'
@@ -32,7 +33,7 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { LockClosedIcon } from '@heroicons/react/24/outline'
 
-type Tab = 'all' | RepoKind | 'notebooks' | 'discussions' | 'posts'
+type Tab = 'all' | RepoKind | 'notebooks' | 'discussions' | 'posts' | 'liked'
 
 const TAB_LABELS: Record<Tab, string> = {
   all: 'Semua aset',
@@ -42,6 +43,7 @@ const TAB_LABELS: Record<Tab, string> = {
   notebooks: 'Notebook',
   discussions: 'Diskusi',
   posts: 'Postingan',
+  liked: 'Disukai',
 }
 
 export function ProfileContent({ username }: { username: string }) {
@@ -96,7 +98,7 @@ export function ProfileContent({ username }: { username: string }) {
   const stats = profile.data?.stats
   const accent = profile.data?.accent_color ?? '#4572b7'
 
-  const tabs: Tab[] = ['posts', 'all', 'project', 'dataset', 'model', 'notebooks', 'discussions']
+  const tabs: Tab[] = ['posts', 'liked', 'all', 'project', 'dataset', 'model', 'notebooks', 'discussions']
 
   function tabCount(key: Tab): number | undefined {
     if (!stats) return undefined
@@ -296,6 +298,8 @@ export function ProfileContent({ username }: { username: string }) {
                     </div>
                   </QueryState>
                 )}
+
+                {tab === 'liked' && <ProfileLikedTab username={username} isOwner={isOwner} />}
               </div>
             </div>
           </div>

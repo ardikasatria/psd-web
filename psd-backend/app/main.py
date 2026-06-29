@@ -25,6 +25,7 @@ from app.modules.engagement.router import router as engagement_router
 from app.modules.health.router import router as health_router
 from app.modules.instructors.router import router as instructors_router
 from app.modules.learn.router import router as learn_router
+from app.modules.liked.router import router as liked_router
 from app.modules.notebook_kernel.router import router as notebook_kernel_router
 from app.modules.me.router import router as me_router
 from app.modules.notifications.router import router as notifications_router
@@ -135,6 +136,7 @@ app.include_router(gamification_router, prefix=settings.API_PREFIX)
 app.include_router(git_router, prefix=settings.API_PREFIX)
 app.include_router(discovery_router, prefix=settings.API_PREFIX)
 app.include_router(engagement_router, prefix=settings.API_PREFIX)
+app.include_router(liked_router, prefix=settings.API_PREFIX)
 app.include_router(blog_router, prefix=settings.API_PREFIX)
 app.include_router(me_router, prefix=settings.API_PREFIX)
 app.include_router(notifications_router, prefix=settings.API_PREFIX)
