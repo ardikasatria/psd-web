@@ -26,6 +26,7 @@ x-backend-env: &backend-env
   MEILI_URL: http://meilisearch:7700
   MEILI_KEY: ${MEILI_KEY}
   PSD_OFFICIAL_USERNAME: psd
+  TOS_VERSION: ${TOS_VERSION:-2026-07}
   OPENAI_API_KEY: ${OPENAI_API_KEY:-}
   AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
   FACTORY_RUN_TIMEOUT_S: ${FACTORY_RUN_TIMEOUT_S:-90}

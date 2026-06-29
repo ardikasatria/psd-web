@@ -65,11 +65,13 @@ async def test_ensure_user_idempotent_on_conflict():
     state = {"posted": False}
 
     def handler(req: httpx.Request):
+        if req.method == "GET" and req.url.path == "/api/v1/users/budi":
+            if state["posted"]:
+                return httpx.Response(200, json={"id": 3, "login": "budi"})
+            return httpx.Response(404)
         if req.method == "POST" and req.url.path == "/api/v1/admin/users":
             state["posted"] = True
             return httpx.Response(422, json={"message": "user already exists"})
-        if req.method == "GET" and req.url.path == "/api/v1/users/budi":
-            return httpx.Response(200, json={"id": 3, "login": "budi"})
         return httpx.Response(500)
 
     client = _mk(handler)

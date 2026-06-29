@@ -1,8 +1,11 @@
 """Validasi & layanan SSH key Git (Gitea)."""
 from __future__ import annotations
 
+import logging
 import re
 from urllib.parse import urlparse
+
+import httpx
 
 from app.core.config import settings as app_settings
 from app.core.errors import ApiError
@@ -10,6 +13,8 @@ from app.gitea.client import GiteaClient, GiteaError
 from app.gitea.seams import normalize_gitea_username
 from app.gitea.service import client_or_none
 from app.modules.users.models import User
+
+log = logging.getLogger(__name__)
 
 _SSH_KEY_PREFIXES = (
     "ssh-rsa",
@@ -47,6 +52,13 @@ def gitea_username_for(user: User) -> str:
     return normalize_gitea_username(user.username)
 
 
+def gitea_email_for(user: User) -> str:
+    if user.email:
+        return user.email
+    login = gitea_username_for(user)
+    return f"{login}@{app_settings.PSD_GITEA_EMAIL_DOMAIN}"
+
+
 def git_public_host() -> str:
     parsed = urlparse(app_settings.PSD_OAUTH_GIT_BASE_URL)
     return parsed.hostname or app_settings.PSD_OAUTH_GIT_BASE_URL.replace("https://", "").split("/")[0]
@@ -78,23 +90,52 @@ def _key_summary(row: dict) -> dict:
 
 
 async def ensure_gitea_user(client: GiteaClient, user: User) -> str:
-    username = gitea_username_for(user)
-    await client.ensure_user(username=username, email=user.email, full_name=user.name or username)
-    return username
+    login = gitea_username_for(user)
+    row = await client.ensure_user(
+        username=login,
+        email=gitea_email_for(user),
+        full_name=user.name or login,
+    )
+    return str(row.get("login") or login)
+
+
+def _map_gitea_error(action: str, exc: GiteaError) -> ApiError:
+    log.warning("Gitea %s failed: status=%s body=%s", action, exc.status, exc.body[:500])
+    if exc.status in (401, 403):
+        return ApiError(
+            503,
+            "git_misconfigured",
+            "Integrasi Git PSD belum dikonfigurasi dengan benar (token admin). Hubungi administrator.",
+        )
+    if exc.status == 404:
+        return ApiError(404, "not_found", "Akun Git PSD tidak ditemukan")
+    return ApiError(502, "gitea_error", f"Gagal {action} — layanan Git PSD tidak merespons dengan benar")
 
 
 async def list_ssh_keys(user: User) -> list[dict]:
     client = client_or_none()
     if not client:
         raise ApiError(503, "git_unavailable", "Git PSD belum diaktifkan di server ini")
-    username = await ensure_gitea_user(client, user)
     try:
-        rows = await client.list_user_keys(username)
+        username = await ensure_gitea_user(client, user)
+        try:
+            rows = await client.list_user_keys(username)
+        except GiteaError as e:
+            if e.status == 404:
+                return []
+            raise
+        if not rows:
+            return []
+        return [_key_summary(r) for r in rows if isinstance(r, dict)]
+    except ApiError:
+        raise
     except GiteaError as e:
-        raise ApiError(502, "gitea_error", "Gagal memuat kunci SSH dari Git PSD") from e
+        raise _map_gitea_error("memuat kunci SSH", e) from e
+    except httpx.HTTPError as e:
+        log.exception("Gitea unreachable while listing ssh keys")
+        raise ApiError(503, "git_unreachable", "Layanan Git PSD tidak dapat dijangkau saat ini") from e
     finally:
         await client.aclose()
-    return [_key_summary(r) for r in rows]
 
 
 async def add_ssh_key(user: User, *, title: str, key: str) -> dict:
@@ -105,13 +146,18 @@ async def add_ssh_key(user: User, *, title: str, key: str) -> dict:
     if len(title_clean) > 80:
         raise ApiError(400, "invalid_title", "Judul kunci maksimal 80 karakter")
     key_clean = normalize_ssh_public_key(key)
-    username = await ensure_gitea_user(client, user)
     try:
+        username = await ensure_gitea_user(client, user)
         row = await client.add_user_key(username, title=title_clean, key=key_clean)
+    except ApiError:
+        raise
     except GiteaError as e:
         if e.status in (422, 409):
             raise ApiError(409, "key_exists", "Kunci SSH ini sudah terdaftar") from e
-        raise ApiError(502, "gitea_error", "Gagal menambahkan kunci SSH") from e
+        raise _map_gitea_error("menambahkan kunci SSH", e) from e
+    except httpx.HTTPError as e:
+        log.exception("Gitea unreachable while adding ssh key")
+        raise ApiError(503, "git_unreachable", "Layanan Git PSD tidak dapat dijangkau saat ini") from e
     finally:
         await client.aclose()
     return _key_summary(row)
@@ -121,12 +167,17 @@ async def delete_ssh_key(user: User, key_id: int) -> None:
     client = client_or_none()
     if not client:
         raise ApiError(503, "git_unavailable", "Git PSD belum diaktifkan di server ini")
-    username = gitea_username_for(user)
     try:
+        username = await ensure_gitea_user(client, user)
         await client.delete_user_key(username, key_id)
+    except ApiError:
+        raise
     except GiteaError as e:
         if e.status == 404:
             raise ApiError(404, "not_found", "Kunci SSH tidak ditemukan") from e
-        raise ApiError(502, "gitea_error", "Gagal menghapus kunci SSH") from e
+        raise _map_gitea_error("menghapus kunci SSH", e) from e
+    except httpx.HTTPError as e:
+        log.exception("Gitea unreachable while deleting ssh key")
+        raise ApiError(503, "git_unreachable", "Layanan Git PSD tidak dapat dijangkau saat ini") from e
     finally:
         await client.aclose()

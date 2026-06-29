@@ -51,6 +51,12 @@ class GiteaClient:
         self, *, username: str, email: str, full_name: str = ""
     ) -> dict:
         try:
+            r = await self._req("GET", f"/users/{username}")
+            return r.json()
+        except GiteaError as e:
+            if e.status != 404:
+                raise
+        try:
             r = await self._req(
                 "POST",
                 "/admin/users",
@@ -66,10 +72,28 @@ class GiteaClient:
             )
             return r.json()
         except GiteaError as e:
-            if e.status in (422, 409):
+            if e.status not in (422, 409):
+                raise
+            try:
                 r = await self._req("GET", f"/users/{username}")
                 return r.json()
+            except GiteaError:
+                pass
+            for candidate in await self.search_users(username, limit=5):
+                if str(candidate.get("login", "")).lower() == username.lower():
+                    return candidate
+            if email:
+                for candidate in await self.search_users(email.split("@", 1)[0], limit=10):
+                    if str(candidate.get("email", "")).lower() == email.lower():
+                        return candidate
             raise
+
+    async def search_users(self, q: str, *, limit: int = 10) -> list:
+        r = await self._req("GET", "/users/search", params={"q": q, "limit": limit})
+        payload = r.json()
+        if isinstance(payload, dict):
+            return payload.get("data") or []
+        return payload if isinstance(payload, list) else []
 
     async def create_user_repo(
         self,

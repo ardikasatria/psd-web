@@ -55,7 +55,7 @@ class Settings(BaseSettings):
 
     PSD_OFFICIAL_USERNAME: str = "psd"
 
-    TOS_VERSION: str = "2026-06"
+    TOS_VERSION: str = "2026-07"
 
     OPENAI_API_KEY: str = ""
     AI_MODEL: str = "gpt-4o-mini"

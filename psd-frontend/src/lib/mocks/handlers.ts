@@ -116,7 +116,7 @@ import { isStaff, isSuperadmin } from '@/lib/auth/roles'
 
 const API = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000') + '/api/v1'
 const API_ROOT = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
-const TOS_CURRENT = '2026-06'
+const TOS_CURRENT = '2026-07'
 const mockTosVersions = new Map<string, string>()
 const mockMemberShareTokens = new Map<string, string>()
 
