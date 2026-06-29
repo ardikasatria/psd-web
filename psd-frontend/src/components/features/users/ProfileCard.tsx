@@ -89,8 +89,8 @@ export function ProfileCard({
   return (
     <aside
       className={clsx(
-        'profile relative overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-700 dark:bg-neutral-900',
-        'lg:z-20 lg:overflow-visible lg:sticky lg:top-24',
+        'profile pointer-events-auto relative isolate overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-700 dark:bg-neutral-900',
+        'z-30 lg:sticky lg:top-24 lg:overflow-visible',
         className
       )}
       style={{ ['--psd-accent' as string]: accent }}
@@ -149,7 +149,7 @@ export function ProfileCard({
           </h1>
 
           {!isOwner && (
-            <div className="mt-3 flex justify-center">
+            <div className="relative z-10 mt-3 flex justify-center">
               <FollowButton
                 username={profile.username}
                 isFollowing={localFollowing}
@@ -316,6 +316,12 @@ export function ProfileCard({
           mode={followDialog}
           open={!!followDialog}
           onClose={() => setFollowDialog(null)}
+          isOwner={isOwner}
+          onFollowerRemoved={() =>
+            setLocalFollowersCount((count) =>
+              count === undefined ? count : Math.max(0, count - 1),
+            )
+          }
         />
       )}
     </aside>

@@ -140,7 +140,7 @@ export function ProfileContent({ username }: { username: string }) {
           >
             {/* Desktop: cover penuh + avatar & username/bio di overlay */}
             <div className="pointer-events-none relative z-0 mb-0 hidden lg:block">
-              <ProfileCover profile={profile.data} className="h-40 rounded-2xl" />
+              <ProfileCover profile={profile.data} className="pointer-events-none h-40 rounded-2xl" />
               <div className="absolute inset-0 z-10 grid pointer-events-none grid-cols-[minmax(0,280px)_1fr] gap-8">
                 <div />
                 <div className="flex items-end pb-5">
@@ -160,7 +160,7 @@ export function ProfileContent({ username }: { username: string }) {
               </div>
             </div>
 
-            <div className="relative z-10 lg:-mt-12 lg:grid lg:grid-cols-[minmax(0,280px)_1fr] lg:items-start lg:gap-8">
+            <div className="relative z-20 lg:-mt-12 lg:grid lg:grid-cols-[minmax(0,280px)_1fr] lg:items-start lg:gap-8">
               <ProfileCard
                 profile={profile.data}
                 isOwner={isOwner}

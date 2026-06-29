@@ -2189,6 +2189,23 @@ export const handlers = [
     return HttpResponse.json({ following: false })
   }),
 
+  http.delete(`${API}/users/:username/followers/:followerUsername`, ({ params, request }) => {
+    const viewer = resolveUserFromRequest(request)
+    if (!viewer) return errorResponse(401, 'unauthorized', 'Belum masuk')
+    const target = users.find((u) => u.username === params.username)
+    if (!target) return errorResponse(404, 'not_found', 'Akun tidak ditemukan')
+    if (target.id !== viewer.id) return errorResponse(403, 'forbidden', 'Hanya pemilik profil yang dapat menghapus pengikut')
+    const follower = users.find((u) => u.username === params.followerUsername)
+    if (!follower) return errorResponse(404, 'not_found', 'Akun tidak ditemukan')
+    for (const [followerId, following] of Object.entries(mockFollows)) {
+      if (followerId === follower.id && following.has(target.id)) {
+        following.delete(target.id)
+        break
+      }
+    }
+    return new HttpResponse(null, { status: 204 })
+  }),
+
   http.get(`${API}/users/:username/followers`, ({ params, request }) => {
     const user = users.find((u) => u.username === params.username)
     if (!user) return errorResponse(404, 'not_found', 'Akun tidak ditemukan')

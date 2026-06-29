@@ -191,6 +191,29 @@ async def unfollow(username: str, user=Depends(get_current_user), db: AsyncSessi
     return {"following": False}
 
 
+@router.delete("/users/{username}/followers/{follower_username}")
+async def remove_follower(
+    username: str,
+    follower_username: str,
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    target = await _user_by_name(db, username)
+    if target.id != user.id:
+        raise ApiError(403, "forbidden", "Hanya pemilik profil yang dapat menghapus pengikut")
+    follower = await _user_by_name(db, follower_username)
+    f = (
+        await db.execute(
+            select(Follow).where(Follow.follower_id == follower.id, Follow.following_id == target.id)
+        )
+    ).scalar_one_or_none()
+    if f:
+        await db.delete(f)
+        target.follower_count = max(0, (target.follower_count or 0) - 1)
+        await db.commit()
+    return {"removed": True}
+
+
 @router.get("/users/{username}/followers")
 async def followers(username: str, p: PageParams = Depends(page_params), db: AsyncSession = Depends(get_db)):
     t = await _user_by_name(db, username)

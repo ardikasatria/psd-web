@@ -23,6 +23,9 @@ export const followUser = (username: string) =>
 export const unfollowUser = (username: string) =>
   apiFetch(`/users/${username}/follow`, FollowResponseSchema, { method: 'DELETE' })
 
+export const removeFollower = (username: string, followerUsername: string) =>
+  apiDelete(`/users/${username}/followers/${followerUsername}`)
+
 export const getFollowers = (username: string, page = 1) =>
   apiFetch<PaginatedOwner>(
     `/users/${username}/followers${buildQuery({ page })}`,
