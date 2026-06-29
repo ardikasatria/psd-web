@@ -107,7 +107,7 @@ update_env_passthrough() {
   for kv in \
     "GITEA_SSH_MODE=passthrough" \
     "GITEA_SSH_PORT=22" \
-    "GITEA_SSH_PUBLISH=127.0.0.1:2222:22"
+    "GITEA_SSH_PUBLISH=127.0.0.1:2222:2222"
   do
     key="${kv%%=*}"
     if grep -q "^${key}=" "$ENV_FILE"; then
@@ -131,7 +131,7 @@ if [[ "$MODE" == "--rollback" ]]; then
   if grep -q '^GITEA_SSH_MODE=passthrough' "$ENV_FILE" 2>/dev/null; then
     sed -i 's/^GITEA_SSH_MODE=.*/GITEA_SSH_MODE=interim/' "$ENV_FILE"
     sed -i 's/^GITEA_SSH_PORT=.*/GITEA_SSH_PORT=2222/' "$ENV_FILE"
-    sed -i 's/^GITEA_SSH_PUBLISH=.*/GITEA_SSH_PUBLISH=2222:22/' "$ENV_FILE"
+    sed -i 's/^GITEA_SSH_PUBLISH=.*/GITEA_SSH_PUBLISH=2222:2222/' "$ENV_FILE"
   fi
   cd "$DEPLOY_DIR"
   "${COMPOSE[@]}" up -d gitea backend
@@ -188,7 +188,7 @@ sleep 3
 if ! "${PASSTHROUGH_COMPOSE[@]}" ps gitea 2>/dev/null | grep -q "Up"; then
   echo "GAGAL: kontainer gitea tidak Up — kemungkinan bentrok port. Cek:"
   echo "  ${PASSTHROUGH_COMPOSE[*]} logs gitea --tail 40"
-  echo "Pastikan .env punya GITEA_SSH_PUBLISH=127.0.0.1:2222:22 (bukan 22:22)"
+  echo "Pastikan .env punya GITEA_SSH_PUBLISH=127.0.0.1:2222:2222 (listen kontainer :2222)"
   exit 1
 fi
 

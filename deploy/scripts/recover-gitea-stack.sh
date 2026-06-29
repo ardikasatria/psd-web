@@ -18,10 +18,10 @@ fi
 MODE="${GITEA_SSH_MODE:-interim}"
 
 if [[ "$MODE" == "passthrough" ]]; then
-  echo "Mode passthrough — set GITEA_SSH_PUBLISH=127.0.0.1:2222:22 (bukan 22:22)"
+  echo "Mode passthrough — set GITEA_SSH_PUBLISH=127.0.0.1:2222:2222"
   for kv in \
     "GITEA_SSH_PORT=22" \
-    "GITEA_SSH_PUBLISH=127.0.0.1:2222:22"
+    "GITEA_SSH_PUBLISH=127.0.0.1:2222:2222"
   do
     key="${kv%%=*}"
     if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
@@ -32,8 +32,8 @@ if [[ "$MODE" == "passthrough" ]]; then
   done
   COMPOSE=(docker compose -f docker-compose.prod.yml -f docker-compose.gitea-passthrough.yml)
 else
-  echo "Mode interim — GITEA_SSH_PUBLISH=2222:22"
-  for kv in "GITEA_SSH_PORT=2222" "GITEA_SSH_PUBLISH=2222:22"; do
+  echo "Mode interim — GITEA_SSH_PUBLISH=2222:2222"
+  for kv in "GITEA_SSH_PORT=2222" "GITEA_SSH_PUBLISH=2222:2222"; do
     key="${kv%%=*}"
     if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
       sed -i "s|^${key}=.*|${kv}|" "$ENV_FILE"
