@@ -24,7 +24,7 @@ async function assistantFetch<T>(path: string, schema: z.ZodType<T>, init: Reque
 }
 
 const QuotaSchema = z.object({
-  tier: z.string(),
+  tier: z.string().optional().default('pemula'),
   limit: z.number(),
   used: z.number(),
   remaining: z.number(),

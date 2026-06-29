@@ -87,6 +87,7 @@ def test_assistant_calls_llm_with_messages():
     out = a.answer(user_id="u", tier="lanjut", question="cara publish?", context={"fitur": "dataset"})
     assert out["reply"].startswith("Gunakan")
     assert out["quota"]["remaining"] == 499
+    assert out["quota"]["tier"] == "lanjut"
     assert seen["messages"][-1]["content"] == "cara publish?"
 
 

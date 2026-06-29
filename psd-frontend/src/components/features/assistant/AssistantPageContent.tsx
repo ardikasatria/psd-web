@@ -1,187 +1,76 @@
 'use client'
 
+import { AssistantChatPanel } from '@/components/features/assistant/AssistantChatPanel'
 import { PersonalizedFeedSection } from '@/components/features/assistant/PersonalizedFeedSection'
 import { useAssistantContext } from '@/lib/assistant/useAssistantContext'
-import { FeaturePageShell } from '@/components/features/layout'
-import { askAssistant, getAssistantQuota, type AskResult } from '@/lib/api/assistant'
-import { useAuth } from '@/lib/auth/useAuth'
+import { useAssistantChat } from '@/lib/assistant/useAssistantChat'
 import ButtonPrimary from '@/shared/ButtonPrimary'
-import { Button } from '@/shared/Button'
-import Textarea from '@/shared/Textarea'
-import { PaperAirplaneIcon, SparklesIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import clsx from 'clsx'
-import { FormEvent, useRef, useState } from 'react'
-
-type ChatMessage = {
-  role: 'user' | 'assistant'
-  content: string
-}
-
-const STARTERS = [
-  'Bagaimana cara mempublikasikan dataset?',
-  'Apa itu Pabrik Data?',
-  'Langkah memulai kompetisi pertama saya?',
-]
+import { SparklesIcon } from '@heroicons/react/24/outline'
 
 export function AssistantPageContent() {
-  const { isLoggedIn } = useAuth()
   const context = useAssistantContext()
-  const qc = useQueryClient()
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const [question, setQuestion] = useState('')
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const chat = useAssistantChat(context)
 
-  const quota = useQuery({
-    queryKey: ['assistant-quota'],
-    queryFn: getAssistantQuota,
-    enabled: isLoggedIn,
-  })
-
-  const askMutation = useMutation({
-    mutationFn: (q: string) => askAssistant({ question: q, context }),
-    onSuccess: (res: AskResult, q) => {
-      setError(null)
-      setMessages((prev) => [...prev, { role: 'user', content: q }, { role: 'assistant', content: res.reply }])
-      setQuestion('')
-      qc.invalidateQueries({ queryKey: ['assistant-quota'] })
-      window.setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-    },
-    onError: (e: Error) => setError(e.message),
-  })
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    const q = question.trim()
-    if (!q || askMutation.isPending) return
-    askMutation.mutate(q)
-  }
-
-  if (!isLoggedIn) {
+  if (!chat.isLoggedIn) {
     return (
-      <FeaturePageShell>
-        <div className="mx-auto max-w-lg rounded-3xl border border-neutral-200/80 bg-white p-10 text-center dark:border-neutral-700 dark:bg-neutral-800">
-          <SparklesIcon className="mx-auto size-12 text-neutral-300 dark:text-neutral-600" aria-hidden />
-          <h1 className="mt-4 text-xl font-bold">Asisten PSD</h1>
+      <div className="mx-auto flex min-h-[calc(100vh-12rem)] max-w-lg items-center px-4 py-16">
+        <div className="w-full rounded-3xl border border-neutral-200/80 bg-white p-10 text-center shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-primary-100 dark:from-sky-950/50 dark:to-primary-950/40">
+            <SparklesIcon className="size-7 text-primary-600 dark:text-primary-400" aria-hidden />
+          </div>
+          <h1 className="mt-4 text-2xl font-bold text-neutral-900 dark:text-neutral-50">Asisten PSD</h1>
           <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-            Masuk untuk bertanya dan mendapat rekomendasi personal.
+            Masuk untuk bertanya, menyimpan riwayat chat, dan mendapat rekomendasi personal.
           </p>
           <ButtonPrimary href="/login?next=/assistant" className="mt-6">
             Masuk
           </ButtonPrimary>
         </div>
-      </FeaturePageShell>
+      </div>
     )
   }
 
   return (
-    <FeaturePageShell>
-      <div className="mx-auto max-w-5xl space-y-8 px-4 py-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-sky-100/80 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">
-              <SparklesIcon className="size-3.5" aria-hidden />
-              AI Asisten
-            </div>
-            <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50">Asisten PSD</h1>
-            <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-              Tanya cara pakai fitur platform — dijawab dalam Bahasa Indonesia, dengan kuota per tier.
-              {context.fitur && (
-                <>
-                  {' '}
-                  Konteks halaman: <strong>{context.fitur}</strong>
-                </>
-              )}
-            </p>
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-8 lg:py-10">
+      <div className="relative overflow-hidden rounded-3xl border border-neutral-200/80 bg-gradient-to-br from-sky-50 via-white to-primary-50 p-6 sm:p-8 dark:border-neutral-700 dark:from-sky-950/30 dark:via-neutral-900 dark:to-primary-950/20">
+        <div className="pointer-events-none absolute -end-16 -top-16 size-48 rounded-full bg-primary-200/30 blur-3xl dark:bg-primary-800/20" aria-hidden />
+        <div className="relative">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-800 shadow-sm dark:bg-neutral-800/80 dark:text-primary-300">
+            <SparklesIcon className="size-3.5" aria-hidden />
+            AI Asisten
           </div>
-          {quota.data && (
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              Kuota hari ini ({quota.data.tier}):{' '}
-              <strong className="text-neutral-800 dark:text-neutral-200">
-                {quota.data.used}/{quota.data.limit}
-              </strong>
-            </p>
-          )}
+          <h1 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">Asisten PSD</h1>
+          <p className="mt-2 max-w-2xl text-sm text-neutral-600 dark:text-neutral-400">
+            Tanya cara pakai fitur platform — dijawab dalam Bahasa Indonesia. Riwayat percakapan disimpan di perangkat
+            ini.
+            {context.fitur && (
+              <>
+                {' '}
+                Konteks halaman: <strong className="text-neutral-800 dark:text-neutral-200">{context.fitur}</strong>
+              </>
+            )}
+          </p>
         </div>
+      </div>
 
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-          <div className="flex min-h-[420px] flex-col rounded-3xl border border-neutral-200/80 bg-white dark:border-neutral-700 dark:bg-neutral-800">
-            <div className="flex-1 space-y-4 overflow-y-auto p-5 sm:p-6">
-              {messages.length === 0 ? (
-                <div className="flex h-full min-h-[280px] flex-col items-center justify-center text-center">
-                  <SparklesIcon className="size-10 text-sky-300 dark:text-sky-700" aria-hidden />
-                  <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-400">
-                    Tanyakan apa saja tentang PSD — dataset, course, kompetisi, notebook, dan lainnya.
-                  </p>
-                  <div className="mt-5 flex flex-wrap justify-center gap-2">
-                    {STARTERS.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setQuestion(s)}
-                        className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs text-neutral-700 transition hover:border-sky-300 hover:bg-sky-50 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-300"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                messages.map((m, i) => (
-                  <div
-                    key={`${m.role}-${i}`}
-                    className={clsx('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}
-                  >
-                    <div
-                      className={clsx(
-                        'max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
-                        m.role === 'user'
-                          ? 'bg-primary-600 text-white'
-                          : 'border border-neutral-200/80 bg-neutral-50 text-neutral-800 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-200',
-                      )}
-                    >
-                      {m.content}
-                    </div>
-                  </div>
-                ))
-              )}
-              <div ref={bottomRef} />
-            </div>
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start">
+        <AssistantChatPanel
+          messages={chat.messages}
+          question={chat.question}
+          onQuestionChange={chat.setQuestion}
+          onSubmit={chat.handleSubmit}
+          onClear={chat.clearHistory}
+          onStarterClick={chat.setQuestion}
+          error={chat.error}
+          isPending={chat.askMutation.isPending}
+          quota={chat.quota.data ?? null}
+          bottomRef={chat.bottomRef}
+        />
 
-            <form onSubmit={handleSubmit} className="border-t border-neutral-200/80 p-4 dark:border-neutral-700">
-              {error && <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-              <div className="flex gap-2">
-                <Textarea
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Tulis pertanyaan…"
-                  rows={2}
-                  className="min-h-0 flex-1 !rounded-xl"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSubmit(e)
-                    }
-                  }}
-                />
-                <div className="flex flex-col gap-2">
-                  <ButtonPrimary type="submit" disabled={askMutation.isPending || !question.trim()}>
-                    <PaperAirplaneIcon className="size-4" aria-hidden />
-                  </ButtonPrimary>
-                  {messages.length > 0 && (
-                    <Button type="button" outline onClick={() => setMessages([])} title="Hapus riwayat">
-                      <TrashIcon className="size-4" aria-hidden />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </form>
-          </div>
-
+        <div className="space-y-4 lg:sticky lg:top-28">
           <PersonalizedFeedSection compact />
         </div>
       </div>
-    </FeaturePageShell>
+    </div>
   )
 }

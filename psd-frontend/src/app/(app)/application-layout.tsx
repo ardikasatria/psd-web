@@ -11,6 +11,7 @@ interface Props {
   headerHasBorder?: boolean
   headerStyle?: 'header-1' | 'header-2'
   showBanner?: boolean
+  showFooter?: boolean
 }
 
 const ApplicationLayout: React.FC<Props> = ({
@@ -18,6 +19,7 @@ const ApplicationLayout: React.FC<Props> = ({
   headerHasBorder,
   headerStyle = 'header-2',
   showBanner = false,
+  showFooter = true,
 }) => {
   return (
     <>
@@ -35,8 +37,7 @@ const ApplicationLayout: React.FC<Props> = ({
 
       <div id="main-content">{children}</div>
 
-      {/* footer - Chose footer style here / footer 1 or footer 2 or footer 3 or footer 4 */}
-      <Footer />
+      {showFooter && <Footer />}
       {/* aside sidebar navigation */}
       <AsideSidebarNavigation />
       <AssistantShell />

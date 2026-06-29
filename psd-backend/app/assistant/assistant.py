@@ -35,4 +35,4 @@ class AIAssistant:
         quota = check_and_consume(self.store, user_id, tier)
         messages = build_messages(question, context)
         reply = self.llm_fn(messages)
-        return {"reply": reply, "quota": quota}
+        return {"reply": reply, "quota": {**quota, "tier": tier}}
