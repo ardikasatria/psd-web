@@ -484,6 +484,66 @@ export const RepoDetailSchema = RepoSummarySchema.extend({
 })
 export type RepoDetail = z.infer<typeof RepoDetailSchema>
 
+export const AssetReadmeSchema = z.object({
+  meta: z.record(z.unknown()),
+  body_md: z.string(),
+  card: z.record(z.unknown()).optional(),
+})
+export type AssetReadme = z.infer<typeof AssetReadmeSchema>
+
+export const AssetTreeNodeSchema: z.ZodType<{
+  name: string
+  type: 'file' | 'dir'
+  path?: string
+  children?: unknown[]
+}> = z.lazy(() =>
+  z.object({
+    name: z.string(),
+    type: z.enum(['file', 'dir']),
+    path: z.string().optional(),
+    children: z.array(AssetTreeNodeSchema).optional(),
+  }),
+)
+
+export const AssetTreeSchema = z.object({
+  tree: z.array(AssetTreeNodeSchema),
+  default_branch: z.string().nullable().optional(),
+})
+
+export const AssetFileSchema = z.object({
+  path: z.string(),
+  content: z.string().optional(),
+  language: z.string(),
+  is_binary: z.boolean(),
+  download_url: z.string().nullable().optional(),
+  size_bytes: z.number().optional(),
+})
+export type AssetFile = z.infer<typeof AssetFileSchema>
+
+export const AssetBranchSchema = z.object({
+  name: z.string(),
+  commit_sha: z.string().optional(),
+  is_default: z.boolean().optional(),
+})
+export type AssetBranch = z.infer<typeof AssetBranchSchema>
+
+export const AssetVersionSchema = z.object({
+  tag: z.string(),
+  name: z.string().optional(),
+  created_at: z.string().optional(),
+  download_url: z.string().optional(),
+})
+export type AssetVersion = z.infer<typeof AssetVersionSchema>
+
+export const AssetContributorSchema = z.object({
+  username: z.string(),
+  commits: z.number(),
+  avatar_url: z.string().nullable().optional(),
+  team: z.string().nullable().optional(),
+  is_team_member: z.boolean().optional(),
+})
+export type AssetContributor = z.infer<typeof AssetContributorSchema>
+
 export const RepoLikeResponseSchema = z.object({
   liked: z.boolean(),
   likes: z.number(),

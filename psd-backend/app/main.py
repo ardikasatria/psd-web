@@ -13,6 +13,7 @@ from app.core.errors import register_error_handlers
 from app.modules.blog.router import router as blog_router
 from app.modules.categories.router import router as categories_router
 from app.modules.admin.router import router as admin_router
+from app.modules.asset_detail.router import router as asset_detail_router
 from app.modules.announcements.router import router as announcements_router
 from app.modules.auth.router import router as auth_router
 from app.modules.community.router import router as community_router
@@ -123,6 +124,7 @@ register_error_handlers(app)
 app.include_router(health_router, prefix=settings.API_PREFIX)
 app.include_router(auth_router, prefix=settings.API_PREFIX)
 app.include_router(repos_router, prefix=settings.API_PREFIX)
+app.include_router(asset_detail_router, prefix=settings.API_PREFIX)
 app.include_router(search_router, prefix=settings.API_PREFIX)
 app.include_router(comp_router, prefix=settings.API_PREFIX)
 app.include_router(events_router, prefix=settings.API_PREFIX)

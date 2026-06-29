@@ -22,6 +22,15 @@ import {
 } from './data/micro'
 import { detailOf as repoDetailOf, findRepo, repos } from './data/repos'
 import {
+  mockAssetBranches,
+  mockAssetContributors,
+  mockAssetFile,
+  mockAssetReadme,
+  mockAssetTree,
+  mockAssetVersions,
+  mockCreateBranch,
+} from './data/asset-detail'
+import {
   canViewMockProfile,
   getMockUserSettings,
   isMockUserSearchable,
@@ -168,7 +177,15 @@ function mockRepoDetail(repo: (typeof repos)[number]) {
   const base = repoDetailOf(repo)
   const files = repoFileState[repo.id] ?? base.files
   const meta = repoMetaState[repo.id] ?? {}
-  return { ...base, ...meta, files }
+  const slug = repo.slug.replace('/', '-')
+  return {
+    ...base,
+    ...meta,
+    files,
+    clone_url: `https://git.projeksainsdata.com/${repo.owner.username}/${slug}.git`,
+    source_of_truth: 'gitea' as const,
+    gitea_repo_id: 1,
+  }
 }
 
 const adminUsers = users.map((u) => ({
@@ -504,6 +521,80 @@ export const handlers = [
         repoMetaState[id] = { readme_md: body.readme_md ?? '', license: body.license ?? null }
       }
       return HttpResponse.json({ ...mockRepoDetail(repo as (typeof repos)[number]), liked: false })
+    }),
+  ]),
+
+  ...(['projects', 'datasets', 'models'] as const).flatMap((kind) => [
+    http.get(`${API}/${kind}/:owner/:name/readme`, ({ params }) => {
+      const kindSingular = kind.slice(0, -1)
+      try {
+        return HttpResponse.json(mockAssetReadme(kindSingular, String(params.owner), String(params.name)))
+      } catch {
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
+    }),
+    http.get(`${API}/${kind}/:owner/:name/tree`, ({ params }) => {
+      const kindSingular = kind.slice(0, -1)
+      try {
+        return HttpResponse.json(mockAssetTree(kindSingular, String(params.owner), String(params.name)))
+      } catch {
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
+    }),
+    http.get(`${API}/${kind}/:owner/:name/file`, ({ params, request }) => {
+      const kindSingular = kind.slice(0, -1)
+      const path = new URL(request.url).searchParams.get('path')
+      if (!path) return errorResponse(422, 'invalid', 'Parameter path wajib.')
+      try {
+        return HttpResponse.json(
+          mockAssetFile(kindSingular, String(params.owner), String(params.name), path),
+        )
+      } catch {
+        return errorResponse(404, 'not_found', 'Berkas tidak ditemukan.')
+      }
+    }),
+    http.get(`${API}/${kind}/:owner/:name/branches`, ({ params }) => {
+      const kindSingular = kind.slice(0, -1)
+      try {
+        return HttpResponse.json(mockAssetBranches(kindSingular, String(params.owner), String(params.name)))
+      } catch {
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
+    }),
+    http.post(`${API}/${kind}/:owner/:name/branches`, async ({ params, request }) => {
+      const kindSingular = kind.slice(0, -1)
+      const body = (await request.json()) as { name?: string; from?: string }
+      try {
+        return HttpResponse.json(
+          mockCreateBranch(
+            kindSingular,
+            String(params.owner),
+            String(params.name),
+            body.name ?? '',
+            body.from ?? 'main',
+          ),
+        )
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : ''
+        if (msg === 'invalid_branch') return errorResponse(422, 'invalid_branch', 'Nama branch tidak valid.')
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
+    }),
+    http.get(`${API}/${kind}/:owner/:name/versions`, ({ params }) => {
+      const kindSingular = kind.slice(0, -1)
+      try {
+        return HttpResponse.json(mockAssetVersions(kindSingular, String(params.owner), String(params.name)))
+      } catch {
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
+    }),
+    http.get(`${API}/${kind}/:owner/:name/contributors`, ({ params }) => {
+      const kindSingular = kind.slice(0, -1)
+      try {
+        return HttpResponse.json(mockAssetContributors(kindSingular, String(params.owner), String(params.name)))
+      } catch {
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
     }),
   ]),
 

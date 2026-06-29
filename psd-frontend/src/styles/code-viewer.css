@@ -1,0 +1,38 @@
+/* Viewer kode adaptif tema — Shiki dwi-tema (github-light / github-dark) */
+.code-viewer .shiki,
+.code-viewer .shiki span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+
+html.dark .code-viewer .shiki,
+html.dark .code-viewer .shiki span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+}
+
+.code-viewer .shiki {
+  padding: 12px 14px;
+  border-radius: 12px;
+  overflow-x: auto;
+  font: 13px/1.6 ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace;
+  border: 1px solid rgb(229 231 235 / 0.8);
+}
+
+html.dark .code-viewer .shiki {
+  border-color: rgb(55 65 81 / 0.8);
+}
+
+.code-binary {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px dashed rgb(209 213 219);
+  color: rgb(107 114 128);
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+html.dark .code-binary {
+  border-color: rgb(75 85 99);
+  color: rgb(156 163 175);
+}

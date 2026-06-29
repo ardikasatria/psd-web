@@ -1,0 +1,21 @@
+/* Viewer kode adaptif tema. Shiki dwi-tema menulis CSS var --shiki-light/--shiki-dark.
+   Token berpindah warna lewat kelas .dark di root (html/body). TIDAK memaksa gelap. */
+.code-viewer .shiki,
+.code-viewer .shiki span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+html.dark .code-viewer .shiki,
+html.dark .code-viewer .shiki span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+}
+.code-viewer .shiki {
+  padding: 12px 14px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font: 13px/1.6 ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  border: 1px solid var(--border, #e5e7eb);
+}
+html.dark .code-viewer .shiki { border-color: var(--border-dark, #30363d); }
+.code-binary { padding: 16px; color: var(--muted, #6b7280); font-style: italic; }
