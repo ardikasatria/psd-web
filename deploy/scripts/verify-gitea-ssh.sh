@@ -51,16 +51,28 @@ else
   echo "  Gunakan Path B (passthrough) atau Path A, atau ssh -p $GITEA_SSH_PORT"
 fi
 
+compose_files() {
+  if [[ "${GITEA_SSH_MODE:-interim}" == "passthrough" ]] && [[ -f "$DEPLOY_DIR/docker-compose.gitea-passthrough.yml" ]]; then
+    echo "-f" "$DEPLOY_DIR/docker-compose.prod.yml" "-f" "$DEPLOY_DIR/docker-compose.gitea-passthrough.yml"
+  else
+    echo "-f" "$DEPLOY_DIR/docker-compose.prod.yml"
+  fi
+}
+
 echo
 echo "--- [3] Kontainer Gitea ---"
 if command -v docker >/dev/null 2>&1 && [[ -f "$DEPLOY_DIR/docker-compose.prod.yml" ]]; then
-  if docker compose -f "$DEPLOY_DIR/docker-compose.prod.yml" ps gitea 2>/dev/null | grep -q "Up"; then
+  # shellcheck disable=SC2046
+  if docker compose $(compose_files) ps gitea 2>/dev/null | grep -q "Up"; then
     echo "OK: kontainer gitea berjalan"
-    docker compose -f "$DEPLOY_DIR/docker-compose.prod.yml" exec -T gitea sh -c \
-      'grep -E "START_SSH_SERVER|SSH_PORT|SSH_LISTEN" /data/gitea/conf/app.ini 2>/dev/null || echo "(app.ini belum ada atau path berbeda)"' \
+    # shellcheck disable=SC2046
+    docker compose $(compose_files) exec -T gitea sh -c \
+      'grep -E "START_SSH_SERVER|SSH_PORT|SSH_LISTEN" /data/gitea/conf/app.ini 2>/dev/null || echo "(app.ini belum ada)"' \
       || true
   else
     echo "GAGAL: kontainer gitea tidak Up"
+    echo "  Jalankan: ./scripts/recover-gitea-stack.sh"
+    echo "  Log: docker compose \$(compose) logs gitea --tail 40"
     fail=1
   fi
 else
@@ -81,13 +93,21 @@ if "${SSH_TEST[@]}" 2>&1 | tee /tmp/psd-gitea-ssh-test.log; then
   echo "OK: autentikasi SSH Git berhasil"
 else
   rc=$?
-  if grep -qi "successfully authenticated" /tmp/psd-gitea-ssh-test.log 2>/dev/null; then
-    echo "OK: Gitea merespons (kunci mungkin belum terdaftar di mesin ini — normal dari VM)"
-  elif grep -qi "Permission denied (publickey)" /tmp/psd-gitea-ssh-test.log 2>/dev/null; then
-    echo "OK: Gitea SSH aktif (publickey ditolak — daftarkan kunci di /settings/git dari laptop)"
-  elif grep -qi "idcloudhost\|AUTHORIZED ACCESS ONLY" /tmp/psd-gitea-ssh-test.log 2>/dev/null; then
-    echo "GAGAL: masih terhubung ke SSH admin VM — perbaiki port / migrasi Path A"
+  if grep -qi "idcloudhost\|AUTHORIZED ACCESS ONLY" /tmp/psd-gitea-ssh-test.log 2>/dev/null; then
+    if [[ "$GITEA_SSH_MODE" == "passthrough" ]]; then
+      echo "GAGAL: banner idcloudhost — passthrough belum aktif (jalankan sudo setup-gitea-ssh-passthrough.sh --apply)"
+    else
+      echo "GAGAL: masih SSH admin VM — gunakan -p $GITEA_SSH_PORT atau migrasi Path B/A"
+    fi
     fail=1
+  elif grep -qi "successfully authenticated" /tmp/psd-gitea-ssh-test.log 2>/dev/null; then
+    echo "OK: Gitea merespons"
+  elif grep -qi "Permission denied (publickey)" /tmp/psd-gitea-ssh-test.log 2>/dev/null; then
+    if [[ "$GITEA_SSH_MODE" == "passthrough" ]]; then
+      echo "OK: passthrough aktif — daftarkan kunci di /settings/git (publickey ditolak = normal tanpa kunci)"
+    else
+      echo "OK: Gitea SSH merespons (daftarkan kunci di /settings/git)"
+    fi
   else
     echo "INFO: uji SSH exit $rc — lihat log di atas"
   fi

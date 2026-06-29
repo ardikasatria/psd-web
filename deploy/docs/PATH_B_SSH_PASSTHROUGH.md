@@ -71,7 +71,8 @@ sudo ./scripts/setup-gitea-ssh-passthrough.sh --apply
 
 Setelah `--apply`:
 
-- `.env`: `GITEA_SSH_MODE=passthrough`, `GITEA_SSH_PORT=22`
+- `.env`: `GITEA_SSH_MODE=passthrough`, `GITEA_SSH_PORT=22`, **`GITEA_SSH_PUBLISH=127.0.0.1:2222:22`**
+- **Jangan** set publish `22:22` — bentrok dengan sshd admin, Gitea tidak akan `Up` → API 502/503
 - Stack: `docker compose -f docker-compose.prod.yml -f docker-compose.gitea-passthrough.yml up -d gitea backend`
 - Gitea SSH **tidak** lagi dipublish ke internet (hanya `127.0.0.1:2222` internal)
 

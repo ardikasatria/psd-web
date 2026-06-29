@@ -175,8 +175,10 @@ services:
       GITEA__lfs__MINIO_BUCKET: psd-gitea-lfs
       GITEA__lfs__MINIO_USE_SSL: "false"
       GITEA__lfs__MINIO_LOCATION: us-east-1
+    # GITEA_SSH_PORT = port di URL clone (22 = gaya GitHub). GITEA_SSH_PUBLISH = bind Docker (host:container).
+    # Passthrough: GITEA_SSH_PORT=22 + GITEA_SSH_PUBLISH=127.0.0.1:2222:22 (jangan bind 22:22 — bentrok sshd host).
     ports:
-      - "${GITEA_SSH_PORT:-2222}:22"
+      - "${GITEA_SSH_PUBLISH:-2222:22}"
     volumes:
       - giteadata:/data
     depends_on:
