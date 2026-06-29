@@ -17,12 +17,13 @@ export function DetailPageShell({ children, className }: DetailPageShellProps) {
 interface DetailPageHeaderProps {
   title: string
   subtitle?: string
+  byline?: ReactNode
   badges?: ReactNode
   meta?: ReactNode
   actions?: ReactNode
 }
 
-export function DetailPageHeader({ title, subtitle, badges, meta, actions }: DetailPageHeaderProps) {
+export function DetailPageHeader({ title, subtitle, byline, badges, meta, actions }: DetailPageHeaderProps) {
   return (
     <div className="relative isolate overflow-hidden rounded-[32px] border border-neutral-200/80 bg-white p-6 lg:rounded-[40px] lg:p-10 dark:border-neutral-700 dark:bg-neutral-800">
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" aria-hidden>
@@ -34,6 +35,7 @@ export function DetailPageHeader({ title, subtitle, badges, meta, actions }: Det
         <h1 className="text-2xl font-semibold tracking-tight text-neutral-950 sm:text-3xl lg:text-4xl dark:text-white">
           {title}
         </h1>
+        {byline && <div className="mt-1.5">{byline}</div>}
         {subtitle && (
           <p className="mt-2 text-base text-neutral-500 lg:text-lg dark:text-neutral-400">{subtitle}</p>
         )}

@@ -180,15 +180,23 @@ export function RepoDetailContent({
           <>
             <DetailPageHeader
               title={data.name}
+              byline={
+                <p className="text-sm">
+                  <span className="text-neutral-600 dark:text-neutral-400">oleh </span>
+                  <Link
+                    href={profilePath(data.owner.username)}
+                    className="font-medium text-primary-700 hover:underline dark:text-primary-300"
+                  >
+                    {data.owner.username}
+                  </Link>
+                </p>
+              }
               subtitle={data.description}
               badges={
                 <>
                   <Badge color="zinc">{kindLabel[data.kind as RepoKind]}</Badge>
                   {data.synthetic && <SyntheticBadge />}
                   {data.from_room && <FromRoomBadge room={data.from_room} />}
-                  <Link href={profilePath(data.owner.username)} className="text-sm text-primary-600 hover:underline">
-                    {data.owner.username}
-                  </Link>
                   {data.license && <Badge color="sky">{data.license}</Badge>}
                 </>
               }
