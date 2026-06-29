@@ -32,6 +32,8 @@ export function CommunityPage() {
             }
           />
 
+          <CommunityDiscoveryPanels layout="featured" only={['top_tier', 'popular']} />
+
           <SocialFeed />
 
           <p className="text-center text-sm text-neutral-500 dark:text-neutral-400">
@@ -44,7 +46,7 @@ export function CommunityPage() {
         </div>
 
         <div className="w-full shrink-0 space-y-5 lg:sticky lg:top-24 lg:w-80">
-          <CommunityDiscoveryPanels />
+          <CommunityDiscoveryPanels exclude={['top_tier', 'popular']} />
           <CommunitySidebar className="w-full" />
         </div>
       </div>

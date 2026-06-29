@@ -141,7 +141,7 @@ export function ProfileContent({ username }: { username: string }) {
             {/* Desktop: cover penuh + avatar & username/bio di overlay */}
             <div className="pointer-events-none relative z-0 mb-0 hidden lg:block">
               <ProfileCover profile={profile.data} className="h-40 rounded-2xl" />
-              <div className="absolute inset-0 z-10 grid grid-cols-[minmax(0,280px)_1fr] gap-8">
+              <div className="absolute inset-0 z-10 grid pointer-events-none grid-cols-[minmax(0,280px)_1fr] gap-8">
                 <div />
                 <div className="flex items-end pb-5">
                   <div className="pointer-events-auto min-w-0 pe-2">

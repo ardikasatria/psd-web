@@ -2,12 +2,13 @@
 
 import { followUser, unfollowUser } from '@/lib/api/social'
 import { useAuth } from '@/lib/auth/useAuth'
-import ButtonPrimary from '@/shared/ButtonPrimary'
-import { Button } from '@/shared/Button'
 import clsx from 'clsx'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+
+const baseClass =
+  'inline-flex shrink-0 items-center justify-center rounded-lg px-4 py-1.5 text-sm font-semibold motion-safe:transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-offset-neutral-900'
 
 export function FollowButton({
   username,
@@ -22,62 +23,97 @@ export function FollowButton({
   className?: string
   onToggle?: (following: boolean) => void
 }) {
-  const router = useRouter()
   const { user, isLoggedIn } = useAuth()
   const qc = useQueryClient()
   const [following, setFollowing] = useState(initialFollowing ?? false)
+
+  useEffect(() => {
+    setFollowing(initialFollowing ?? false)
+  }, [initialFollowing])
 
   const mutation = useMutation({
     mutationFn: () => (following ? unfollowUser(username) : followUser(username)),
     onMutate: () => {
       const prev = following
-      setFollowing(!following)
+      const next = !following
+      setFollowing(next)
+      onToggle?.(next)
       return { prev }
     },
     onSuccess: async (data) => {
-      onToggle?.(data.following)
+      setFollowing(data.following)
       await qc.invalidateQueries({ queryKey: ['user', username] })
       await qc.invalidateQueries({ queryKey: ['feed-stats'] })
       await qc.invalidateQueries({ queryKey: ['discovery'] })
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx) setFollowing(ctx.prev)
+      if (ctx) {
+        setFollowing(ctx.prev)
+        onToggle?.(ctx.prev)
+      }
     },
   })
 
   if (user?.username === username) return null
 
+  const accentStyle = accent
+    ? ({ ['--follow-accent' as string]: accent } as React.CSSProperties)
+    : undefined
+
   if (!isLoggedIn) {
     return (
-      <ButtonPrimary
+      <Link
         href={`/login?next=/${username}`}
-        className={clsx('!rounded-lg !px-4 !py-1.5 !text-sm', className)}
-        style={accent ? { backgroundColor: 'var(--psd-accent)', borderColor: 'var(--psd-accent)' } : undefined}
+        className={clsx(
+          baseClass,
+          accent
+            ? 'bg-[var(--follow-accent)] text-white hover:brightness-95'
+            : 'bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400',
+          className,
+        )}
+        style={accentStyle}
       >
         Ikuti
-      </ButtonPrimary>
+      </Link>
+    )
+  }
+
+  if (following) {
+    return (
+      <button
+        type="button"
+        onClick={() => mutation.mutate()}
+        disabled={mutation.isPending}
+        aria-pressed="true"
+        title="Batal ikuti"
+        className={clsx(
+          baseClass,
+          'cursor-pointer border border-neutral-300 bg-neutral-50 text-neutral-700 hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:border-red-800 dark:hover:bg-red-950/40 dark:hover:text-red-300',
+          className,
+        )}
+      >
+        {mutation.isPending ? '…' : 'Mengikuti'}
+      </button>
     )
   }
 
   return (
-    <Button
+    <button
       type="button"
       onClick={() => mutation.mutate()}
       disabled={mutation.isPending}
+      aria-pressed="false"
       className={clsx(
-        '!rounded-lg !px-4 !py-1.5 !text-sm font-medium motion-safe:transition-colors',
-        following
-          ? 'border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200'
-          : 'border-primary-600 bg-primary-600 text-white hover:bg-primary-700 dark:border-primary-500 dark:bg-primary-600',
-        className
+        baseClass,
+        'cursor-pointer text-white shadow-sm',
+        accent
+          ? 'bg-[var(--follow-accent)] hover:brightness-95'
+          : 'bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400',
+        className,
       )}
-      style={
-        !following && accent
-          ? { backgroundColor: 'var(--psd-accent)', borderColor: 'var(--psd-accent)' }
-          : undefined
-      }
+      style={accentStyle}
     >
-      {following ? 'Mengikuti' : 'Ikuti'}
-    </Button>
+      {mutation.isPending ? '…' : 'Ikuti'}
+    </button>
   )
 }

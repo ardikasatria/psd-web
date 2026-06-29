@@ -60,7 +60,7 @@ export function SocialFeed({ className }: { className?: string }) {
         emptyTitle={scope === 'following' ? 'Feed masih kosong' : 'Belum ada postingan'}
         emptyDescription={
           scope === 'following'
-            ? 'Ikuti akun dari panel penemuan di samping atau jelajahi tab Semua untuk mulai.'
+            ? 'Ikuti praktisi dari panel Tier teratas atau Populer di atas, atau jelajahi tab Semua untuk mulai.'
             : 'Jadilah yang pertama membagikan update ke komunitas.'
         }
       >

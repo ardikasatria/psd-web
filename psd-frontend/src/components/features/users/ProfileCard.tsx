@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { CalendarDaysIcon, LinkIcon, MapPinIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
@@ -51,6 +51,27 @@ export function ProfileCard({
   const tier = 'tier' in profile ? profile.tier : undefined
   const earnedBadges = 'badges' in profile ? profile.badges ?? [] : []
   const [followDialog, setFollowDialog] = useState<'followers' | 'following' | null>(null)
+  const [localFollowing, setLocalFollowing] = useState(isFollowing ?? false)
+  const [localFollowersCount, setLocalFollowersCount] = useState(followersCount)
+
+  useEffect(() => {
+    setLocalFollowing(isFollowing ?? false)
+  }, [isFollowing])
+
+  useEffect(() => {
+    setLocalFollowersCount(followersCount)
+  }, [followersCount])
+
+  const handleFollowToggle = (next: boolean) => {
+    setLocalFollowing((was) => {
+      if (next !== was) {
+        setLocalFollowersCount((count) =>
+          count === undefined ? count : Math.max(0, count + (next ? 1 : -1)),
+        )
+      }
+      return next
+    })
+  }
 
   if (variant === 'preview') {
     return (
@@ -82,11 +103,6 @@ export function ProfileCard({
           </ButtonPrimary>
         </div>
       )}
-      {!isOwner && variant === 'sidebar' && (
-        <div className="absolute end-4 top-4 z-10 hidden lg:block">
-          <FollowButton username={profile.username} isFollowing={isFollowing} accent={accent} />
-        </div>
-      )}
 
       {/* Mobile: cover di belakang avatar */}
       <div className="relative lg:hidden">
@@ -108,7 +124,6 @@ export function ProfileCard({
                 Edit
               </ButtonPrimary>
             )}
-            {!isOwner && <FollowButton username={profile.username} isFollowing={isFollowing} accent={accent} />}
           </div>
 
           <p className="font-mono text-sm font-bold text-neutral-900 dark:text-white">@{profile.username}</p>
@@ -132,6 +147,17 @@ export function ProfileCard({
           <h1 className="text-lg font-bold leading-snug break-words text-neutral-900 dark:text-white">
             {profile.name}
           </h1>
+
+          {!isOwner && (
+            <div className="mt-3 flex justify-center">
+              <FollowButton
+                username={profile.username}
+                isFollowing={localFollowing}
+                accent={accent}
+                onToggle={handleFollowToggle}
+              />
+            </div>
+          )}
 
           {(profile.account_type === 'organization' ||
             profile.is_official ||
@@ -209,7 +235,7 @@ export function ProfileCard({
                 className="hover:underline"
                 style={{ color: 'var(--psd-accent)' }}
               >
-                <span className="font-semibold text-neutral-900 dark:text-white">{followersCount}</span>{' '}
+                <span className="font-semibold text-neutral-900 dark:text-white">{localFollowersCount}</span>{' '}
                 <span className="text-neutral-500">pengikut</span>
               </button>
             )}
