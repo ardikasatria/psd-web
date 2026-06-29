@@ -201,6 +201,6 @@ fi
 
 echo "=== Langkah uji (dari LAPTOP) ==="
 echo "  ssh -vT git@git.$DOMAIN"
-echo "  Sukses: Hi <username>! You've successfully authenticated ..."
+echo "  Sukses: Hi <username>! Git PSD siap digunakan."
 echo
 echo "Banner idcloudhost = kosmetik (Path B). Hilangkan: sudo ./scripts/diagnose-gitea-ssh.sh --fix-banner"

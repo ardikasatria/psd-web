@@ -164,7 +164,7 @@ export function GitSettingsContent() {
                       <CopyButton text={git.ssh_test_command} label="Salin perintah" />
                     </dd>
                     <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                      Respon sukses: <em>Hi {git.gitea_username}! You&apos;ve successfully authenticated…</em>
+                      Respon sukses: <em>Hi {git.gitea_username}! Git PSD siap digunakan.</em>
                     </p>
                   </div>
                   <div className="sm:col-span-2">

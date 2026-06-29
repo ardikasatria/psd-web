@@ -17,6 +17,7 @@ PASSTHROUGH_COMPOSE=(docker compose -f "$DEPLOY_DIR/docker-compose.prod.yml" -f 
 HOST_GIT_USER="${HOST_GIT_USER:-git}"
 DOCKER_SHELL="/home/${HOST_GIT_USER}/docker-shell"
 AUTH_SCRIPT="/usr/local/bin/psd-gitea-authorized-keys"
+HOST_GITEA_SHIM="/usr/local/bin/gitea"
 SSHD_MARKER_BEGIN="# --- PSD Gitea SSH Passthrough (begin) ---"
 SSHD_MARKER_END="# --- PSD Gitea SSH Passthrough (end) ---"
 MARK_TAG="psd-gitea-authorized-keys"
@@ -72,6 +73,29 @@ remove_sshd_block() {
     $0 == e { skip=0; next }
     !skip { print }
   ' "$SSHD_CONFIG" > "${SSHD_CONFIG}.tmp" && mv "${SSHD_CONFIG}.tmp" "$SSHD_CONFIG"
+}
+
+write_host_gitea_shim() {
+  # Gitea keys mengembalikan command=/usr/local/bin/gitea serv … — shim di host mengeksekusi kontainer.
+  # Untuk ssh -T (uji koneksi): pesan singkat PSD, bukan teks panjang bawaan Gitea.
+  cat > "$HOST_GITEA_SHIM" <<EOF
+#!/bin/sh
+# PSD host shim — ${MARK_TAG}
+CONTAINER=${GITEA_CONTAINER}
+if [ "\$1" = "serv" ] && [ -z "\${SSH_ORIGINAL_COMMAND:-}" ]; then
+  out=\$(/usr/bin/docker exec -i -u git "\$CONTAINER" /usr/local/bin/gitea "\$@" 2>&1) || true
+  if echo "\$out" | grep -q 'successfully authenticated'; then
+    name=\$(echo "\$out" | sed -n 's/^Hi \\([^!]*\\)!.*/\\1/p;s/^Hi there, \\([^!]*\\)!.*/\\1/p' | head -1)
+    printf 'Hi %s! Git PSD siap digunakan.\\n' "\${name:-pengguna}"
+    exit 0
+  fi
+  echo "\$out"
+  exit 1
+fi
+exec /usr/bin/docker exec -i -u git "\$CONTAINER" /usr/local/bin/gitea "\$@"
+EOF
+  chmod 755 "$HOST_GITEA_SHIM"
+  chown root:root "$HOST_GITEA_SHIM"
 }
 
 write_auth_script() {
@@ -190,6 +214,7 @@ fi
 cp -a "$SSHD_CONFIG" "${SSHD_CONFIG}.bak.psd-passthrough.$(date +%Y%m%d%H%M)" 2>/dev/null || true
 
 write_auth_script
+write_host_gitea_shim
 write_docker_shell
 ensure_git_user
 append_sshd_block

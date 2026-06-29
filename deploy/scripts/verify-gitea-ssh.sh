@@ -79,7 +79,7 @@ SSH_TEST+=(-T "git@${GIT_HOST}")
 
 "${SSH_TEST[@]}" 2>&1 | tee /tmp/psd-gitea-ssh-test.log || true
 
-if grep -qi "successfully authenticated" /tmp/psd-gitea-ssh-test.log 2>/dev/null; then
+if grep -qi "successfully authenticated\|Git PSD siap digunakan" /tmp/psd-gitea-ssh-test.log 2>/dev/null; then
   echo "OK: autentikasi Gitea berhasil"
 elif grep -qi "password" /tmp/psd-gitea-ssh-test.log 2>/dev/null && ! grep -qi "PasswordAuthentication no" /tmp/psd-gitea-ssh-test.log; then
   if grep -qi "password:" /tmp/psd-gitea-ssh-test.log 2>/dev/null; then
@@ -90,6 +90,7 @@ elif grep -qi "Permission denied (publickey)" /tmp/psd-gitea-ssh-test.log 2>/dev
   if [[ "$GITEA_SSH_MODE" == "passthrough" ]]; then
     echo "OK: passthrough aktif (publickey denied = kunci belum cocok, BUKAN kegagalan infra)"
     echo "     Jalankan: sudo ./scripts/diagnose-gitea-ssh.sh --pubkey \"<kunci-laptop>\""
+  echo "     (Pesan panjang Gitea diganti shim: Hi <user>! Git PSD siap digunakan.)"
     warn_count=$((warn_count + 1))
   else
     echo "INFO: publickey denied — daftarkan kunci di /settings/git"
