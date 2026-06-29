@@ -121,7 +121,7 @@ if [[ -n "$PUBKEY" ]]; then
   else
     echo "  Tipe: $typ"
     echo "  a) Apakah kunci terdaftar di Gitea? (gitea keys)"
-    klines="$(docker exec "$GITEA" gitea keys -e "$HOST_GIT_USER" -u "$HOST_GIT_USER" -t "$typ" -k "$b64" 2>&1 || true)"
+    klines="$(docker exec -u git "$GITEA" gitea keys -e "$HOST_GIT_USER" -u "$HOST_GIT_USER" -t "$typ" -k "$b64" 2>&1 || true)"
     if grep -q 'command=' <<<"$klines" || grep -q 'serv' <<<"$klines"; then
       pass "kunci TERDAFTAR di Gitea"
     else

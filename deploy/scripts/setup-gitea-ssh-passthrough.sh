@@ -79,7 +79,8 @@ write_auth_script() {
   cat > "$AUTH_SCRIPT" <<EOF
 #!/bin/sh
 # ${MARK_TAG}
-exec /usr/bin/docker exec -i ${GITEA_CONTAINER} ${GITEA_BIN} keys -e git -u "\$1" -t "\$2" -k "\$3"
+# Wajib -u git: gitea menolak dijalankan sebagai root di kontainer (docs.gitea.com)
+exec /usr/bin/docker exec -i -u git ${GITEA_CONTAINER} ${GITEA_BIN} keys -e git -u "\$1" -t "\$2" -k "\$3"
 EOF
   chmod 755 "$AUTH_SCRIPT"
   chown root:root "$AUTH_SCRIPT"
@@ -89,7 +90,7 @@ write_docker_shell() {
   mkdir -p "/home/${HOST_GIT_USER}"
   cat > "$DOCKER_SHELL" <<EOF
 #!/bin/sh
-exec /usr/bin/docker exec -i --env SSH_ORIGINAL_COMMAND="\$SSH_ORIGINAL_COMMAND" ${GITEA_CONTAINER} sh "\$@"
+exec /usr/bin/docker exec -i -u git --env SSH_ORIGINAL_COMMAND="\$SSH_ORIGINAL_COMMAND" ${GITEA_CONTAINER} sh "\$@"
 EOF
   chmod 755 "$DOCKER_SHELL"
   chown "${HOST_GIT_USER}:${HOST_GIT_USER}" "$DOCKER_SHELL" 2>/dev/null || true

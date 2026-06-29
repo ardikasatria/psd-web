@@ -8,3 +8,4 @@ services:
     container_name: psd-gitea
     environment:
       GITEA__server__SSH_PORT: "22"
+      GITEA__server__SSH_CREATE_AUTHORIZED_KEYS_FILE: "false"
