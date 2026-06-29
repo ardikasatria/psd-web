@@ -1,6 +1,7 @@
 'use client'
 
 import { AssistantChatPanel } from '@/components/features/assistant/AssistantChatPanel'
+import { quotaStatusLine } from '@/lib/assistant/formatQuota'
 import { useAssistantContext } from '@/lib/assistant/useAssistantContext'
 import { useAssistantChat } from '@/lib/assistant/useAssistantChat'
 import {
@@ -14,7 +15,7 @@ import { useEffect, useState } from 'react'
 
 export function AssistantFab() {
   const context = useAssistantContext()
-  const chat = useAssistantChat(context)
+  const chat = useAssistantChat(context, { freshOnMount: false })
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export function AssistantFab() {
   }, [open])
 
   const contextLabel = context.fitur ?? context.halaman
+  const panel = chat.panel.data
 
   return (
     <>
@@ -55,19 +57,19 @@ export function AssistantFab() {
                   <SparklesIcon className="size-4 text-primary-600 dark:text-primary-400" aria-hidden />
                   Asisten PSD
                 </div>
-                <p className="mt-0.5 truncate text-xs text-neutral-500">
+                <p className="mt-0.5 truncate text-xs text-neutral-500 dark:text-neutral-400">
                   Konteks: <span className="text-neutral-700 dark:text-neutral-300">{contextLabel}</span>
                 </p>
-                {chat.quota.data && (
-                  <p className="mt-1 text-[10px] text-neutral-400">
-                    Kuota ({chat.quota.data.tier}): {chat.quota.data.remaining}/{chat.quota.data.limit}
+                {panel && (
+                  <p className="mt-1 text-[10px] text-neutral-400 dark:text-neutral-500">
+                    {quotaStatusLine(panel.quota.remaining, panel.quota.limit, panel.quota.reset_at)}
                   </p>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-1 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                className="rounded-lg p-1 text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
                 aria-label="Tutup"
               >
                 <XMarkIcon className="size-5" />
@@ -80,11 +82,11 @@ export function AssistantFab() {
               question={chat.question}
               onQuestionChange={chat.setQuestion}
               onSubmit={chat.handleSubmit}
-              onClear={chat.clearHistory}
               error={chat.error}
-              isPending={chat.askMutation.isPending}
+              isPending={chat.sendMutation.isPending}
+              panel={panel ?? null}
               bottomRef={chat.bottomRef}
-              emptyHint="Tanya singkat tentang halaman ini — riwayat tersimpan di perangkat Anda."
+              emptyHint="Tanya singkat tentang halaman ini."
               className="!rounded-none !border-0 shadow-none"
             />
 
@@ -94,7 +96,7 @@ export function AssistantFab() {
                 className="inline-flex items-center gap-1 text-xs font-medium text-primary-700 hover:underline dark:text-primary-300"
                 onClick={() => setOpen(false)}
               >
-                Buka asisten lengkap
+                Buka asisten lengkap & riwayat
                 <ArrowTopRightOnSquareIcon className="size-3.5" aria-hidden />
               </Link>
             </div>

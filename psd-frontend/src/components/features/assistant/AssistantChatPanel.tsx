@@ -1,18 +1,20 @@
 'use client'
 
 import { SimpleMarkdown } from '@/components/common/SimpleMarkdown'
-import type { ChatMessage } from '@/lib/assistant/chatStorage'
-import type { AssistantQuota } from '@/lib/api/assistant'
+import { quotaStatusLine } from '@/lib/assistant/formatQuota'
+import type { ChatMessage } from '@/lib/assistant/useAssistantChat'
+import type { AssistantPanel } from '@/lib/api/assistant'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import { Button } from '@/shared/Button'
 import Textarea from '@/shared/Textarea'
 import {
+  ExclamationTriangleIcon,
   PaperAirplaneIcon,
   SparklesIcon,
-  TrashIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
+import Link from 'next/link'
 import type { FormEvent, RefObject } from 'react'
 
 const STARTERS = [
@@ -26,11 +28,10 @@ type Props = {
   question: string
   onQuestionChange: (value: string) => void
   onSubmit: (e?: FormEvent) => void
-  onClear?: () => void
   onStarterClick?: (text: string) => void
   error?: string | null
   isPending?: boolean
-  quota?: AssistantQuota | null
+  panel?: AssistantPanel | null
   bottomRef?: RefObject<HTMLDivElement | null>
   compact?: boolean
   emptyHint?: string
@@ -46,16 +47,18 @@ export function AssistantChatPanel({
   question,
   onQuestionChange,
   onSubmit,
-  onClear,
   onStarterClick,
   error,
   isPending,
-  quota,
+  panel,
   bottomRef,
   compact = false,
   emptyHint,
   className,
 }: Props) {
+  const sendDisabled = panel?.send_disabled ?? false
+  const inputDisabled = isPending || sendDisabled
+
   return (
     <div
       className={clsx(
@@ -64,14 +67,32 @@ export function AssistantChatPanel({
         className,
       )}
     >
-      {!compact && quota && (
-        <div className="flex items-center justify-between gap-3 border-b border-neutral-200/80 px-5 py-3 dark:border-neutral-700">
+      {panel && !compact && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200/80 px-5 py-3 dark:border-neutral-700">
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
-            Kuota hari ini · tier <span className="font-semibold capitalize text-neutral-800 dark:text-neutral-200">{quota.tier}</span>
+            {quotaStatusLine(panel.quota.remaining, panel.quota.limit, panel.quota.reset_at)}
           </p>
-          <p className="text-xs font-medium text-primary-700 dark:text-primary-300">
-            {quota.remaining} / {quota.limit} tersisa
+          <p className="text-[10px] text-neutral-400 dark:text-neutral-500">
+            Mengingat ~{panel.memory.max_context_messages} pesan terakhir
           </p>
+        </div>
+      )}
+
+      {panel?.send_disabled && panel.warning && (
+        <div
+          className="flex flex-wrap items-start justify-between gap-3 border-b border-amber-200/80 bg-amber-50 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/30"
+          role="alert"
+        >
+          <div className="flex min-w-0 gap-2">
+            <ExclamationTriangleIcon
+              className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400"
+              aria-hidden
+            />
+            <p className="text-sm text-amber-900 dark:text-amber-100">{panel.warning}</p>
+          </div>
+          <Button href="/me/gamification" outline className="!rounded-lg shrink-0 text-xs">
+            Upgrade
+          </Button>
         </div>
       )}
 
@@ -94,14 +115,14 @@ export function AssistantChatPanel({
             <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-400">
               {emptyHint ?? 'Tanyakan apa saja tentang PSD — dataset, course, kompetisi, notebook, dan lainnya.'}
             </p>
-            {!compact && (
+            {!compact && !sendDisabled && (
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 {STARTERS.map((s) => (
                   <button
                     key={s}
                     type="button"
                     onClick={() => onStarterClick?.(s)}
-                    className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs text-neutral-700 transition hover:border-primary-300 hover:bg-primary-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:border-primary-700"
+                    className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs text-neutral-700 transition hover:border-primary-300 hover:bg-primary-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:border-primary-700 dark:hover:bg-primary-950/40"
                   >
                     {s}
                   </button>
@@ -140,12 +161,15 @@ export function AssistantChatPanel({
                   )}
                 >
                   {m.role === 'assistant' ? (
-                    <SimpleMarkdown content={m.content} className="!space-y-2 [&_a]:text-primary-600 dark:[&_a]:text-primary-400" />
+                    <SimpleMarkdown
+                      content={m.content}
+                      className="!space-y-2 [&_a]:text-primary-600 dark:[&_a]:text-primary-400"
+                    />
                   ) : (
                     m.content
                   )}
                 </div>
-                <p className="mt-1 px-1 text-[10px] text-neutral-400">{formatTime(m.at)}</p>
+                <p className="mt-1 px-1 text-[10px] text-neutral-400 dark:text-neutral-500">{formatTime(m.at)}</p>
               </div>
             </div>
           ))
@@ -174,14 +198,25 @@ export function AssistantChatPanel({
         className="border-t border-neutral-200/80 p-4 dark:border-neutral-700"
       >
         {error && <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {compact && panel && (
+          <p className="mb-2 text-[10px] text-neutral-400 dark:text-neutral-500">
+            {quotaStatusLine(panel.quota.remaining, panel.quota.limit, panel.quota.reset_at)}
+          </p>
+        )}
         <div className="flex gap-2">
           <Textarea
             value={question}
             onChange={(e) => onQuestionChange(e.target.value)}
-            placeholder={compact ? 'Tanya tentang halaman ini…' : 'Tulis pertanyaan…'}
+            placeholder={
+              sendDisabled
+                ? 'Kuota habis — tunggu reset atau upgrade tier'
+                : compact
+                  ? 'Tanya tentang halaman ini…'
+                  : 'Tulis pertanyaan…'
+            }
             rows={compact ? 2 : 2}
             className="min-h-0 flex-1 !rounded-xl"
-            disabled={isPending}
+            disabled={inputDisabled}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
@@ -189,17 +224,23 @@ export function AssistantChatPanel({
               }
             }}
           />
-          <div className="flex flex-col gap-2">
-            <ButtonPrimary type="submit" disabled={isPending || !question.trim()} className={compact ? '!px-3' : undefined}>
-              <PaperAirplaneIcon className="size-4" aria-hidden />
-            </ButtonPrimary>
-            {messages.length > 0 && onClear && (
-              <Button type="button" outline onClick={onClear} title="Hapus riwayat" disabled={isPending}>
-                <TrashIcon className="size-4" aria-hidden />
-              </Button>
-            )}
-          </div>
+          <ButtonPrimary
+            type="submit"
+            disabled={inputDisabled || !question.trim()}
+            className={compact ? '!px-3' : undefined}
+            title={sendDisabled ? 'Kuota habis' : 'Kirim'}
+          >
+            <PaperAirplaneIcon className="size-4" aria-hidden />
+          </ButtonPrimary>
         </div>
+        {!compact && panel?.send_disabled && (
+          <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            Anda masih bisa membuka chat baru, tetapi mengirim pesan menunggu kuota pulih.{' '}
+            <Link href="/me/gamification" className="font-medium text-primary-700 hover:underline dark:text-primary-300">
+              Lihat cara upgrade
+            </Link>
+          </p>
+        )}
       </form>
     </div>
   )

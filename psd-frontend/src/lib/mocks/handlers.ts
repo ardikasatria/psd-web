@@ -11,7 +11,7 @@ import { addReply, addThread, buildForumStats, mockForumReaction, mockForumVote,
 import { mockCategoryDetail, mockCategories, slugifyCategoryName } from './data/categories'
 import { mockJourneyNext, mockQuestCatalog, mockQuestStore } from './data/quests'
 import { mockActivitySummary } from './data/activity'
-import { mockAssistantAsk, mockAssistantQuota, mockPersonalizedFeed } from './data/assistant'
+import { mockAssistantAsk, mockAssistantPanel, mockAssistantQuota, mockDeleteConversation, mockGetConversation, mockListConversations, mockNewConversation, mockPersonalizedFeed, mockSendMessage } from './data/assistant'
 import {
   getMockDailyMicro,
   isMicroComplete,
@@ -3948,6 +3948,64 @@ export const handlers = [
   }),
 
   // Langkah 57 — Asisten & feed personal
+  http.get(`${API_ROOT}/api/assistant/panel`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    return HttpResponse.json(mockAssistantPanel(user.id))
+  }),
+
+  http.get(`${API_ROOT}/api/assistant/conversations`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    return HttpResponse.json(mockListConversations(user.id))
+  }),
+
+  http.post(`${API_ROOT}/api/assistant/conversations`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    return HttpResponse.json(mockNewConversation(user.id))
+  }),
+
+  http.get(`${API_ROOT}/api/assistant/conversations/:id`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    try {
+      return HttpResponse.json(mockGetConversation(user.id, String(params.id)))
+    } catch {
+      return errorResponse(404, 'not_found', 'Percakapan tidak ditemukan')
+    }
+  }),
+
+  http.delete(`${API_ROOT}/api/assistant/conversations/:id`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    try {
+      mockDeleteConversation(user.id, String(params.id))
+      return HttpResponse.json({ ok: true })
+    } catch {
+      return errorResponse(404, 'not_found', 'Percakapan tidak ditemukan')
+    }
+  }),
+
+  http.post(`${API_ROOT}/api/assistant/conversations/:id/messages`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    const body = (await request.json()) as { content?: string; context?: Record<string, string> | null }
+    try {
+      const result = mockSendMessage(user.id, String(params.id), body.content ?? '', body.context)
+      return HttpResponse.json({ reply: result.reply, panel: result.panel })
+    } catch (e) {
+      const err = e as Error & { status?: number; reset_at?: string }
+      if (err.message === 'quota_exhausted' || err.status === 429) {
+        return errorResponse(429, 'quota_exhausted', 'Kuota chat Anda habis untuk jendela ini.')
+      }
+      if (err.message === 'not_found') {
+        return errorResponse(404, 'not_found', 'Percakapan tidak ditemukan')
+      }
+      return errorResponse(500, 'assistant_error', 'Gagal mengirim pesan')
+    }
+  }),
+
   http.get(`${API_ROOT}/api/assistant/quota`, ({ request }) => {
     const user = resolveUserFromRequest(request)
     if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')

@@ -1,13 +1,15 @@
 """Endpoint asisten & feed personal (Langkah 57)."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.assistant import feed as feed_mod
-from app.assistant import recommend
+from app.assistant import chat_store, feed as feed_mod, history, panel as panel_mod, recommend, window_quota
 from app.assistant.affinity import build_affinity
+from app.assistant.assistant import AIAssistant, build_messages
 from app.assistant.data import (
     fetch_activity_summary,
     fetch_candidates,
@@ -17,7 +19,6 @@ from app.assistant.data import (
 )
 from app.assistant.deps import get_assistant, get_quota_store
 from app.assistant.quota import QuotaExceeded, limit_for
-from app.assistant.assistant import AIAssistant
 from app.core.config import settings
 from app.core.db import get_db
 from app.core.deps import get_current_user
@@ -30,9 +31,113 @@ router = APIRouter(prefix="/api", tags=["assistant"])
 DEFAULT_KINDS = ("dataset", "course", "kompetisi", "ruang")
 
 
+def _tier(user: User) -> str:
+    return hub_tier_for_reputation(user.reputation or 0)
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class AskReq(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     context: dict | None = None
+
+
+class SendMsgReq(BaseModel):
+    content: str = Field(..., min_length=1, max_length=2000)
+    context: dict | None = None
+
+
+@router.get("/assistant/panel")
+async def assistant_panel(user: User = Depends(get_current_user)):
+    tier = _tier(user)
+    state = chat_store.get_window(user.id)
+    return panel_mod.panel_state(state, _now(), tier=tier)
+
+
+@router.get("/assistant/conversations")
+async def list_conversations(user: User = Depends(get_current_user)):
+    return chat_store.list_conversations(user.id)
+
+
+@router.post("/assistant/conversations")
+async def create_conversation(user: User = Depends(get_current_user)):
+    return chat_store.new_conversation(user.id, tier=_tier(user))
+
+
+@router.get("/assistant/conversations/{conv_id}")
+async def get_conversation(conv_id: str, user: User = Depends(get_current_user)):
+    conv = chat_store.get_conversation(user.id, conv_id)
+    if not conv:
+        raise ApiError(404, "not_found", "Percakapan tidak ditemukan")
+    return conv
+
+
+@router.delete("/assistant/conversations/{conv_id}")
+async def remove_conversation(conv_id: str, user: User = Depends(get_current_user)):
+    if not chat_store.delete_conversation(user.id, conv_id):
+        raise ApiError(404, "not_found", "Percakapan tidak ditemukan")
+    return {"ok": True}
+
+
+@router.post("/assistant/conversations/{conv_id}/messages")
+async def send_message(
+    conv_id: str,
+    body: SendMsgReq,
+    user: User = Depends(get_current_user),
+    assistant: AIAssistant = Depends(get_assistant),
+):
+    if not settings.PSD_ASSISTANT_ENABLED:
+        raise ApiError(503, "assistant_disabled", "Asisten AI tidak aktif.")
+    if not settings.OPENAI_API_KEY:
+        raise ApiError(503, "openai_missing", "OPENAI_API_KEY belum dikonfigurasi.")
+
+    conv = chat_store.get_conversation(user.id, conv_id)
+    if not conv:
+        raise ApiError(404, "not_found", "Percakapan tidak ditemukan")
+
+    tier = _tier(user)
+    now = _now()
+    state = chat_store.get_window(user.id)
+    preview = window_quota.view(state, now, tier=tier)
+    if not preview.can_send:
+        raise ApiError(
+            429,
+            "quota_exhausted",
+            "Kuota chat Anda habis untuk jendela ini.",
+            details={
+                "reset_at": preview.reset_at.isoformat() if preview.reset_at else None,
+                "limit": preview.limit,
+                "window_hours": preview.window_hours,
+            },
+        )
+    new_state, _ = window_quota.consume(state, now, tier=tier)
+    chat_store.set_window(user.id, new_state)
+
+    ctx_max, _ = history.memory_limits_for(tier)
+    content = body.content.strip()
+    prior = conv["messages"]
+    model_msgs = history.trim_context(
+        prior + [{"role": "user", "content": content}],
+        max_messages=ctx_max,
+    )
+    if not model_msgs or model_msgs[0].get("role") != "system":
+        base = build_messages(content, body.context)
+        system = [m for m in base if m["role"] == "system"]
+        model_msgs = system + history.trim_context(
+            prior + [{"role": "user", "content": content}],
+            max_messages=ctx_max,
+        )
+
+    try:
+        reply = assistant.llm_fn(model_msgs)
+    except RuntimeError as e:
+        raise ApiError(503, "assistant_error", str(e))
+
+    chat_store.append_messages(user.id, conv_id, content, reply)
+    panel = panel_mod.panel_state(chat_store.get_window(user.id), _now(), tier=tier)
+    return {"reply": reply, "panel": panel}
 
 
 @router.get("/assistant/quota")
