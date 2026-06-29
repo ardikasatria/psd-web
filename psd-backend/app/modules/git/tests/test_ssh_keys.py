@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from app.core.errors import ApiError
-from app.gitea.client import GiteaError
+from app.gitea.client import GiteaClient, GiteaError
 from app.modules.git import ssh_keys
 from app.modules.git.ssh_keys import normalize_ssh_public_key
 
@@ -21,6 +21,23 @@ def test_reject_private_key_material():
 
 
 @pytest.mark.asyncio
+async def test_list_user_keys_uses_public_endpoint():
+    seen = {}
+
+    def handler(req: httpx.Request):
+        seen["path"] = req.url.path
+        if req.method == "GET" and req.url.path == "/api/v1/users/budi/keys":
+            return httpx.Response(200, json=[])
+        return httpx.Response(404)
+
+    client = GiteaClient("http://gitea.local", "token", transport=httpx.MockTransport(handler))
+    rows = await client.list_user_keys("budi")
+    await client.aclose()
+    assert seen["path"] == "/api/v1/users/budi/keys"
+    assert rows == []
+
+
+@pytest.mark.asyncio
 async def test_list_ssh_keys_empty_on_404(monkeypatch):
     user = MagicMock()
     user.username = "budi"
@@ -28,7 +45,6 @@ async def test_list_ssh_keys_empty_on_404(monkeypatch):
     user.name = "Budi"
 
     client = AsyncMock()
-    client.ensure_user = AsyncMock(return_value={"login": "budi"})
     client.list_user_keys = AsyncMock(side_effect=GiteaError(404, "not found"))
     client.aclose = AsyncMock()
 
@@ -36,18 +52,19 @@ async def test_list_ssh_keys_empty_on_404(monkeypatch):
 
     items = await ssh_keys.list_ssh_keys(user)
     assert items == []
+    client.list_user_keys.assert_awaited_once_with("budi")
     await client.aclose.assert_awaited()
 
 
 @pytest.mark.asyncio
-async def test_list_ssh_keys_uses_gitea_login(monkeypatch):
+async def test_list_ssh_keys_does_not_provision_user(monkeypatch):
     user = MagicMock()
-    user.username = "Budi.User"
+    user.username = "budi"
     user.email = "budi@example.com"
     user.name = "Budi"
 
     client = AsyncMock()
-    client.ensure_user = AsyncMock(return_value={"login": "budi-user"})
+    client.ensure_user = AsyncMock()
     client.list_user_keys = AsyncMock(
         return_value=[{"id": 1, "title": "Laptop", "fingerprint": "fp", "key": "ssh-ed25519 AAA"}]
     )
@@ -57,4 +74,5 @@ async def test_list_ssh_keys_uses_gitea_login(monkeypatch):
 
     items = await ssh_keys.list_ssh_keys(user)
     assert items[0]["id"] == 1
-    client.list_user_keys.assert_awaited_once_with("budi-user")
+    client.ensure_user.assert_not_called()
+    client.list_user_keys.assert_awaited_once_with("budi")

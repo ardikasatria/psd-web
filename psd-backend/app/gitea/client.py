@@ -285,10 +285,12 @@ class GiteaClient:
         )
         return r.json()
 
-    # --- SSH keys (admin API, per user) ---
+    # --- SSH keys ---
+    # List: GET /users/{username}/keys (admin list endpoint tidak ada di Gitea)
+    # Add/delete: admin API
 
     async def list_user_keys(self, username: str) -> list:
-        r = await self._req("GET", f"/admin/users/{username}/keys")
+        r = await self._req("GET", f"/users/{username}/keys")
         return r.json()
 
     async def add_user_key(self, username: str, *, title: str, key: str) -> dict:
