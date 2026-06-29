@@ -61,6 +61,17 @@ export function NotebookEditor({
   }, [kernel])
 
   useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault()
+        void persist()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [persist])
+
+  useEffect(() => {
     const onLeave = () => {
       if (saveState === 'dirty') void autosave.flush()
     }
@@ -112,6 +123,7 @@ export function NotebookEditor({
         runtime={runtime}
         kernelStatus={kernelStatus}
         saveState={saveState}
+        onSave={() => void persist()}
         onRunAll={() => void runAll()}
         onAddCell={(type) => setNb((cur) => M.addCell(cur, { type }))}
         onRestart={async () => {
@@ -130,7 +142,10 @@ export function NotebookEditor({
             {idx === 0 && (
               <div className="nb-cell-insert">
                 <button type="button" onClick={() => addCellAt('code', 0)}>
-                  + sel di atas
+                  + Kode
+                </button>
+                <button type="button" onClick={() => addCellAt('markdown', 0)}>
+                  + Teks
                 </button>
               </div>
             )}
@@ -149,10 +164,10 @@ export function NotebookEditor({
             />
             <div className="nb-cell-insert">
               <button type="button" onClick={() => addCellAt('code', idx + 1)}>
-                + sel kode
+                + Kode
               </button>
               <button type="button" onClick={() => addCellAt('markdown', idx + 1)}>
-                + sel teks
+                + Teks
               </button>
             </div>
           </div>

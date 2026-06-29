@@ -78,7 +78,7 @@ export function NotebookEditorContent({ id }: { id: string }) {
       error={meta.error ?? content.error}
     >
       {meta.data && content.data && (
-        <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+        <div className="min-h-screen bg-white dark:bg-[#202124]">
           <div className="border-b border-neutral-200 bg-white/90 px-4 py-2 backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/90">
             <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
               <Link
