@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /settings/
+Disallow: /me/
+Disallow: /studio/
+Disallow: /notifications/
+Disallow: /m/
+Disallow: /factory/
+Disallow: /analytics/
+Disallow: /idea-rooms/
+Disallow: /synthesis/
+Disallow: /api/
+
+Sitemap: https://projeksainsdata.com/sitemap.xml
+Host: https://projeksainsdata.com

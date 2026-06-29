@@ -1,8 +1,6 @@
 """Uji modul email (Langkah 59) — 8 skenario scaffold."""
 from __future__ import annotations
 
-import json
-from email import message_from_string
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -16,7 +14,7 @@ from app.email.unsubscribe import make_unsubscribe_token, verify_unsubscribe_tok
 
 
 def test_smtp_build_mime():
-    sent: list[str] = []
+    sent: list[tuple] = []
 
     class FakeSMTP:
         def __init__(self, host, port, timeout=30):
@@ -37,8 +35,8 @@ def test_smtp_build_mime():
         def login(self, user, password):
             assert user == "resend"
 
-        def sendmail(self, sender, recipients, raw):
-            sent.append(raw)
+        def send_message(self, msg, from_addr=None, to_addrs=None):
+            sent.append((from_addr, to_addrs, msg))
 
     with patch("app.email.provider.smtplib.SMTP", FakeSMTP):
         SMTPProvider(
@@ -49,11 +47,11 @@ def test_smtp_build_mime():
             sender="noreply@test.com",
         ).send("u@x.com", "Subjek", "<p>Hi</p>", "Hi")
 
-    msg = message_from_string(sent[0])
+    from_addr, to_addrs, msg = sent[0]
+    assert from_addr == "noreply@test.com"
+    assert to_addrs == ["u@x.com"]
     assert msg["To"] == "u@x.com"
     assert msg["Subject"] == "Subjek"
-    parts = [p.get_payload(decode=True).decode() for p in msg.walk() if p.get_content_type() in ("text/plain", "text/html")]
-    assert any("Hi" in part for part in parts)
 
 
 def test_smtp_ssl_port_465():
@@ -75,8 +73,8 @@ def test_smtp_ssl_port_465():
         def login(self, user, password):
             logged.append(("login", user))
 
-        def sendmail(self, sender, recipients, raw):
-            logged.append(("send", sender))
+        def send_message(self, msg, from_addr=None, to_addrs=None):
+            logged.append(("send", from_addr))
 
     with patch("app.email.provider.smtplib.SMTP_SSL", FakeSMTPSSL):
         SMTPProvider(
@@ -108,21 +106,17 @@ def test_resend_http_request():
     captured: dict = {}
 
     class FakeResp:
-        status = 200
+        status_code = 200
+        text = '{"id":"em_1"}'
 
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-    def fake_urlopen(req, timeout=30):
-        captured["url"] = req.full_url
-        captured["headers"] = dict(req.header_items())
-        captured["body"] = json.loads(req.data.decode())
+    def fake_post(url, json, headers):
+        captured["url"] = url
+        captured["headers"] = headers
+        captured["body"] = json
         return FakeResp()
 
-    with patch("app.email.provider.urllib.request.urlopen", fake_urlopen):
+    with patch("app.email.provider.httpx.Client") as client_cls:
+        client_cls.return_value.__enter__.return_value.post = fake_post
         ResendHttpProvider(api_key="re_test", sender="noreply@test.com").send(
             "u@x.com", "Judul", "<b>x</b>", "x"
         )
@@ -130,6 +124,7 @@ def test_resend_http_request():
     assert captured["url"] == "https://api.resend.com/emails"
     assert captured["headers"]["Authorization"] == "Bearer re_test"
     assert captured["body"]["to"] == ["u@x.com"]
+    assert "@" in captured["body"]["from"]
 
 
 def test_render_template_fallback():

@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "npm run sync:gamification && next dev --turbopack",
     "build": "next build",
-    "prebuild": "npm run sync:gamification && npm run sync:favicon",
+    "prebuild": "npm run sync:gamification && npm run sync:favicon && npm run generate:sitemap",
+    "generate:sitemap": "node scripts/generate-sitemap.mjs",
     "start": "next start",
     "lint": "tsc --noEmit",
     "sync:gamification": "node scripts/sync-gamification.mjs",

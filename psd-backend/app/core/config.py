@@ -138,7 +138,7 @@ class Settings(BaseSettings):
 
     # Email SMTP / Resend (Langkah 59)
     PSD_EMAIL_ENABLED: bool = False
-    PSD_EMAIL_PROVIDER: str = "smtp"  # smtp | http
+    PSD_EMAIL_PROVIDER: str = "http"  # smtp | http — http lebih andal di Docker
     PSD_EMAIL_SENDER: str = ""
     RESEND_API_KEY: str = ""
     PSD_EMAIL_SMTP_HOST: str = "smtp.resend.com"
@@ -149,6 +149,40 @@ class Settings(BaseSettings):
     PSD_EMAIL_UNSUBSCRIBE_SECRET: str = ""
     PSD_EMAIL_REDIS: bool = True
     PSD_EMAIL_DIGEST_HOUR: int = 8  # WIB, via Celery beat
+
+    @field_validator(
+        "RESEND_API_KEY",
+        "PSD_EMAIL_SENDER",
+        "PSD_EMAIL_PROVIDER",
+        "PSD_EMAIL_SMTP_HOST",
+        "PSD_EMAIL_SMTP_USER",
+        mode="before",
+    )
+    @classmethod
+    def _strip_email_env(cls, value):
+        if isinstance(value, str):
+            return value.strip().strip('"').strip("'")
+        return value
+
+    @field_validator(
+        "PSD_EMAIL_ENABLED",
+        "PSD_EMAIL_SMTP_TLS",
+        "PSD_EMAIL_SMTP_SSL",
+        "PSD_EMAIL_REDIS",
+        "DEV_EMAIL_ECHO",
+        mode="before",
+    )
+    @classmethod
+    def _parse_bool_env(cls, value):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            v = value.strip().lower()
+            if v in {"1", "true", "yes", "on"}:
+                return True
+            if v in {"0", "false", "no", "off", ""}:
+                return False
+        return value
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
@@ -176,6 +210,17 @@ class Settings(BaseSettings):
             if www not in origins:
                 origins.append(www)
         self.BACKEND_CORS_ORIGINS = origins
+        return self
+
+    @model_validator(mode="after")
+    def _default_email_sender(self):
+        if not (self.PSD_EMAIL_SENDER or "").strip():
+            from urllib.parse import urlparse
+
+            host = urlparse(self.APP_BASE_URL or "").hostname or ""
+            host = host.removeprefix("www.")
+            if host and host not in {"localhost", "127.0.0.1"}:
+                self.PSD_EMAIL_SENDER = f"no-reply@{host}"
         return self
 
     def cors_allows(self, origin: str | None) -> bool:

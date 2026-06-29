@@ -1,15 +1,14 @@
 """Provider email SMTP (Resend) & HTTP API (Langkah 59)."""
 from __future__ import annotations
 
-import json
 import logging
 import smtplib
 import ssl
-import urllib.error
-import urllib.request
 from abc import ABC, abstractmethod
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+from email.message import EmailMessage
+from email.utils import formataddr, parseaddr
+
+import httpx
 
 from app.core.config import settings
 
@@ -28,14 +27,74 @@ class EchoProvider(EmailProvider):
         log.warning("EMAIL → %s | %s\n%s", to, subject, text or html)
 
 
+def _clean_env(value: str | None) -> str:
+    if not value:
+        return ""
+    return value.strip().strip('"').strip("'")
+
+
+def _sender_email(raw: str) -> str:
+    _, addr = parseaddr(raw)
+    return (addr or raw).strip()
+
+
+def format_sender(raw_sender: str, *, display_name: str | None = None) -> str:
+    """Header From untuk Resend / MIME (mis. 'Projek Sains Data <no-reply@domain.com>')."""
+    name, addr = parseaddr(raw_sender)
+    email = (addr or raw_sender).strip()
+    if not email:
+        raise ValueError("PSD_EMAIL_SENDER tidak valid")
+    label = (name or display_name or settings.APP_NAME.replace(" API", "")).strip()
+    return formataddr((label, email)) if label else email
+
+
 def email_credentials_ready() -> bool:
-    return bool((settings.RESEND_API_KEY or "").strip() and (settings.PSD_EMAIL_SENDER or "").strip())
+    key = _clean_env(settings.RESEND_API_KEY)
+    sender = _sender_email(_clean_env(settings.PSD_EMAIL_SENDER))
+    return bool(key and sender and "@" in sender)
+
+
+def email_config_status() -> dict:
+    sender_raw = _clean_env(settings.PSD_EMAIL_SENDER)
+    return {
+        "credentials_ready": email_credentials_ready(),
+        "provider": (settings.PSD_EMAIL_PROVIDER or "http").lower(),
+        "sender": sender_raw,
+        "sender_formatted": format_sender(sender_raw) if email_credentials_ready() else None,
+        "email_enabled": settings.PSD_EMAIL_ENABLED,
+        "dev_echo": settings.DEV_EMAIL_ECHO,
+        "smtp_host": settings.PSD_EMAIL_SMTP_HOST,
+        "smtp_port": settings.PSD_EMAIL_SMTP_PORT,
+        "smtp_tls": settings.PSD_EMAIL_SMTP_TLS,
+        "smtp_ssl": settings.PSD_EMAIL_SMTP_SSL,
+        "has_api_key": bool(_clean_env(settings.RESEND_API_KEY)),
+    }
 
 
 def _smtp_use_ssl() -> bool:
     if settings.PSD_EMAIL_SMTP_SSL:
         return True
     return settings.PSD_EMAIL_SMTP_PORT in (465, 2465)
+
+
+def _build_message(
+    *,
+    to: str,
+    subject: str,
+    html: str,
+    text: str | None,
+    header_from: str,
+) -> EmailMessage:
+    msg = EmailMessage()
+    msg["From"] = header_from
+    msg["To"] = to
+    msg["Subject"] = subject
+    if text:
+        msg.set_content(text, charset="utf-8")
+    else:
+        msg.set_content("Lihat versi HTML email ini di klien yang mendukung HTML.", charset="utf-8")
+    msg.add_alternative(html, subtype="html", charset="utf-8")
+    return msg
 
 
 class SMTPProvider(EmailProvider):
@@ -55,18 +114,19 @@ class SMTPProvider(EmailProvider):
         self.user = user
         self.password = password
         self.sender = sender
+        self.header_from = format_sender(sender)
+        self.envelope_from = _sender_email(sender)
         self.use_tls = use_tls
         self.use_ssl = use_ssl
 
     def send(self, to: str, subject: str, html: str, text: str | None = None) -> None:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = self.sender
-        msg["To"] = to
-        if text:
-            msg.attach(MIMEText(text, "plain", "utf-8"))
-        msg.attach(MIMEText(html, "html", "utf-8"))
-        raw = msg.as_string()
+        msg = _build_message(
+            to=to,
+            subject=subject,
+            html=html,
+            text=text,
+            header_from=self.header_from,
+        )
         context = ssl.create_default_context()
 
         if self.use_ssl:
@@ -74,7 +134,7 @@ class SMTPProvider(EmailProvider):
                 smtp.ehlo()
                 if self.user:
                     smtp.login(self.user, self.password)
-                smtp.sendmail(self.sender, [to], raw)
+                smtp.send_message(msg, from_addr=self.envelope_from, to_addrs=[to])
             return
 
         with smtplib.SMTP(self.host, self.port, timeout=30) as smtp:
@@ -84,13 +144,13 @@ class SMTPProvider(EmailProvider):
                 smtp.ehlo()
             if self.user:
                 smtp.login(self.user, self.password)
-            smtp.sendmail(self.sender, [to], raw)
+            smtp.send_message(msg, from_addr=self.envelope_from, to_addrs=[to])
 
 
 class ResendHttpProvider(EmailProvider):
     def __init__(self, *, api_key: str, sender: str):
         self.api_key = api_key
-        self.sender = sender
+        self.sender = format_sender(sender)
 
     def send(self, to: str, subject: str, html: str, text: str | None = None) -> None:
         payload: dict = {
@@ -101,29 +161,23 @@ class ResendHttpProvider(EmailProvider):
         }
         if text:
             payload["text"] = text
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            "https://api.resend.com/emails",
-            data=data,
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                if resp.status >= 300:
-                    raise RuntimeError(f"Resend HTTP {resp.status}")
-        except urllib.error.HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Resend HTTP {exc.code}: {body}") from exc
+            with httpx.Client(timeout=30.0) as client:
+                resp = client.post(
+                    "https://api.resend.com/emails",
+                    json=payload,
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                )
+        except httpx.HTTPError as exc:
+            raise RuntimeError(f"Resend HTTP koneksi gagal: {exc}") from exc
+        if resp.status_code >= 400:
+            raise RuntimeError(f"Resend HTTP {resp.status_code}: {resp.text}")
 
 
 def _build_live_provider() -> EmailProvider:
-    key = (settings.RESEND_API_KEY or "").strip()
-    sender = (settings.PSD_EMAIL_SENDER or "").strip()
-    provider = (settings.PSD_EMAIL_PROVIDER or "smtp").lower().strip()
+    key = _clean_env(settings.RESEND_API_KEY)
+    sender = _clean_env(settings.PSD_EMAIL_SENDER)
+    provider = (settings.PSD_EMAIL_PROVIDER or "http").lower().strip()
 
     if provider == "http":
         return ResendHttpProvider(api_key=key, sender=sender)
@@ -149,14 +203,16 @@ def get_provider(*, auth: bool = False) -> EmailProvider:
 
     if auth:
         if not email_credentials_ready():
-            log.warning("Auth email: RESEND_API_KEY / PSD_EMAIL_SENDER belum lengkap — mode echo")
+            log.error(
+                "Auth email tidak terkirim: RESEND_API_KEY atau PSD_EMAIL_SENDER belum valid (cek deploy/.env)"
+            )
             return EchoProvider()
         return _build_live_provider()
 
     if not settings.PSD_EMAIL_ENABLED:
         return EchoProvider()
     if not email_credentials_ready():
-        log.warning("Email belum lengkap (RESEND_API_KEY / PSD_EMAIL_SENDER) — mode echo")
+        log.error("Email notifikasi tidak terkirim: RESEND_API_KEY / PSD_EMAIL_SENDER belum valid")
         return EchoProvider()
     return _build_live_provider()
 

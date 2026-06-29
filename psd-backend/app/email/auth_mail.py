@@ -35,7 +35,7 @@ def send_auth_email(
     try:
         get_auth_provider().send(to, subject, html, text)
     except Exception as exc:
-        log.exception("auth_email_send_failed kind=%s to=%s", kind, to, exc_info=exc)
+        log.error("auth_email_send_failed kind=%s to=%s err=%s", kind, to, exc)
         if settings.DEV_EMAIL_ECHO:
             log.warning("AUTH EMAIL (fallback) [%s] → %s | %s\n%s", kind, to, subject, text)
 
