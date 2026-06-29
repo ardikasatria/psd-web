@@ -7,9 +7,12 @@ export const GitInfoSchema = z.object({
   git_base_url: z.string(),
   ssh_user: z.string(),
   ssh_port: z.number(),
+  github_like: z.boolean(),
   gitea_username: z.string(),
+  ssh_clone_example: z.string(),
   ssh_clone_prefix: z.string(),
   ssh_test_command: z.string(),
+  ssh_config_snippet: z.string(),
 })
 export type GitInfo = z.infer<typeof GitInfoSchema>
 

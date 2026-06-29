@@ -125,13 +125,15 @@ ssh-keygen -t ed25519 -C "email-anda@domain.ac.id"
 cat ~/.ssh/id_ed25519.pub
 \`\`\`
 
-3. Buka [Pengaturan → Git & SSH](/settings/git) di PSD — tempel isi kunci publik, atau tambahkan manual di Git PSD (**Pengaturan → SSH / GPG Keys**).
+3. Buka [Pengaturan → Git & SSH](/settings/git) di PSD — tempel isi kunci publik. Halaman itu menampilkan **perintah uji** dan **contoh clone** yang sesuai port SSH server (salin dari sana, jangan tebak port).
 
-4. Uji koneksi (ganti host sesuai domain Git Anda). **Port 2222** — bukan 22 (port 22 adalah SSH admin VM, bukan Git):
+4. Uji koneksi — **salin perintah persis** dari Pengaturan → Git & SSH. Contoh bila port Git = 2222:
 
 \`\`\`bash
 ssh -p 2222 -T git@git.projeksainsdata.com
 \`\`\`
+
+> **Keamanan:** \`ssh -T git@git.<domain>\` **tanpa** \`-p\` memakai port 22 default — di server PSD itu SSH **admin VM**, bukan Git. Jangan masukkan password di sana. Bila port Git sudah 22 (gaya GitHub), perintah tanpa \`-p\` benar — tetap ikuti yang ditampilkan di Pengaturan.
 
 ## Opsi B — Personal Access Token (HTTPS)
 
@@ -169,11 +171,16 @@ Lanjut: [Clone, commit & push](/help/git-clone-push) · [LFS & Pull Request](/he
 
 ## Clone ke laptop
 
+Salin URL **SSH** dari banner clone repo atau dari [Pengaturan → Git & SSH](/settings/git).
+
 \`\`\`bash
-# SSH (disarankan jika sudah pasang SSH key; port 2222 = Git PSD)
+# Contoh port non-22 (interim) — ganti dengan URL persis dari UI Anda
 git clone ssh://git@git.projeksainsdata.com:2222/username/nama-repo.git
 
-# atau HTTPS (pakai token sebagai password)
+# Contoh gaya GitHub (setelah migrasi port 22 → Gitea)
+# git clone git@git.projeksainsdata.com:username/nama-repo.git
+
+# HTTPS (pakai token sebagai password)
 git clone https://git.projeksainsdata.com/username/nama-repo.git
 \`\`\`
 
@@ -230,7 +237,8 @@ Alur kolaborasi ala GitHub/Hugging Face:
 2. Clone **fork Anda**, buat branch fitur:
 
 \`\`\`bash
-git clone git@git.projeksainsdata.com:username/fork-repo.git
+# Salin URL SSH persis dari banner clone / Pengaturan → Git & SSH
+git clone <url-ssh-dari-ui> fork-repo
 cd fork-repo
 git checkout -b fitur-baru
 # ... ubah, commit ...
@@ -344,7 +352,8 @@ Output notebook (grafik, log) membuat diff Git besar dan sulit direview.
 2. Clone repo (jika belum) — gunakan URL dari banner clone PSD:
 
 \`\`\`bash
-git clone git@git.projeksainsdata.com:username/proyek-saya.git ~/work/proyek-saya
+# Salin URL SSH persis dari banner clone / Pengaturan → Git & SSH
+git clone <url-ssh-dari-ui> ~/work/proyek-saya
 cd ~/work/proyek-saya
 \`\`\`
 

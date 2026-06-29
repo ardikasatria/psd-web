@@ -107,6 +107,17 @@ export function GitSettingsContent() {
                   <CommandLineIcon className="size-5 text-primary-600" aria-hidden />
                   Koneksi Git Anda
                 </h2>
+                {!git.github_like && (
+                  <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+                    <p className="font-medium">Penting — jangan pakai port 22 untuk Git</p>
+                    <p className="mt-1 text-amber-900/90 dark:text-amber-200/90">
+                      Perintah <code className="text-xs">ssh -T git@{git.git_host}</code> tanpa{' '}
+                      <code className="text-xs">-p {git.ssh_port}</code> mengarah ke SSH admin server
+                      (bukan Git). Selalu pakai perintah uji di bawah atau salin blok{' '}
+                      <code className="text-xs">~/.ssh/config</code>.
+                    </p>
+                  </div>
+                )}
                 <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                   <div>
                     <dt className="text-neutral-500">Host Git</dt>
@@ -124,20 +135,24 @@ export function GitSettingsContent() {
                     <dt className="text-neutral-500">Port SSH Git</dt>
                     <dd className="mt-0.5 font-mono font-medium text-neutral-900 dark:text-neutral-100">
                       {git.ssh_port}
-                      {git.ssh_port !== 22 && (
+                      {git.github_like ? (
+                        <span className="ml-2 font-sans text-xs font-normal text-emerald-600 dark:text-emerald-400">
+                          (gaya GitHub)
+                        </span>
+                      ) : (
                         <span className="ml-2 font-sans text-xs font-normal text-neutral-500">
-                          (bukan port 22 VM)
+                          (admin server di port 22)
                         </span>
                       )}
                     </dd>
                   </div>
                   <div className="sm:col-span-2">
-                    <dt className="text-neutral-500">Prefix clone SSH</dt>
+                    <dt className="text-neutral-500">Contoh clone SSH</dt>
                     <dd className="mt-1 flex flex-wrap items-center gap-2">
                       <code className="rounded-lg bg-neutral-100 px-2 py-1 text-xs dark:bg-neutral-900">
-                        {git.ssh_clone_prefix}nama-repo.git
+                        {git.ssh_clone_example}
                       </code>
-                      <CopyButton text={`${git.ssh_clone_prefix}nama-repo.git`} label="Salin contoh" />
+                      <CopyButton text={git.ssh_clone_example} label="Salin contoh" />
                     </dd>
                   </div>
                   <div className="sm:col-span-2">
@@ -147,6 +162,20 @@ export function GitSettingsContent() {
                         {git.ssh_test_command}
                       </code>
                       <CopyButton text={git.ssh_test_command} label="Salin perintah" />
+                    </dd>
+                    <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                      Respon sukses: <em>Hi {git.gitea_username}! You&apos;ve successfully authenticated…</em>
+                    </p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-neutral-500">
+                      {git.github_like ? 'Opsional — ~/.ssh/config' : 'Disarankan — ~/.ssh/config'}
+                    </dt>
+                    <dd className="mt-1 space-y-2">
+                      <pre className="overflow-x-auto rounded-xl bg-neutral-900 p-4 text-xs text-neutral-100">
+                        {git.ssh_config_snippet}
+                      </pre>
+                      <CopyButton text={git.ssh_config_snippet} label="Salin config" />
                     </dd>
                   </div>
                 </dl>

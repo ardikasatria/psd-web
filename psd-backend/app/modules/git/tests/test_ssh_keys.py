@@ -31,8 +31,25 @@ def test_git_info_payload_custom_ssh_port(monkeypatch):
 
     payload = ssh_keys.git_info_payload(user)
     assert payload["ssh_port"] == 2222
+    assert payload["github_like"] is False
     assert payload["ssh_test_command"] == "ssh -p 2222 -T git@git.example.com"
-    assert payload["ssh_clone_prefix"] == "ssh://git@git.example.com:2222/budi/"
+    assert payload["ssh_clone_example"] == "ssh://git@git.example.com:2222/budi/nama-repo.git"
+    assert "Port 2222" in payload["ssh_config_snippet"]
+
+
+def test_git_info_payload_port22_github_like(monkeypatch):
+    user = MagicMock()
+    user.username = "budi"
+
+    monkeypatch.setattr(ssh_keys.app_settings, "PSD_GITEA_ENABLED", True)
+    monkeypatch.setattr(ssh_keys.app_settings, "PSD_GITEA_ADMIN_TOKEN", "secret")
+    monkeypatch.setattr(ssh_keys.app_settings, "PSD_OAUTH_GIT_BASE_URL", "https://git.example.com")
+    monkeypatch.setattr(ssh_keys.app_settings, "PSD_GITEA_SSH_PORT", 22)
+
+    payload = ssh_keys.git_info_payload(user)
+    assert payload["github_like"] is True
+    assert payload["ssh_clone_example"] == "git@git.example.com:budi/nama-repo.git"
+    assert payload["ssh_test_command"] == "ssh -T git@git.example.com"
 
 
 @pytest.mark.asyncio

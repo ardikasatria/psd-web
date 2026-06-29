@@ -153,6 +153,8 @@ services:
 
   gitea:
     image: gitea/gitea:1.22
+    # SSH Git: host ${GITEA_SSH_PORT:-2222} → kontainer :22 (START_SSH_SERVER).
+    # Path C interim: 2222. Path A (GitHub-like): set GITEA_SSH_PORT=22 setelah sshd admin pindah.
     environment:
       GITEA__database__DB_TYPE: postgres
       GITEA__database__HOST: gitea-db:5432

@@ -228,14 +228,25 @@ UI: `https://<DOMAIN>/ml` · API inferensi: `POST /api/models/{slug}/predict`
 
 ```bash
 # Token admin dari UI git.<DOMAIN> → GITEA_ADMIN_TOKEN di .env
-# SSH Git di port 2222 (GITEA_SSH_PORT) — JANGAN pakai port 22: itu sshd admin VM idcloudhost
-echo 'GITEA_SSH_PORT=2222' >> .env
-ufw allow 2222/tcp   # atau aturan firewall setara
 ./scripts/init-gitea-oauth.sh
 ./scripts/backfill-gitea.sh    # repo lama → commit awal
+
+# --- SSH Git (pisahkan dari SSH admin VM) ---
+# Path C (interim): GITEA_SSH_PORT=2222 — buka 2222 di firewall idcloudhost
+echo 'GITEA_SSH_PORT=2222' >> .env
+ufw allow 2222/tcp
 docker compose -f docker-compose.prod.yml up -d gitea backend
-# Uji dari laptop: ssh -p 2222 -T git@git.<DOMAIN>
+./scripts/verify-gitea-ssh.sh
+
+# Path A (disarankan, gaya GitHub): port 22 → Gitea, admin VM → 2202
+# Baca: Instructions/perbaikan-gitea/PERBAIKAN_SSH_GITEA_GITHUB.md
+# ADMIN_SSH_PORT=2202 ./scripts/setup-gitea-ssh-path-a.sh --check
+# sudo ADMIN_SSH_PORT=2202 ./scripts/setup-gitea-ssh-path-a.sh --apply
+# Uji: ssh -T git@git.<DOMAIN>  → "Hi <user>!" dari Gitea
 ```
+
+**Keamanan SSH:** Jangan biarkan `ssh git@git.<DOMAIN>` (port 22) menuju shell VM. Setelah Path A,
+admin masuk `ssh -p 2202 user@<ip>`. Disarankan: kunci saja untuk admin, fail2ban, batasi IP admin.
 
 **51 PR** — tidak perlu service baru (tab Kontribusi di halaman repo).
 

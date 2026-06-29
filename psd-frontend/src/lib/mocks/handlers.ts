@@ -1015,8 +1015,15 @@ export const handlers = [
       ssh_user: 'git',
       gitea_username: user.username,
       ssh_port: 2222,
+      github_like: false,
+      ssh_clone_example: `ssh://git@git.projeksainsdata.com:2222/${user.username}/nama-repo.git`,
       ssh_clone_prefix: `ssh://git@git.projeksainsdata.com:2222/${user.username}/`,
       ssh_test_command: 'ssh -p 2222 -T git@git.projeksainsdata.com',
+      ssh_config_snippet: `Host git.projeksainsdata.com
+  HostName git.projeksainsdata.com
+  User git
+  Port 2222
+  IdentityFile ~/.ssh/id_ed25519`,
     })
   }),
 

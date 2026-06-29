@@ -12,6 +12,7 @@ from app.core.errors import ApiError
 from app.gitea.client import GiteaClient, GiteaError
 from app.gitea.seams import normalize_gitea_username
 from app.gitea.service import client_or_none
+from app.modules.git import giturl
 from app.modules.users.models import User
 
 log = logging.getLogger(__name__)
@@ -69,21 +70,21 @@ def git_info_payload(user: User) -> dict:
     gitea_user = gitea_username_for(user)
     port = app_settings.PSD_GITEA_SSH_PORT
     enabled = bool(app_settings.PSD_GITEA_ENABLED and app_settings.PSD_GITEA_ADMIN_TOKEN)
-    if port == 22:
-        ssh_test_command = f"ssh -T git@{host}"
-        ssh_clone_prefix = f"git@{host}:{gitea_user}/"
-    else:
-        ssh_test_command = f"ssh -p {port} -T git@{host}"
-        ssh_clone_prefix = f"ssh://git@{host}:{port}/{gitea_user}/"
+    example_repo = "nama-repo"
+    ssh_clone_example = giturl.ssh_clone_url(host, gitea_user, example_repo, port=port)
+    github_like = giturl.is_github_like(port)
     return {
         "enabled": enabled,
         "git_host": host,
         "git_base_url": app_settings.PSD_OAUTH_GIT_BASE_URL.rstrip("/"),
         "ssh_user": "git",
         "ssh_port": port,
+        "github_like": github_like,
         "gitea_username": gitea_user,
-        "ssh_clone_prefix": ssh_clone_prefix,
-        "ssh_test_command": ssh_test_command,
+        "ssh_clone_example": ssh_clone_example,
+        "ssh_clone_prefix": ssh_clone_example.rsplit(example_repo, 1)[0],
+        "ssh_test_command": giturl.ssh_test_command(host, port=port),
+        "ssh_config_snippet": giturl.ssh_config_snippet(host, port=port),
     }
 
 
