@@ -19,6 +19,7 @@ DOCKER_SHELL="/home/${HOST_GIT_USER}/docker-shell"
 AUTH_SCRIPT="/usr/local/bin/psd-gitea-authorized-keys"
 SSHD_MARKER_BEGIN="# --- PSD Gitea SSH Passthrough (begin) ---"
 SSHD_MARKER_END="# --- PSD Gitea SSH Passthrough (end) ---"
+MARK_TAG="psd-gitea-authorized-keys"
 SSHD_CONFIG="/etc/ssh/sshd_config"
 MODE="${1:-}"
 
@@ -36,8 +37,15 @@ fi
 DOMAIN="${DOMAIN:-projeksainsdata.com}"
 
 resolve_gitea_container() {
-  local id name
-  id="$("${COMPOSE[@]}" ps -q gitea 2>/dev/null | head -1 || true)"
+  local id name compose=("${COMPOSE[@]}")
+  if [[ -f "$ENV_FILE" ]]; then
+    # shellcheck disable=SC1091
+    source "$ENV_FILE"
+    if [[ "${GITEA_SSH_MODE:-}" == "passthrough" ]]; then
+      compose=("${PASSTHROUGH_COMPOSE[@]}")
+    fi
+  fi
+  id="$("${compose[@]}" ps -q gitea 2>/dev/null | head -1 || true)"
   if [[ -z "$id" ]]; then
     echo "psd-gitea"
     return
@@ -46,7 +54,14 @@ resolve_gitea_container() {
   echo "${name:-psd-gitea}"
 }
 
+resolve_gitea_bin() {
+  local bin
+  bin="$(docker exec "$GITEA_CONTAINER" sh -c 'command -v gitea 2>/dev/null || echo /usr/local/bin/gitea' 2>/dev/null || echo /usr/local/bin/gitea)"
+  echo "$bin"
+}
+
 GITEA_CONTAINER="$(resolve_gitea_container)"
+GITEA_BIN="$(resolve_gitea_bin)"
 
 remove_sshd_block() {
   if [[ ! -f "$SSHD_CONFIG" ]]; then
@@ -60,11 +75,14 @@ remove_sshd_block() {
 }
 
 write_auth_script() {
+  GITEA_BIN="$(resolve_gitea_bin)"
   cat > "$AUTH_SCRIPT" <<EOF
 #!/bin/sh
-exec /usr/bin/docker exec -i ${GITEA_CONTAINER} /usr/local/bin/gitea keys -e git -u "\$1" -t "\$2" -k "\$3"
+# ${MARK_TAG}
+exec /usr/bin/docker exec -i ${GITEA_CONTAINER} ${GITEA_BIN} keys -e git -u "\$1" -t "\$2" -k "\$3"
 EOF
   chmod 755 "$AUTH_SCRIPT"
+  chown root:root "$AUTH_SCRIPT"
 }
 
 write_docker_shell() {
@@ -95,9 +113,11 @@ append_sshd_block() {
 
 $SSHD_MARKER_BEGIN
 Match User ${HOST_GIT_USER}
+    # ${MARK_TAG}
     AuthorizedKeysCommandUser ${HOST_GIT_USER}
     AuthorizedKeysCommand ${AUTH_SCRIPT} %u %t %k
     PasswordAuthentication no
+    Banner none
 $SSHD_MARKER_END
 EOF
 }
@@ -121,7 +141,7 @@ update_env_passthrough() {
 echo "=== Gitea SSH Passthrough (Path B) ==="
 echo "Git (mahasiswa): ssh -T git@git.${DOMAIN}  (port 22, user git → Gitea)"
 echo "Admin:           ssh ${USER}@<ip-vm>       (port 22, user admin → shell VM)"
-echo "Kontainer Gitea: ${GITEA_CONTAINER}"
+echo "Kontainer Gitea: ${GITEA_CONTAINER} (binary: ${GITEA_BIN})"
 echo
 
 if [[ "$MODE" == "--rollback" ]]; then
@@ -194,11 +214,13 @@ fi
 
 echo
 echo "=== Passthrough aktif ==="
-echo "Uji dari laptop (bukan VM):"
+echo "Diagnosa lengkap (dengan kunci laptop):"
+echo "  sudo ./scripts/diagnose-gitea-ssh.sh --pubkey \"\$(cat ~/.ssh/id_ed25519.pub)\""
+echo
+echo "Uji dari laptop:"
 echo "  ssh -T git@git.${DOMAIN}"
-echo "  ssh -vT git@git.${DOMAIN}  # harus user git, bukan banner idcloudhost untuk kunci valid"
 echo
-echo "Admin infra tetap:"
-echo "  ssh <user>@<ip-vm>"
+echo "Daftarkan kunci manual (uji Kasus A):"
+echo "  ./scripts/register-gitea-ssh-key.sh <username> \"\$(cat ~/.ssh/id_ed25519.pub)\""
 echo
-echo "./scripts/verify-gitea-ssh.sh"
+echo "Admin infra tetap: ssh <user>@<ip-vm>"

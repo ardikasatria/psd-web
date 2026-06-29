@@ -67,7 +67,18 @@ sudo ./scripts/setup-gitea-ssh-passthrough.sh --apply
 
 # Verifikasi
 ./scripts/verify-gitea-ssh.sh
+
+# Jika masih Permission denied (publickey) — diagnosa akar masalah:
+sudo ./scripts/diagnose-gitea-ssh.sh --pubkey "$(cat ~/.ssh/id_ed25519.pub)"
+
+# Uji daftar kunci langsung (Kasus A):
+./scripts/register-gitea-ssh-key.sh ardikasatria "$(cat ~/.ssh/id_ed25519.pub)"
+
+# Hilangkan banner idcloudhost (kosmetik):
+sudo ./scripts/diagnose-gitea-ssh.sh --fix-banner
 ```
+
+Panduan: `Instructions/perbaikan-ssh-gitea/PERBAIKAN_LANJUTAN_SSH_PATH_B.md`
 
 Setelah `--apply`:
 
