@@ -40,6 +40,14 @@ import {
   postsByUsername,
 } from './data/social'
 import { buildDiscoveryPanels, discoveryListForKind } from './data/discovery'
+import {
+  getMockAssetStats,
+  getMockUserEngagement,
+  mockDownload,
+  mockShare,
+  mockView,
+  toggleMockLove,
+} from './data/engagement'
 import { getMockArticle, listMockBlog, mockBlogPosts } from './data/blog'
 import { mockNotifications, notificationsForUser, unreadCountForUser } from './data/notifications'
 import {
@@ -397,6 +405,7 @@ export const handlers = [
     const payload: Record<string, unknown> = {
       ...user,
       stats: { ...stats, followers: followers_count },
+      engagement: getMockUserEngagement(user.username),
       followers_count,
       following_count,
       is_following,
@@ -2206,6 +2215,49 @@ export const handlers = [
     const page = Number(new URL(request.url).searchParams.get('page') ?? 1)
     const items = discoveryListForKind(kind, viewer?.id)
     return HttpResponse.json(paginate(items, page))
+  }),
+
+  http.get(`${API}/assets/:kind/:owner/:name/stats`, ({ request, params }) => {
+    const viewer = resolveUserFromRequest(request)
+    const slug = `${params.owner}/${params.name}`
+    return HttpResponse.json(getMockAssetStats(String(params.kind), slug, viewer?.id))
+  }),
+
+  http.post(`${API}/assets/:kind/:owner/:name/love`, ({ request, params }) => {
+    const viewer = resolveUserFromRequest(request)
+    if (!viewer) return errorResponse(401, 'unauthorized', 'Belum masuk')
+    const slug = `${params.owner}/${params.name}`
+    try {
+      return HttpResponse.json(toggleMockLove(String(params.kind), slug, viewer.id))
+    } catch {
+      return errorResponse(422, 'cannot_love_own', 'Tak bisa menyukai aset sendiri')
+    }
+  }),
+
+  http.post(`${API}/assets/:kind/:owner/:name/share`, async ({ request, params }) => {
+    const slug = `${params.owner}/${params.name}`
+    const body = (await request.json()) as { channel: 'feed' | 'forum' | 'external' | 'link' }
+    return HttpResponse.json(mockShare(String(params.kind), slug, body.channel ?? 'link'))
+  }),
+
+  http.post(`${API}/assets/:kind/:owner/:name/download`, ({ params }) => {
+    const slug = `${params.owner}/${params.name}`
+    return HttpResponse.json(mockDownload(String(params.kind), slug))
+  }),
+
+  http.post(`${API}/assets/:kind/:owner/:name/view`, ({ params }) => {
+    const slug = `${params.owner}/${params.name}`
+    return HttpResponse.json(mockView(String(params.kind), slug))
+  }),
+
+  http.get(`${API}/users/:username/stats`, ({ params, request }) => {
+    const user = users.find((u) => u.username === params.username)
+    if (!user) return errorResponse(404, 'not_found', 'Pengguna tidak ditemukan')
+    const viewer = resolveUserFromRequest(request)
+    if (!canViewMockProfile(user.id, viewer?.id ?? null, viewer?.role)) {
+      return errorResponse(403, 'private_profile', 'Profil ini privat')
+    }
+    return HttpResponse.json(getMockUserEngagement(user.username))
   }),
 
   http.get(`${API}/feed`, ({ request }) => {

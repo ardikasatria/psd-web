@@ -107,6 +107,30 @@ export const UserStatsSchema = z.object({
 })
 export type UserStats = z.infer<typeof UserStatsSchema>
 
+export const UserEngagementStatsSchema = z.object({
+  total_loves_received: z.number(),
+  total_shares: z.number(),
+  total_downloads: z.number(),
+  total_views: z.number(),
+  asset_count: z.number(),
+})
+export type UserEngagementStats = z.infer<typeof UserEngagementStatsSchema>
+
+export const AssetStatsSchema = z.object({
+  love_count: z.number(),
+  share_count: z.number(),
+  shares: z.object({
+    feed: z.number(),
+    forum: z.number(),
+    external: z.number(),
+    link: z.number(),
+  }),
+  download_count: z.number(),
+  view_count: z.number(),
+  liked: z.boolean(),
+})
+export type AssetStats = z.infer<typeof AssetStatsSchema>
+
 export const PerksSchema = z.object({
   upload_max_mb: z.number(),
   daily_submission_bonus: z.number(),
@@ -147,6 +171,7 @@ export type PaginatedContributor = z.infer<typeof PaginatedContributorSchema>
 
 export const UserProfileSchema = ProfileSchema.extend({
   stats: UserStatsSchema,
+  engagement: UserEngagementStatsSchema.optional(),
   followers_count: z.number().optional(),
   following_count: z.number().optional(),
   is_following: z.boolean().optional(),

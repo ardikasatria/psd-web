@@ -4,8 +4,7 @@ import { CircleJourneyCTA } from '@/components/features/quests/CircleJourneyCTA'
 import { FromRoomBadge } from '@/components/common/FromRoomBadge'
 import { SyntheticBadge } from '@/components/common/SyntheticBadge'
 import { useTrackView } from '@/lib/analytics/useTrackView'
-import { LikeButton } from '@/components/features/repos/LikeButton'
-import { ShareToFeedButton } from '@/components/features/social/ShareToFeedButton'
+import { AssetStatBar } from '@/components/features/engagement/AssetStatBar'
 import { RepoCloneBanner } from '@/components/features/repos/RepoCloneBanner'
 import { RepoEditDialog } from '@/components/features/repos/RepoEditDialog'
 import { RepoFilesPanel } from '@/components/features/repos/RepoFilesPanel'
@@ -29,7 +28,7 @@ import { RepoDetail, RepoKind, ThreadSummary } from '@/types/api'
 import clsx from 'clsx'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { PencilSquareIcon } from '@heroicons/react/24/outline'
 
@@ -57,6 +56,7 @@ export function RepoDetailContent({
   name: string
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, isLoggedIn } = useAuth()
   const qc = useQueryClient()
   const [tab, setTab] = useState<TabId>('readme')
@@ -134,6 +134,10 @@ export function RepoDetailContent({
     if (tab === 'pulls' && !data?.clone_url) setTab('readme')
   }, [tab, data?.clone_url])
 
+  useEffect(() => {
+    if (searchParams.get('tab') === 'discussions') setTab('discussions')
+  }, [searchParams])
+
   return (
     <DetailPageShell>
       <QueryState isLoading={isLoading} isError={isError} error={error}>
@@ -167,10 +171,25 @@ export function RepoDetailContent({
                       Edit
                     </Button>
                   )}
-                  <LikeButton repoId={data.id} initialLiked={data.liked} initialLikes={data.likes} />
-                  <ShareToFeedButton kind={data.kind} slug={data.slug} />
                 </div>
               }
+            />
+
+            <AssetStatBar
+              kind={data.kind}
+              slug={data.slug}
+              ownerUsername={data.owner.username}
+              pageUrl={typeof window !== 'undefined' ? window.location.href : pathname}
+              forumHref={`${pathname}?tab=discussions`}
+              onDownload={
+                data.files.some((f) => f.url)
+                  ? () => {
+                      const file = data.files.find((f) => f.url)
+                      if (file?.url) window.open(file.url, '_blank', 'noopener,noreferrer')
+                    }
+                  : undefined
+              }
+              className="mb-2"
             />
 
             <Suspense fallback={null}>

@@ -1,3 +1,9 @@
+export function formatCompactCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace('.0', '')}jt`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace('.0', '')}rb`
+  return n.toLocaleString('id-ID')
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 10_240 ? 1 : 0)} KB`

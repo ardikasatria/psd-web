@@ -91,6 +91,9 @@ async def get_user(
     profile["following_count"] = following_count
     profile["is_following"] = is_following
     profile.update(await profile_gamification(db, u))
+    from app.modules.engagement.service import user_engagement_stats
+
+    profile["engagement"] = await user_engagement_stats(db, u)
     return profile
 
 

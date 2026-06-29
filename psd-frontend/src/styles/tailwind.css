@@ -6,6 +6,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+  --font-sans: var(--font-sinteca), ui-sans-serif, system-ui, sans-serif;
+
   --color-primary-50: rgb(254, 242, 242);
   --color-primary-100: rgb(253, 226, 226);
   --color-primary-200: rgb(252, 200, 200);

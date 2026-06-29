@@ -11,7 +11,7 @@ from app.core.pagination import PageParams, page_params, paginated
 from app.core.search import client, delete_repo_doc, index_repo
 from app.core.storage import delete_asset, upload_asset
 from app.modules.categories.service import apply_category_body, filter_by_category_slugs, load_category_refs
-from app.modules.gamification.service import after_repo_created, after_repo_liked
+from app.modules.engagement import service as engagement_service
 from app.modules.gamification.tiers import perks_for
 from app.modules.repos.models import Repo, RepoLike
 from app.modules.repos.schemas import RepoUpdate, to_detail, to_summary
@@ -375,22 +375,17 @@ async def like_repo(
     db: AsyncSession = Depends(get_db),
 ):
     r = await _get_repo(db, repo_id)
-    found = (
-        await db.execute(
-            select(RepoLike).where(RepoLike.user_id == user.id, RepoLike.repo_id == repo_id)
-        )
-    ).scalar_one_or_none()
-    if not found:
-        db.add(RepoLike(user_id=user.id, repo_id=repo_id))
-        r.likes += 1
-        await db.commit()
-        await db.refresh(r, ["owner"])
-        try:
-            index_repo(r)
-        except Exception:
-            pass
-        await after_repo_liked(db, r, user)
-    return {"liked": True, "likes": r.likes}
+    key = engagement_service.asset_key(r.kind, r.slug)
+    if await engagement_service.has_loved(db, user.id, key):
+        stats = await engagement_service.get_stats(db, r.kind, r.slug, user)
+        return {"liked": True, "likes": stats["love_count"]}
+    result = await engagement_service.toggle_love(db, kind=r.kind, slug=r.slug, actor=user)
+    try:
+        await db.refresh(r)
+        index_repo(r)
+    except Exception:
+        pass
+    return {"liked": result["liked"], "likes": result["love_count"]}
 
 
 @router.delete("/repos/{repo_id}/like")
@@ -400,21 +395,17 @@ async def unlike_repo(
     db: AsyncSession = Depends(get_db),
 ):
     r = await _get_repo(db, repo_id)
-    found = (
-        await db.execute(
-            select(RepoLike).where(RepoLike.user_id == user.id, RepoLike.repo_id == repo_id)
-        )
-    ).scalar_one_or_none()
-    if found:
-        await db.delete(found)
-        r.likes = max(0, r.likes - 1)
-        await db.commit()
-        await db.refresh(r, ["owner"])
-        try:
-            index_repo(r)
-        except Exception:
-            pass
-    return {"liked": False, "likes": r.likes}
+    key = engagement_service.asset_key(r.kind, r.slug)
+    if not await engagement_service.has_loved(db, user.id, key):
+        stats = await engagement_service.get_stats(db, r.kind, r.slug, user)
+        return {"liked": False, "likes": stats["love_count"]}
+    result = await engagement_service.toggle_love(db, kind=r.kind, slug=r.slug, actor=user)
+    try:
+        await db.refresh(r)
+        index_repo(r)
+    except Exception:
+        pass
+    return {"liked": result["liked"], "likes": result["love_count"]}
 
 
 @router.get("/repos/{repo_id}/gitea/files")

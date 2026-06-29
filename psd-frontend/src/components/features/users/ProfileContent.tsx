@@ -6,7 +6,7 @@ import { QueryState } from '@/components/features/QueryState'
 import { NotebookCard } from '@/components/features/NotebookCard'
 import { ThreadCard } from '@/components/features/ThreadCard'
 import { DetailPageShell } from '@/components/features/layout'
-import { ProfileCard } from '@/components/features/users/ProfileCard'
+import { ProfileEngagementStats } from '@/components/features/engagement/ProfileEngagementStats'
 import { ProfileCover } from '@/components/features/users/ProfileCover'
 import { ProfileRepoRow } from '@/components/features/users/ProfileRepoRow'
 import { getMe } from '@/lib/api/auth'
@@ -168,6 +168,9 @@ export function ProfileContent({ username }: { username: string }) {
               />
 
               <div className="mt-8 min-w-0 lg:mt-0 lg:pt-14">
+                {profile.data.engagement && (
+                  <ProfileEngagementStats engagement={profile.data.engagement} className="mb-6" />
+                )}
                 <nav
                   className="-mx-1 mb-6 flex gap-1 overflow-x-auto border-b border-neutral-200 dark:border-neutral-700"
                   role="tablist"
