@@ -88,6 +88,8 @@ class Settings(BaseSettings):
     PSD_GITEA_NAMESPACE_MODE: str = "user"
     PSD_GITEA_ORG: str = "psd"
     PSD_GITEA_EMAIL_DOMAIN: str = "projeksainsdata.local"
+    # Port SSH publik Gitea (22 = default; produksi biasanya 2222 agar tidak bentrok dengan sshd VM)
+    PSD_GITEA_SSH_PORT: int = 22
 
     # Pull Request (Langkah 51)
     PSD_PR_DEFAULT_BRANCH: str = "main"

@@ -20,6 +20,21 @@ def test_reject_private_key_material():
         normalize_ssh_public_key("not-a-key")
 
 
+def test_git_info_payload_custom_ssh_port(monkeypatch):
+    user = MagicMock()
+    user.username = "budi"
+
+    monkeypatch.setattr(ssh_keys.app_settings, "PSD_GITEA_ENABLED", True)
+    monkeypatch.setattr(ssh_keys.app_settings, "PSD_GITEA_ADMIN_TOKEN", "secret")
+    monkeypatch.setattr(ssh_keys.app_settings, "PSD_OAUTH_GIT_BASE_URL", "https://git.example.com")
+    monkeypatch.setattr(ssh_keys.app_settings, "PSD_GITEA_SSH_PORT", 2222)
+
+    payload = ssh_keys.git_info_payload(user)
+    assert payload["ssh_port"] == 2222
+    assert payload["ssh_test_command"] == "ssh -p 2222 -T git@git.example.com"
+    assert payload["ssh_clone_prefix"] == "ssh://git@git.example.com:2222/budi/"
+
+
 @pytest.mark.asyncio
 async def test_list_user_keys_uses_public_endpoint():
     seen = {}

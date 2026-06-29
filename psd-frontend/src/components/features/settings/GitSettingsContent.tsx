@@ -120,6 +120,17 @@ export function GitSettingsContent() {
                       {git.gitea_username}
                     </dd>
                   </div>
+                  <div>
+                    <dt className="text-neutral-500">Port SSH Git</dt>
+                    <dd className="mt-0.5 font-mono font-medium text-neutral-900 dark:text-neutral-100">
+                      {git.ssh_port}
+                      {git.ssh_port !== 22 && (
+                        <span className="ml-2 font-sans text-xs font-normal text-neutral-500">
+                          (bukan port 22 VM)
+                        </span>
+                      )}
+                    </dd>
+                  </div>
                   <div className="sm:col-span-2">
                     <dt className="text-neutral-500">Prefix clone SSH</dt>
                     <dd className="mt-1 flex flex-wrap items-center gap-2">

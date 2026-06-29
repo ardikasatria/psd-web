@@ -127,10 +127,10 @@ cat ~/.ssh/id_ed25519.pub
 
 3. Buka [Pengaturan → Git & SSH](/settings/git) di PSD — tempel isi kunci publik, atau tambahkan manual di Git PSD (**Pengaturan → SSH / GPG Keys**).
 
-4. Uji koneksi (ganti host sesuai domain Git Anda):
+4. Uji koneksi (ganti host sesuai domain Git Anda). **Port 2222** — bukan 22 (port 22 adalah SSH admin VM, bukan Git):
 
 \`\`\`bash
-ssh -T git@git.projeksainsdata.com
+ssh -p 2222 -T git@git.projeksainsdata.com
 \`\`\`
 
 ## Opsi B — Personal Access Token (HTTPS)
@@ -170,8 +170,8 @@ Lanjut: [Clone, commit & push](/help/git-clone-push) · [LFS & Pull Request](/he
 ## Clone ke laptop
 
 \`\`\`bash
-# SSH (disarankan jika sudah pasang SSH key)
-git clone git@git.projeksainsdata.com:username/nama-repo.git
+# SSH (disarankan jika sudah pasang SSH key; port 2222 = Git PSD)
+git clone ssh://git@git.projeksainsdata.com:2222/username/nama-repo.git
 
 # atau HTTPS (pakai token sebagai password)
 git clone https://git.projeksainsdata.com/username/nama-repo.git

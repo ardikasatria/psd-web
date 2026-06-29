@@ -46,6 +46,7 @@ x-backend-env: &backend-env
   PSD_GITEA_NAMESPACE_MODE: user
   PSD_GITEA_ORG: psd
   PSD_GITEA_EMAIL_DOMAIN: ${DOMAIN}
+  PSD_GITEA_SSH_PORT: ${GITEA_SSH_PORT:-2222}
   PSD_HUB_ENABLED: "true"
   PSD_SUPERSET_ENABLED: "true"
   PSD_SUPERSET_PUBLIC_URL: https://bi.${DOMAIN}
@@ -160,6 +161,10 @@ services:
       GITEA__database__PASSWD: ${GITEA_DB_PASSWORD}
       GITEA__server__ROOT_URL: https://git.${DOMAIN}/
       GITEA__server__HTTP_PORT: "3000"
+      GITEA__server__START_SSH_SERVER: "true"
+      GITEA__server__SSH_DOMAIN: git.${DOMAIN}
+      GITEA__server__SSH_PORT: ${GITEA_SSH_PORT:-2222}
+      GITEA__server__SSH_LISTEN_PORT: "22"
       GITEA__server__LFS_START_SERVER: "true"
       GITEA__lfs__STORAGE_TYPE: minio
       GITEA__lfs__MINIO_ENDPOINT: minio:9000
@@ -168,6 +173,8 @@ services:
       GITEA__lfs__MINIO_BUCKET: psd-gitea-lfs
       GITEA__lfs__MINIO_USE_SSL: "false"
       GITEA__lfs__MINIO_LOCATION: us-east-1
+    ports:
+      - "${GITEA_SSH_PORT:-2222}:22"
     volumes:
       - giteadata:/data
     depends_on:

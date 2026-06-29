@@ -67,15 +67,23 @@ def git_public_host() -> str:
 def git_info_payload(user: User) -> dict:
     host = git_public_host()
     gitea_user = gitea_username_for(user)
+    port = app_settings.PSD_GITEA_SSH_PORT
     enabled = bool(app_settings.PSD_GITEA_ENABLED and app_settings.PSD_GITEA_ADMIN_TOKEN)
+    if port == 22:
+        ssh_test_command = f"ssh -T git@{host}"
+        ssh_clone_prefix = f"git@{host}:{gitea_user}/"
+    else:
+        ssh_test_command = f"ssh -p {port} -T git@{host}"
+        ssh_clone_prefix = f"ssh://git@{host}:{port}/{gitea_user}/"
     return {
         "enabled": enabled,
         "git_host": host,
         "git_base_url": app_settings.PSD_OAUTH_GIT_BASE_URL.rstrip("/"),
         "ssh_user": "git",
+        "ssh_port": port,
         "gitea_username": gitea_user,
-        "ssh_clone_prefix": f"git@{host}:{gitea_user}/",
-        "ssh_test_command": f"ssh -T git@{host}",
+        "ssh_clone_prefix": ssh_clone_prefix,
+        "ssh_test_command": ssh_test_command,
     }
 
 

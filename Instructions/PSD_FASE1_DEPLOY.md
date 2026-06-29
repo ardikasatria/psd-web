@@ -228,8 +228,13 @@ UI: `https://<DOMAIN>/ml` · API inferensi: `POST /api/models/{slug}/predict`
 
 ```bash
 # Token admin dari UI git.<DOMAIN> → GITEA_ADMIN_TOKEN di .env
+# SSH Git di port 2222 (GITEA_SSH_PORT) — JANGAN pakai port 22: itu sshd admin VM idcloudhost
+echo 'GITEA_SSH_PORT=2222' >> .env
+ufw allow 2222/tcp   # atau aturan firewall setara
 ./scripts/init-gitea-oauth.sh
 ./scripts/backfill-gitea.sh    # repo lama → commit awal
+docker compose -f docker-compose.prod.yml up -d gitea backend
+# Uji dari laptop: ssh -p 2222 -T git@git.<DOMAIN>
 ```
 
 **51 PR** — tidak perlu service baru (tab Kontribusi di halaman repo).

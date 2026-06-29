@@ -1014,8 +1014,9 @@ export const handlers = [
       git_base_url: 'https://git.projeksainsdata.com',
       ssh_user: 'git',
       gitea_username: user.username,
-      ssh_clone_prefix: `git@git.projeksainsdata.com:${user.username}/`,
-      ssh_test_command: 'ssh -T git@git.projeksainsdata.com',
+      ssh_port: 2222,
+      ssh_clone_prefix: `ssh://git@git.projeksainsdata.com:2222/${user.username}/`,
+      ssh_test_command: 'ssh -p 2222 -T git@git.projeksainsdata.com',
     })
   }),
 

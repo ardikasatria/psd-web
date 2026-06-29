@@ -6,6 +6,7 @@ export const GitInfoSchema = z.object({
   git_host: z.string(),
   git_base_url: z.string(),
   ssh_user: z.string(),
+  ssh_port: z.number(),
   gitea_username: z.string(),
   ssh_clone_prefix: z.string(),
   ssh_test_command: z.string(),
