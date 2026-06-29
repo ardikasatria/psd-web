@@ -6,6 +6,7 @@ import {
   runtimeLabel,
   type NotebookTierLimits,
 } from '@/lib/notebooks/policy'
+import { getMyGamification } from '@/lib/api/gamification'
 import { hubTierFromGamificationLevel } from '@/lib/notebooks/tier'
 import { useNotebookKernelAccess } from '@/lib/notebooks/useNotebookKernelAccess'
 import { kernelServerAvailable } from '@/lib/gamification/config'

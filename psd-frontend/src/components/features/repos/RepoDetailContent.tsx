@@ -57,6 +57,7 @@ export function RepoDetailContent({
 }) {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { user, isLoggedIn } = useAuth()
   const qc = useQueryClient()
   const [tab, setTab] = useState<TabId>('readme')

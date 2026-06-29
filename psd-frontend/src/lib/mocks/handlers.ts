@@ -40,6 +40,7 @@ import {
   postsByUsername,
 } from './data/social'
 import { buildDiscoveryPanels, discoveryListForKind } from './data/discovery'
+import { mockContributors, mockGamificationFor } from './data/gamification'
 import {
   getMockAssetStats,
   getMockUserEngagement,
