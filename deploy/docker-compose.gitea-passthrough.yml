@@ -1,0 +1,12 @@
+# Override compose — Gitea SSH passthrough (Path B).
+# Port 22 publik = host sshd (admin + git@). Gitea SSH hanya localhost.
+# Usage:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.gitea-passthrough.yml up -d gitea backend
+
+services:
+  gitea:
+    container_name: psd-gitea
+    environment:
+      GITEA__server__SSH_PORT: "22"
+    ports: !override
+      - "127.0.0.1:2222:22"

@@ -13,32 +13,42 @@ fi
 DOMAIN="${DOMAIN:-projeksainsdata.com}"
 GIT_HOST="git.${DOMAIN}"
 GITEA_SSH_PORT="${GITEA_SSH_PORT:-2222}"
+GITEA_SSH_MODE="${GITEA_SSH_MODE:-interim}"
 ADMIN_SSH_PORT="${ADMIN_SSH_PORT:-22}"
 
 echo "=== Verifikasi SSH Git PSD ==="
 echo "Domain:     $DOMAIN"
 echo "Git host:   $GIT_HOST"
-echo "Git SSH:    port $GITEA_SSH_PORT (Gitea)"
-echo "Admin SSH:  port $ADMIN_SSH_PORT (VM — jangan dipakai untuk git@)"
+echo "Mode:       $GITEA_SSH_MODE"
+echo "Git SSH:    port $GITEA_SSH_PORT (ditampilkan ke pengguna)"
+echo "Admin SSH:  port $ADMIN_SSH_PORT (VM)"
 echo
 
 fail=0
 
-echo "--- [1] Port $GITEA_SSH_PORT (harus Gitea, bukan banner idcloudhost) ---"
-if timeout 8 bash -c "echo | nc -w 5 ${GIT_HOST} ${GITEA_SSH_PORT}" >/dev/null 2>&1; then
-  echo "OK: port $GITEA_SSH_PORT terbuka di $GIT_HOST"
+if [[ "$GITEA_SSH_MODE" == "passthrough" ]]; then
+  echo "--- [1] Path B passthrough — port 22 host (user git → Gitea, user admin → shell) ---"
+  echo "Uji Git dari laptop: ssh -T git@$GIT_HOST"
+  echo "Uji admin: ssh <user>@<ip-vm>"
 else
-  echo "GAGAL: port $GITEA_SSH_PORT tidak dapat dijangkau — cek docker compose gitea & firewall idcloudhost"
-  fail=1
+  echo "--- [1] Port $GITEA_SSH_PORT (harus Gitea, bukan banner idcloudhost) ---"
+  if timeout 8 bash -c "echo | nc -w 5 ${GIT_HOST} ${GITEA_SSH_PORT}" >/dev/null 2>&1; then
+    echo "OK: port $GITEA_SSH_PORT terbuka di $GIT_HOST"
+  else
+    echo "GAGAL: port $GITEA_SSH_PORT tidak dapat dijangkau — cek docker compose gitea & firewall idcloudhost"
+    fail=1
+  fi
 fi
 
 echo
-echo "--- [2] Port 22 ke git.$DOMAIN (risiko keamanan bila banner OS) ---"
-if [[ "$GITEA_SSH_PORT" == "22" ]]; then
+echo "--- [2] Port 22 ke git.$DOMAIN ---"
+if [[ "$GITEA_SSH_MODE" == "passthrough" ]]; then
+  echo "OK: Path B — port 22 dipakai host sshd; koneksi git@ diteruskan ke Gitea (bukan shell admin)"
+elif [[ "$GITEA_SSH_PORT" == "22" ]]; then
   echo "SKIP: port 22 didedikasikan ke Gitea (Path A)"
 else
-  echo "PERINGATAN: port 22 masih default — ssh -T git@$GIT_HOST tanpa -p akan ke SSH admin VM"
-  echo "  Uji manual: ssh -T git@$GIT_HOST  → jangan masukkan password; migrasi ke Path A bila perlu"
+  echo "PERINGATAN: port 22 masih SSH admin VM — ssh -T git@$GIT_HOST tanpa -p berbahaya"
+  echo "  Gunakan Path B (passthrough) atau Path A, atau ssh -p $GITEA_SSH_PORT"
 fi
 
 echo
@@ -60,7 +70,9 @@ fi
 echo
 echo "--- [4] Uji SSH Git (dari mesin ini) ---"
 SSH_TEST=(ssh -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new)
-if [[ "$GITEA_SSH_PORT" != "22" ]]; then
+if [[ "$GITEA_SSH_MODE" == "passthrough" ]]; then
+  : # port 22 default
+elif [[ "$GITEA_SSH_PORT" != "22" ]]; then
   SSH_TEST+=(-p "$GITEA_SSH_PORT")
 fi
 SSH_TEST+=(-T "git@${GIT_HOST}")

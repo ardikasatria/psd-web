@@ -232,7 +232,10 @@ UI: `https://<DOMAIN>/ml` · API inferensi: `POST /api/models/{slug}/predict`
 ./scripts/backfill-gitea.sh    # repo lama → commit awal
 
 # --- SSH Git (pisahkan dari SSH admin VM) ---
-# Path C (interim): GITEA_SSH_PORT=2222 — buka 2222 di firewall idcloudhost
+# Path B passthrough (disarankan bila admin tetap port 22):
+#   sudo ./scripts/setup-gitea-ssh-passthrough.sh --apply
+# Path C interim: GITEA_SSH_PORT=2222 + buka firewall 2222
+# Path A: admin pindah 2202, Gitea bind 22 — deploy/docs/RENCANA_PATH_A.md
 echo 'GITEA_SSH_PORT=2222' >> .env
 ufw allow 2222/tcp
 docker compose -f docker-compose.prod.yml up -d gitea backend
