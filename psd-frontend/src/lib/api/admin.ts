@@ -11,6 +11,8 @@ import {
   PaginatedAdminUserSchema,
   PaginatedAdminInstructorApplication,
   PaginatedAdminInstructorApplicationSchema,
+  PaginatedAdminNotebookKernelRequest,
+  PaginatedAdminNotebookKernelRequestSchema,
   PaginatedAdminCompetitionProposalSchema,
   AdminCompetitionProposalSchema,
   PaginatedAdminEventProposalSchema,
@@ -176,6 +178,26 @@ export const reviewInstructorApplication = (id: string, status: 'approved' | 're
     method: 'PATCH',
     body: JSON.stringify({ status }),
   })
+
+export const listNotebookKernelRequests = (
+  q: { status?: string; applicant_type?: string; page?: number; page_size?: number } = {},
+) =>
+  apiFetch<PaginatedAdminNotebookKernelRequest>(
+    `/admin/notebook-kernel-requests${buildQuery(q)}`,
+    PaginatedAdminNotebookKernelRequestSchema,
+  )
+
+export const reviewNotebookKernelRequest = (
+  id: string,
+  body: { status: 'approved' | 'rejected'; review_note?: string },
+) =>
+  apiFetch<{ status: string }>(`/admin/notebook-kernel-requests/${id}`, z.object({ status: z.string() }), {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+
+export const getAdminNotebookKernelKtmUrl = (id: string) =>
+  apiFetch(`/admin/notebook-kernel-requests/${id}/ktm-url`, z.object({ url: z.string() }))
 
 export const getEventRegistrations = (slug: string, page = 1) =>
   apiFetch<PaginatedEventRegistrationAdmin>(

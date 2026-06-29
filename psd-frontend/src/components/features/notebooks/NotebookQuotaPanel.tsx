@@ -7,7 +7,9 @@ import {
   type NotebookTierLimits,
 } from '@/lib/notebooks/policy'
 import { hubTierFromGamificationLevel } from '@/lib/notebooks/tier'
-import { getMyGamification } from '@/lib/api/gamification'
+import { useNotebookKernelAccess } from '@/lib/notebooks/useNotebookKernelAccess'
+import { kernelServerAvailable } from '@/lib/gamification/config'
+import Link from 'next/link'
 import { CpuChipIcon, DocumentDuplicateIcon, ServerStackIcon } from '@heroicons/react/24/outline'
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
@@ -57,6 +59,8 @@ export function NotebookQuotaPanel({ className, compact }: Props) {
   const tierKey = hubTierFromGamificationLevel(gamification.data?.tier.level ?? 0)
   const limits: NotebookTierLimits = notebookLimitsFor(tierKey)
   const tierName = NOTEBOOK_TIER_LABEL[tierKey] ?? tierKey
+  const { canServer: grantServer, pendingGrant } = useNotebookKernelAccess()
+  const showKernelCta = !kernelServerAvailable(tierKey) && !grantServer
 
   return (
     <section
@@ -104,6 +108,26 @@ export function NotebookQuotaPanel({ className, compact }: Props) {
           value={`${limits.cpu} CPU · ${limits.memGb} GB`}
         />
       </div>
+
+      {showKernelCta && (
+        <p className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">
+          {pendingGrant ? (
+            <>
+              Pengajuan kernel sedang ditinjau.{' '}
+              <Link href="/notebooks/kernel-request" className="font-medium text-primary-600 hover:underline dark:text-primary-400">
+                Lihat status
+              </Link>
+            </>
+          ) : (
+            <>
+              Butuh kernel server?{' '}
+              <Link href="/notebooks/kernel-request" className="font-medium text-primary-600 hover:underline dark:text-primary-400">
+                Ajukan akses (mahasiswa / umum)
+              </Link>
+            </>
+          )}
+        </p>
+      )}
     </section>
   )
 }

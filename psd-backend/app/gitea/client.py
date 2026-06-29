@@ -261,6 +261,23 @@ class GiteaClient:
         )
         return r.json()
 
+    # --- SSH keys (admin API, per user) ---
+
+    async def list_user_keys(self, username: str) -> list:
+        r = await self._req("GET", f"/admin/users/{username}/keys")
+        return r.json()
+
+    async def add_user_key(self, username: str, *, title: str, key: str) -> dict:
+        r = await self._req(
+            "POST",
+            f"/admin/users/{username}/keys",
+            json={"title": title, "key": key},
+        )
+        return r.json()
+
+    async def delete_user_key(self, username: str, key_id: int) -> None:
+        await self._req("DELETE", f"/admin/users/{username}/keys/{key_id}")
+
 
 def make_operations(files: list[dict], operation: str = "create") -> list[dict]:
     ops = []

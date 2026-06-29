@@ -23,6 +23,7 @@ from app.modules.events.models import Event, EventProposal, EventRegistration
 from app.modules.factory.models import Dashboard, DataSource, Pipeline, PipelineRun, Widget
 from app.modules.gamification.models import UserBadge
 from app.modules.instructors.models import InstructorApplication
+from app.modules.notebook_kernel.models import NotebookKernelRequest
 from app.modules.learn.models import Course, Enrollment, LearningPath, LessonProgress, Notebook
 from app.modules.micro.models import MicroCompletion, MicroLesson
 from app.modules.notifications.models import Notification
@@ -84,6 +85,7 @@ SEED_WIPE_ORDER = (
     LessonProgress,
     Enrollment,
     InstructorApplication,
+    NotebookKernelRequest,
     Submission,
     LeaderboardRow,
     CompetitionProposal,

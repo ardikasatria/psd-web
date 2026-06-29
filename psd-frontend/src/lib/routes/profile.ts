@@ -11,6 +11,7 @@ const RESERVED_PROFILE_SLUGS = new Set([
   'contact',
   'dashboard',
   'datasets',
+  'discovery',
   'events',
   'explore',
   'forgot-password',

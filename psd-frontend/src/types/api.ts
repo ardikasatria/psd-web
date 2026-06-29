@@ -228,6 +228,29 @@ export type LikePostResponse = z.infer<typeof LikePostResponseSchema>
 export const FollowResponseSchema = z.object({ following: z.boolean() })
 export type FollowResponse = z.infer<typeof FollowResponseSchema>
 
+export const DiscoveryRefSchema = z.object({
+  username: z.string(),
+  type: z.enum(['user', 'org']),
+  avatar_url: z.string().nullable(),
+  is_official: z.boolean(),
+  reputation: z.number(),
+  tier: z.string().nullable(),
+  reason: z.string(),
+})
+export type DiscoveryRef = z.infer<typeof DiscoveryRefSchema>
+
+export const DiscoveryPanelsSchema = z.object({
+  top_tier: z.array(DiscoveryRefSchema),
+  popular: z.array(DiscoveryRefSchema),
+  new_members: z.array(DiscoveryRefSchema),
+  achievements: z.array(DiscoveryRefSchema),
+  affiliation: z.array(DiscoveryRefSchema),
+})
+export type DiscoveryPanels = z.infer<typeof DiscoveryPanelsSchema>
+
+export const PaginatedDiscoverySchema = Paginated(DiscoveryRefSchema)
+export type PaginatedDiscovery = z.infer<typeof PaginatedDiscoverySchema>
+
 export const PostImageUploadSchema = z.object({ url: z.string() })
 
 export const ProfileUpdateSchema = ProfileSchema.pick({
@@ -838,6 +861,39 @@ export type AdminInstructorApplication = z.infer<typeof AdminInstructorApplicati
 
 export const PaginatedAdminInstructorApplicationSchema = Paginated(AdminInstructorApplicationSchema)
 export type PaginatedAdminInstructorApplication = PaginatedResult<AdminInstructorApplication>
+
+export const NotebookKernelApplicantTypeSchema = z.enum(['student', 'umum'])
+export type NotebookKernelApplicantType = z.infer<typeof NotebookKernelApplicantTypeSchema>
+
+export const NotebookKernelRequestSchema = z.object({
+  id: z.string().optional(),
+  status: z.enum(['pending', 'approved', 'rejected']),
+  applicant_type: NotebookKernelApplicantTypeSchema,
+  nim: z.string().nullable().optional(),
+  institution: z.string().nullable().optional(),
+  reason_md: z.string().optional(),
+  has_ktm: z.boolean().optional(),
+  review_note: z.string().nullable().optional(),
+  created_at: z.string().nullable().optional(),
+})
+export type NotebookKernelRequest = z.infer<typeof NotebookKernelRequestSchema>
+
+export const AdminNotebookKernelRequestSchema = z.object({
+  id: z.string(),
+  applicant_type: NotebookKernelApplicantTypeSchema,
+  nim: z.string().nullable().optional(),
+  institution: z.string().nullable().optional(),
+  reason_md: z.string(),
+  status: z.enum(['pending', 'approved', 'rejected']),
+  review_note: z.string().nullable().optional(),
+  has_ktm: z.boolean(),
+  created_at: z.string().nullable().optional(),
+  user: z.object({ username: z.string(), name: z.string(), email: z.string() }),
+})
+export type AdminNotebookKernelRequest = z.infer<typeof AdminNotebookKernelRequestSchema>
+
+export const PaginatedAdminNotebookKernelRequestSchema = Paginated(AdminNotebookKernelRequestSchema)
+export type PaginatedAdminNotebookKernelRequest = PaginatedResult<AdminNotebookKernelRequest>
 
 export const PaginatedCourseSummarySchema = Paginated(CourseSummarySchema)
 export type PaginatedCourseSummary = PaginatedResult<CourseSummary>

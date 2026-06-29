@@ -9,6 +9,7 @@ import { getMyGamification } from '@/lib/api/gamification'
 import { getNotebook, getNotebookContent, launchNotebook } from '@/lib/api/notebooks'
 import { kernelServerAvailable } from '@/lib/gamification/config'
 import { hubTierFromGamificationLevel } from '@/lib/notebooks/tier'
+import { useNotebookKernelAccess } from '@/lib/notebooks/useNotebookKernelAccess'
 import type { IpyNb } from '@/lib/notebooks/ipynb'
 import type { NotebookKernel } from '@/lib/notebooks/kernels/kernelInterface'
 import { createPyodideKernel } from '@/lib/notebooks/kernels/pyodideKernel'
@@ -42,7 +43,8 @@ export function NotebookEditorContent({ id }: { id: string }) {
   })
 
   const tierSlug = hubTierFromGamificationLevel(gamification.data?.tier.level ?? 0)
-  const canServer = kernelServerAvailable(tierSlug)
+  const { canServer: canServerGrant } = useNotebookKernelAccess()
+  const canServer = kernelServerAvailable(tierSlug) || canServerGrant
 
   useEffect(() => {
     let cancelled = false

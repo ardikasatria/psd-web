@@ -5,6 +5,7 @@ import clsx from 'clsx'
 import {
   BellIcon,
   ChevronRightIcon,
+  CommandLineIcon,
   Cog6ToothIcon,
   CreditCardIcon,
   PaintBrushIcon,
@@ -20,6 +21,7 @@ export type SettingsSection =
   | 'overview'
   | 'profile'
   | 'security'
+  | 'git'
   | 'notifications'
   | 'privacy'
   | 'appearance'
@@ -54,6 +56,13 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Keamanan akun',
     description: 'Kata sandi, email, verifikasi',
     icon: ShieldCheckIcon,
+  },
+  {
+    id: 'git',
+    href: '/settings/git',
+    label: 'Git & SSH',
+    description: 'Kunci SSH untuk push & clone',
+    icon: CommandLineIcon,
   },
   {
     id: 'notifications',

@@ -42,6 +42,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   { name: 'Course', href: '/admin/courses', icon: AcademicCapIcon },
   { name: 'Tinjauan Course', href: '/admin/courses/review', icon: AcademicCapIcon },
   { name: 'Instruktur', href: '/admin/instructors', icon: UsersIcon },
+  { name: 'Kernel notebook', href: '/admin/notebook-kernel-requests', icon: CpuChipIcon },
   { name: 'Jalur Belajar', href: '/admin/learning-paths', icon: MapIcon },
   { name: 'Forum', href: '/admin/forum', icon: ChatBubbleLeftRightIcon },
   { name: 'Performa', href: '/admin/perf', icon: CpuChipIcon },

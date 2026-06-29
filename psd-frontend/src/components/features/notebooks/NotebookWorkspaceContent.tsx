@@ -9,6 +9,7 @@ import { createNotebook, getNotebookUsage, getNotebooks } from '@/lib/api/notebo
 import { getMyGamification } from '@/lib/api/gamification'
 import { kernelServerAvailable } from '@/lib/gamification/config'
 import { hubTierFromGamificationLevel } from '@/lib/notebooks/tier'
+import { useNotebookKernelAccess } from '@/lib/notebooks/useNotebookKernelAccess'
 import { notebookLimitsFor } from '@/lib/notebooks/policy'
 import { Badge } from '@/shared/Badge'
 import ButtonPrimary from '@/shared/ButtonPrimary'
@@ -49,7 +50,8 @@ export function NotebookWorkspaceContent() {
 
   const tierKey = hubTierFromGamificationLevel(gamification.data?.tier.level ?? 0)
   const limits = notebookLimitsFor(tierKey)
-  const canServer = kernelServerAvailable(tierKey)
+  const { canServer: canServerGrant } = useNotebookKernelAccess()
+  const canServer = kernelServerAvailable(tierKey) || canServerGrant
   const browserOnly = limits.runtime === 'browser'
 
   const create = useMutation({

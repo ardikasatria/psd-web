@@ -19,6 +19,7 @@ from app.modules.learn.models import Course, Enrollment, LearningPath, LessonPro
 from app.modules.learn.path_utils import apply_path_payload, path_detail, path_summary
 from app.modules.learn.notebooks import colab_url
 from app.modules.notebook.launch import launch_notebook, user_tier_slug
+from app.modules.notebook_kernel.grant import effective_notebook_tier
 from app.modules.notebook.store import NotebookStore
 from psd_notebook.policy import NotebookQuotaError
 from psd_notebook import policy as nb_policy
@@ -628,7 +629,7 @@ def _nb_owner(n: Notebook) -> dict:
 @router.get("/notebooks/me/usage")
 async def notebook_usage(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     store = NotebookStore(db)
-    tier = await user_tier_slug(user)
+    tier = await effective_notebook_tier(db, user, await user_tier_slug(user))
     lim = nb_policy.limits_for(tier)
     owned = await store.count(user.id)
     return {
@@ -728,7 +729,7 @@ async def launch_notebook_endpoint(
     if not n:
         raise ApiError(404, "not_found", "Notebook tidak ditemukan")
     await _can_edit_notebook(db, n, user)
-    tier = await user_tier_slug(user)
+    tier = await effective_notebook_tier(db, user, await user_tier_slug(user))
     api_base = f"{request.url.scheme}://{request.url.netloc}/api/v1"
     out = await launch_notebook(
         tier=tier,

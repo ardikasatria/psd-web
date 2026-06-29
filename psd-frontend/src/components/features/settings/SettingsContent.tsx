@@ -143,6 +143,12 @@ export function SettingsContent() {
                   cta="Kelola keamanan"
                 />
                 <ShortcutCard
+                  href="/settings/git"
+                  title="Git & SSH"
+                  description="Daftarkan kunci SSH untuk push dan clone repository Git PSD."
+                  cta="Kelola kunci SSH"
+                />
+                <ShortcutCard
                   href="/settings/notifications"
                   title="Notifikasi"
                   description="Atur email event, kompetisi, balasan forum, dan notifikasi dalam aplikasi."

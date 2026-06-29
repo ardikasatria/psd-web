@@ -17,10 +17,12 @@ from app.modules.events.models import Event, EventProposal, EventRegistration
 from app.modules.events.proposals import proposal_dict as event_proposal_dict
 from app.modules.events.proposals import review_proposal as review_event_proposal
 from app.modules.instructors.models import InstructorApplication
+from app.modules.notebook_kernel.grant import apply_kernel_grant
+from app.modules.notebook_kernel.models import NotebookKernelRequest
 from app.modules.notifications.service import notify
 from app.modules.learn.models import Course, LearningPath
 from app.core.search import delete_competition_doc, delete_repo_doc, index_competition
-from app.core.storage import upload_private
+from app.core.storage import upload_private, presigned_get
 from app.modules.categories.service import apply_category_body
 from app.modules.announcements.models import Announcement
 from app.modules.gamification.service import after_course_published
@@ -617,3 +619,92 @@ async def review_instructor_app(app_id: str, body: dict, db: AsyncSession = Depe
     elif a.status == "rejected":
         await notify(db, a.user_id, "instructor", "Lamaran instruktur ditolak", link="/studio")
     return {"status": a.status}
+
+
+@router.get("/admin/notebook-kernel-requests")
+async def list_notebook_kernel_requests(
+    status: str | None = None,
+    applicant_type: str | None = None,
+    p: PageParams = Depends(page_params),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(NotebookKernelRequest, User).join(User, NotebookKernelRequest.user_id == User.id)
+    if status:
+        stmt = stmt.where(NotebookKernelRequest.status == status)
+    if applicant_type:
+        stmt = stmt.where(NotebookKernelRequest.applicant_type == applicant_type)
+    stmt = stmt.order_by(NotebookKernelRequest.created_at.desc())
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
+    rows = (await db.execute(stmt.offset(p.offset).limit(p.page_size))).all()
+    return paginated(
+        [
+            {
+                "id": r.id,
+                "applicant_type": r.applicant_type,
+                "nim": r.nim,
+                "institution": r.institution,
+                "reason_md": r.reason_md,
+                "status": r.status,
+                "review_note": r.review_note,
+                "has_ktm": bool(r.ktm_storage_key),
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "user": {"username": u.username, "name": u.name, "email": u.email},
+            }
+            for r, u in rows
+        ],
+        total,
+        p,
+    )
+
+
+@router.get("/admin/notebook-kernel-requests/{req_id}/ktm-url")
+async def notebook_kernel_ktm_url(req_id: str, db: AsyncSession = Depends(get_db)):
+    r = (
+        await db.execute(select(NotebookKernelRequest).where(NotebookKernelRequest.id == req_id))
+    ).scalar_one_or_none()
+    if not r or not r.ktm_storage_key:
+        raise ApiError(404, "not_found", "KTM tidak ditemukan")
+    return {"url": presigned_get(r.ktm_storage_key, expires=600)}
+
+
+@router.patch("/admin/notebook-kernel-requests/{req_id}")
+async def review_notebook_kernel_request(
+    req_id: str,
+    body: dict,
+    staff: User = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    r = (
+        await db.execute(select(NotebookKernelRequest).where(NotebookKernelRequest.id == req_id))
+    ).scalar_one_or_none()
+    if not r:
+        raise ApiError(404, "not_found", "Pengajuan tidak ditemukan")
+    status = body.get("status")
+    if status not in ("approved", "rejected"):
+        raise ApiError(400, "invalid_status", "Status harus approved atau rejected")
+    r.status = status
+    r.review_note = body.get("review_note") or r.review_note
+    r.reviewed_by = staff.id
+    u = (await db.execute(select(User).where(User.id == r.user_id))).scalar_one()
+    if status == "approved":
+        await apply_kernel_grant(db, u, granted=True)
+        await notify(
+            db,
+            r.user_id,
+            "notebook_kernel",
+            "Pengajuan kernel server disetujui",
+            body="Anda dapat menggunakan kernel server di notebook.",
+            link="/notebooks",
+        )
+    else:
+        await apply_kernel_grant(db, u, granted=False)
+        await notify(
+            db,
+            r.user_id,
+            "notebook_kernel",
+            "Pengajuan kernel server ditolak",
+            body=body.get("review_note") or "Hubungi tim PSD jika ada pertanyaan.",
+            link="/notebooks/kernel-request",
+        )
+    await db.commit()
+    return {"status": r.status}

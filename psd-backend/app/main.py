@@ -19,9 +19,11 @@ from app.modules.community.router import router as community_router
 from app.modules.competitions.router import router as comp_router
 from app.modules.events.router import router as events_router
 from app.modules.gamification.router import router as gamification_router
+from app.modules.discovery.router import router as discovery_router
 from app.modules.health.router import router as health_router
 from app.modules.instructors.router import router as instructors_router
 from app.modules.learn.router import router as learn_router
+from app.modules.notebook_kernel.router import router as notebook_kernel_router
 from app.modules.me.router import router as me_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.quests.router import router as quests_router
@@ -123,10 +125,13 @@ app.include_router(comp_router, prefix=settings.API_PREFIX)
 app.include_router(events_router, prefix=settings.API_PREFIX)
 app.include_router(community_router, prefix=settings.API_PREFIX)
 app.include_router(learn_router, prefix=settings.API_PREFIX)
+app.include_router(notebook_kernel_router, prefix=settings.API_PREFIX)
 app.include_router(instructors_router, prefix=settings.API_PREFIX)
 app.include_router(users_router, prefix=settings.API_PREFIX)
 app.include_router(social_router, prefix=settings.API_PREFIX)
 app.include_router(gamification_router, prefix=settings.API_PREFIX)
+app.include_router(git_router, prefix=settings.API_PREFIX)
+app.include_router(discovery_router, prefix=settings.API_PREFIX)
 app.include_router(blog_router, prefix=settings.API_PREFIX)
 app.include_router(me_router, prefix=settings.API_PREFIX)
 app.include_router(notifications_router, prefix=settings.API_PREFIX)

@@ -162,6 +162,7 @@ async def follow(username: str, user=Depends(get_current_user), db: AsyncSession
         )
     ).scalar_one_or_none():
         db.add(Follow(follower_id=user.id, following_id=target.id))
+        target.follower_count = (target.follower_count or 0) + 1
         await db.commit()
         await after_follow(db, target)
         await notify(
@@ -185,6 +186,7 @@ async def unfollow(username: str, user=Depends(get_current_user), db: AsyncSessi
     ).scalar_one_or_none()
     if f:
         await db.delete(f)
+        target.follower_count = max(0, (target.follower_count or 0) - 1)
         await db.commit()
     return {"following": False}
 
@@ -306,10 +308,12 @@ async def like_post(post_id: str, user=Depends(get_current_user), db: AsyncSessi
             return {"liked": True, "like_count": p.like_count}
         db.add(PostLike(user_id=user.id, post_id=post_id))
         p.like_count += 1
-        await db.commit()
         author = (
             await db.execute(select(User).where(User.id == p.author_id))
         ).scalar_one_or_none()
+        if author:
+            author.post_like_total = (author.post_like_total or 0) + 1
+        await db.commit()
         if author:
             await after_post_liked(db, author, p.like_count)
             await notify(
@@ -334,6 +338,11 @@ async def unlike_post(post_id: str, user=Depends(get_current_user), db: AsyncSes
     if f:
         await db.delete(f)
         p.like_count = max(0, p.like_count - 1)
+        author = (
+            await db.execute(select(User).where(User.id == p.author_id))
+        ).scalar_one_or_none()
+        if author:
+            author.post_like_total = max(0, (author.post_like_total or 0) - 1)
         await db.commit()
     return {"liked": False, "like_count": p.like_count if p else 0}
 

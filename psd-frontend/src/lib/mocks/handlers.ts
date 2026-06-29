@@ -39,7 +39,7 @@ import {
   mockPosts,
   postsByUsername,
 } from './data/social'
-import { mockContributors, mockGamificationFor } from './data/gamification'
+import { buildDiscoveryPanels, discoveryListForKind } from './data/discovery'
 import { getMockArticle, listMockBlog, mockBlogPosts } from './data/blog'
 import { mockNotifications, notificationsForUser, unreadCountForUser } from './data/notifications'
 import {
@@ -993,6 +993,48 @@ export const handlers = [
       if (u) u.is_instructor = true
     }
     return HttpResponse.json({ status: app.status })
+  }),
+
+  http.get(`${API}/me/git/info`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Belum masuk')
+    return HttpResponse.json({
+      enabled: true,
+      git_host: 'git.projeksainsdata.com',
+      git_base_url: 'https://git.projeksainsdata.com',
+      ssh_user: 'git',
+      gitea_username: user.username,
+      ssh_clone_prefix: `git@git.projeksainsdata.com:${user.username}/`,
+      ssh_test_command: 'ssh -T git@git.projeksainsdata.com',
+    })
+  }),
+
+  http.get(`${API}/me/git/ssh-keys`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Belum masuk')
+    return HttpResponse.json({ items: [] })
+  }),
+
+  http.post(`${API}/me/git/ssh-keys`, async ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Belum masuk')
+    const body = (await request.json()) as { title: string; key: string }
+    return HttpResponse.json(
+      {
+        id: Date.now(),
+        title: body.title,
+        fingerprint: 'SHA256:mock',
+        key_type: body.key.split(' ')[0] || 'ssh-ed25519',
+        created_at: new Date().toISOString(),
+      },
+      { status: 201 },
+    )
+  }),
+
+  http.delete(`${API}/me/git/ssh-keys/:id`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Belum masuk')
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.get(`${API}/learning-paths`, ({ request }) => {
@@ -2148,6 +2190,22 @@ export const handlers = [
   http.get(`${API}/feed/stats`, ({ request }) => {
     const viewer = resolveUserFromRequest(request)
     return HttpResponse.json(buildFeedStats(viewer?.id))
+  }),
+
+  http.get(`${API}/discovery/panels`, ({ request }) => {
+    const viewer = resolveUserFromRequest(request)
+    return HttpResponse.json(buildDiscoveryPanels(viewer?.id))
+  }),
+
+  http.get(`${API}/discovery/:kind`, ({ request, params }) => {
+    const viewer = resolveUserFromRequest(request)
+    const kind = String(params.kind)
+    if (kind === 'similar' && !viewer) {
+      return errorResponse(401, 'unauthorized', 'Masuk untuk melihat orang serupa')
+    }
+    const page = Number(new URL(request.url).searchParams.get('page') ?? 1)
+    const items = discoveryListForKind(kind, viewer?.id)
+    return HttpResponse.json(paginate(items, page))
   }),
 
   http.get(`${API}/feed`, ({ request }) => {

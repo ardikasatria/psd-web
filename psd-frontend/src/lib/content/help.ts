@@ -125,7 +125,7 @@ ssh-keygen -t ed25519 -C "email-anda@domain.ac.id"
 cat ~/.ssh/id_ed25519.pub
 \`\`\`
 
-3. Buka **Git PSD** (subdomain \`git.\` domain Anda) → **Pengaturan → SSH / GPG Keys → Tambah Kunci** → tempel isi kunci publik.
+3. Buka **Pengaturan → Git & SSH** di PSD (`/settings/git`) — tempel isi kunci publik, atau tambahkan manual di Git PSD (**Pengaturan → SSH / GPG Keys**).
 
 4. Uji koneksi (ganti host sesuai domain Git Anda):
 

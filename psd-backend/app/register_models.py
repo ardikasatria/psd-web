@@ -14,6 +14,7 @@ def register_models() -> None:
     from app.modules.gamification import models as _gamification  # noqa: F401
     from app.modules.instructors import models as _instructors  # noqa: F401
     from app.modules.learn import models as _learn  # noqa: F401
+    from app.modules.notebook_kernel import models as _notebook_kernel  # noqa: F401
     from app.modules.micro import models as _micro  # noqa: F401
     from app.modules.notifications import models as _notifications  # noqa: F401
     from app.modules.quests import models as _quests  # noqa: F401

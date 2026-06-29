@@ -1,6 +1,6 @@
 'use client'
 
-import { followUser, getFeedStats } from '@/lib/api/social'
+import { getFeedStats } from '@/lib/api/social'
 import { getMyQuests } from '@/lib/api/quests'
 import { questStepHref } from '@/lib/quests/utils'
 import { profilePath } from '@/lib/routes/profile'
@@ -8,7 +8,6 @@ import { timeAgo } from '@/lib/utils/format'
 import type { FeedStats, Quest } from '@/types/api'
 import { useAuth } from '@/lib/auth/useAuth'
 import Avatar from '@/shared/Avatar'
-import { Button } from '@/shared/Button'
 import {
   FireIcon,
   GiftIcon,
@@ -17,9 +16,8 @@ import {
   SparklesIcon,
   TrophyIcon,
   UserGroupIcon,
-  UserPlusIcon,
 } from '@heroicons/react/24/outline'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
 import Link from 'next/link'
 
@@ -65,29 +63,6 @@ function CommunityQuestCard({ quest }: { quest: Quest }) {
         </Link>
       )}
     </div>
-  )
-}
-
-function SuggestedFollowRow({ username, followers }: { username: string; followers: number }) {
-  const qc = useQueryClient()
-  const follow = useMutation({
-    mutationFn: () => followUser(username),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['feed-stats'] })
-      qc.invalidateQueries({ queryKey: ['feed'] })
-    },
-  })
-
-  return (
-    <li className="flex items-center gap-2 rounded-xl p-1.5">
-      <Link href={profilePath(username)} className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-800 hover:text-primary-600 dark:text-neutral-200">
-        @{username}
-      </Link>
-      <span className="text-xs text-neutral-500">{followers} pengikut</span>
-      <Button type="button" outline className="!px-2 !py-1 !text-xs" onClick={() => follow.mutate()} disabled={follow.isPending}>
-        <UserPlusIcon className="size-3.5" />
-      </Button>
-    </li>
   )
 }
 
@@ -181,20 +156,6 @@ export function CommunitySidebar({ className }: Props) {
           ))}
         </ul>
       </section>
-
-      {isLoggedIn && (data?.suggested_follows?.length ?? 0) > 0 && (
-        <section className="rounded-2xl border border-neutral-200/80 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
-            <UserPlusIcon className="size-4 text-primary-500" />
-            Rekomendasi ikuti
-          </h3>
-          <ul className="mt-3 space-y-1">
-            {data!.suggested_follows.map(({ user, followers }) => (
-              <SuggestedFollowRow key={user.username} username={user.username} followers={followers} />
-            ))}
-          </ul>
-        </section>
-      )}
 
       <section className="rounded-2xl border border-neutral-200/80 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">

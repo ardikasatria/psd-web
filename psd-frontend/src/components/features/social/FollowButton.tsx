@@ -14,11 +14,13 @@ export function FollowButton({
   isFollowing: initialFollowing,
   accent,
   className,
+  onToggle,
 }: {
   username: string
   isFollowing?: boolean
   accent?: string
   className?: string
+  onToggle?: (following: boolean) => void
 }) {
   const router = useRouter()
   const { user, isLoggedIn } = useAuth()
@@ -32,8 +34,11 @@ export function FollowButton({
       setFollowing(!following)
       return { prev }
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      onToggle?.(data.following)
       await qc.invalidateQueries({ queryKey: ['user', username] })
+      await qc.invalidateQueries({ queryKey: ['feed-stats'] })
+      await qc.invalidateQueries({ queryKey: ['discovery'] })
     },
     onError: (_err, _vars, ctx) => {
       if (ctx) setFollowing(ctx.prev)
@@ -63,7 +68,7 @@ export function FollowButton({
         '!rounded-lg !px-4 !py-1.5 !text-sm font-medium motion-safe:transition-colors',
         following
           ? 'border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200'
-          : 'text-white',
+          : 'border-primary-600 bg-primary-600 text-white hover:bg-primary-700 dark:border-primary-500 dark:bg-primary-600',
         className
       )}
       style={
