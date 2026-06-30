@@ -18,7 +18,7 @@ import {
   submitCompetition,
   submitEntry,
 } from '@/lib/api/competitions'
-import { getMyTeams } from '@/lib/api/teams'
+import { fetchMyTeams, MY_TEAMS_QUERY_KEY } from '@/lib/teams/myTeamsQuery'
 import { useAuth } from '@/lib/auth/useAuth'
 import {
   CompetitionDetail,
@@ -151,8 +151,8 @@ function CompetitionDetailInner({ slug }: { slug: string }) {
   })
 
   const myTeams = useQuery({
-    queryKey: ['my-teams'],
-    queryFn: async () => (await getMyTeams()).items as { id: string; name: string }[],
+    queryKey: MY_TEAMS_QUERY_KEY,
+    queryFn: fetchMyTeams,
     enabled: tab === 'submissions' && isLoggedIn,
   })
 

@@ -21,6 +21,12 @@ c.GenericOAuthenticator.enable_auth_state = True
 _spawn_timeout = int(os.environ.get("PSD_HUB_SPAWN_TIMEOUT", "300"))
 _http_timeout = int(os.environ.get("PSD_HUB_HTTP_TIMEOUT", "180"))
 
+# Hub di dalam Docker Compose: default hub_ip=127.0.0.1 + bind 127.0.0.1:8081
+# membuat kontainer single-user di psd-net tidak bisa mendaftar ke Hub API → spawn gagal.
+_hub_host = os.environ.get("PSD_HUB_CONNECT_HOST", "jupyterhub")
+c.JupyterHub.hub_ip = _hub_host
+c.JupyterHub.hub_bind_url = "http://:8081"
+
 c.JupyterHub.spawner_class = "docker"
 c.DockerSpawner.image = os.environ.get("PSD_SINGLEUSER_IMAGE", "psd-singleuser:latest")
 c.DockerSpawner.network_name = os.environ.get("PSD_HUB_NETWORK", "psd-net")

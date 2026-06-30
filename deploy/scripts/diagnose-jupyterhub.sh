@@ -53,6 +53,17 @@ echo "4. Backend → JupyterHub (internal http://jupyterhub:8000/hub/api)"
 if compose exec -T backend python -c "
 import os, httpx
 url = (os.environ.get('PSD_HUB_API_URL') or '').rstrip('/') or 'http://jupyterhub:8000/hub/api'
+try:
+    r = httpx.get('http://jupyterhub:8000/hub/login', timeout=10, follow_redirects=True)
+    print(f'  GET /hub/login (internal) → HTTP {r.status_code}')
+except Exception as e:
+    print(f'  WARN GET /hub/login gagal: {e}')
+" 2>/dev/null; then
+  :
+fi
+if compose exec -T backend python -c "
+import os, httpx
+url = (os.environ.get('PSD_HUB_API_URL') or '').rstrip('/') or 'http://jupyterhub:8000/hub/api'
 tok = os.environ.get('PSD_HUB_SERVICE_TOKEN', '')
 if not tok:
     print('  GAGAL PSD_HUB_SERVICE_TOKEN kosong di kontainer backend')

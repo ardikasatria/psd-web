@@ -13,7 +13,7 @@ import {
   submitSolution,
   uploadRoomData,
 } from '@/lib/api/rooms'
-import { getMyTeams } from '@/lib/api/teams'
+import { fetchMyTeams, MY_TEAMS_QUERY_KEY } from '@/lib/teams/myTeamsQuery'
 import { IdeaRoom, RepoKind, SolutionTemplate } from '@/types/api'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import { Badge } from '@/shared/Badge'
@@ -174,8 +174,8 @@ export function RoomSolutionPanel({
   })
 
   const myTeamsQuery = useQuery({
-    queryKey: ['my-teams'],
-    queryFn: async () => (await getMyTeams()).items as { id: string; slug: string }[],
+    queryKey: MY_TEAMS_QUERY_KEY,
+    queryFn: fetchMyTeams,
     enabled: isMember,
   })
 

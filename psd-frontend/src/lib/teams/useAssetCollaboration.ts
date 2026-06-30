@@ -1,6 +1,6 @@
 'use client'
 
-import { getMyTeams } from '@/lib/api/teams'
+import { fetchMyTeams, MY_TEAMS_QUERY_KEY } from '@/lib/teams/myTeamsQuery'
 import { useAuth } from '@/lib/auth/useAuth'
 import { isStaff } from '@/lib/auth/roles'
 import { canCollaborateOnAsset, isPersonalAssetOwner } from '@/lib/teams/collaboration'
@@ -12,8 +12,8 @@ export function useAssetCollaboration(team?: TeamRef | null, ownerUsername?: str
   const needsTeamLookup = isLoggedIn && !!team?.slug && !!user
 
   const myTeams = useQuery({
-    queryKey: ['my-teams'],
-    queryFn: async () => (await getMyTeams()).items as { id: string; slug: string }[],
+    queryKey: MY_TEAMS_QUERY_KEY,
+    queryFn: fetchMyTeams,
     enabled: needsTeamLookup,
     staleTime: 60_000,
   })

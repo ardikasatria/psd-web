@@ -671,6 +671,7 @@ export const TeamSummarySchema = z.object({
 export type TeamSummary = z.infer<typeof TeamSummarySchema>
 
 export const TeamSchema = z.object({
+  id: z.string().optional(),
   slug: z.string(),
   name: z.string(),
   description: z.string(),

@@ -4,7 +4,7 @@ import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import { CategoryPicker } from '@/components/common/CategoryPicker'
 import { NotebookHubCallout } from '@/components/features/notebooks/NotebookHubCallout'
 import { createNotebook, getNotebook, updateNotebook } from '@/lib/api/notebooks'
-import { getMyTeams } from '@/lib/api/teams'
+import { fetchMyTeams, MY_TEAMS_QUERY_KEY } from '@/lib/teams/myTeamsQuery'
 import { GIT_IPYNB_HINT, isGitNotebookUrl } from '@/lib/notebooks/source'
 import { useAuth } from '@/lib/auth/useAuth'
 import { Field, Label } from '@/shared/fieldset'
@@ -100,11 +100,8 @@ export function NotebookForm({ id }: { id?: string }) {
   const [error, setError] = useState<string | null>(null)
 
   const myTeamsQuery = useQuery({
-    queryKey: ['my-teams'],
-    queryFn: async () => {
-      const res = await getMyTeams()
-      return res.items as MyTeam[]
-    },
+    queryKey: MY_TEAMS_QUERY_KEY,
+    queryFn: fetchMyTeams,
     enabled: isLoggedIn && !isEdit,
   })
 

@@ -3,7 +3,8 @@
 import { TeamCard } from '@/components/features/teams/TeamCard'
 import { QueryState } from '@/components/features/QueryState'
 import { FeaturePageHero, FeaturePageShell } from '@/components/features/layout'
-import { getMyInvites, getMyTeams, respondInvite } from '@/lib/api/teams'
+import { getMyInvites, respondInvite } from '@/lib/api/teams'
+import { fetchMyTeams, MY_TEAMS_QUERY_KEY } from '@/lib/teams/myTeamsQuery'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useAuthGuard } from '@/lib/auth/useAuthGuard'
 import { MyTeam, TeamInvite, TeamSummary } from '@/types/api'
@@ -23,11 +24,8 @@ export function MyTeamsPage() {
   const qc = useQueryClient()
 
   const teamsQuery = useQuery({
-    queryKey: ['my-teams'],
-    queryFn: async () => {
-      const res = await getMyTeams()
-      return res.items as MyTeam[]
-    },
+    queryKey: MY_TEAMS_QUERY_KEY,
+    queryFn: fetchMyTeams,
   })
 
   const invitesQuery = useQuery({
@@ -42,7 +40,7 @@ export function MyTeamsPage() {
     mutationFn: ({ id, action }: { id: string; action: 'accept' | 'decline' }) => respondInvite(id, action),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-team-invites'] })
-      qc.invalidateQueries({ queryKey: ['my-teams'] })
+      qc.invalidateQueries({ queryKey: MY_TEAMS_QUERY_KEY })
     },
   })
 

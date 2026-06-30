@@ -199,6 +199,7 @@ export function teamDetailOf(t: MockTeam, viewerId?: string) {
     }
   })
   return {
+    id: t.id,
     slug: t.slug,
     name: t.name,
     description: t.description,

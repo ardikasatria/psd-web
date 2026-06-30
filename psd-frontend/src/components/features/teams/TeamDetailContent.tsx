@@ -12,7 +12,8 @@ import { QueryState } from '@/components/features/QueryState'
 import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import { getNotebooks } from '@/lib/api/notebooks'
 import { getRepos } from '@/lib/api/repos'
-import { deleteTeam, getMyTeams, getTeam, leaveTeam, requestJoin } from '@/lib/api/teams'
+import { deleteTeam, getTeam, leaveTeam, requestJoin } from '@/lib/api/teams'
+import { fetchMyTeams, MY_TEAMS_QUERY_KEY, myTeamsFromCache } from '@/lib/teams/myTeamsQuery'
 import { useAuth } from '@/lib/auth/useAuth'
 import { can, normalizeTeamRole } from '@/lib/teams/permissions'
 import { teamTabActive, teamTabIdle, teamTextMuted } from '@/lib/teams/team-ui'
@@ -94,12 +95,13 @@ function TeamDetailInner({ slug }: { slug: string }) {
   })
 
   const myTeamsQuery = useQuery({
-    queryKey: ['my-teams'],
-    queryFn: async () => (await getMyTeams()).items as { id: string; slug: string }[],
-    enabled: isLoggedIn && tab === 'assets',
+    queryKey: MY_TEAMS_QUERY_KEY,
+    queryFn: fetchMyTeams,
+    enabled: isLoggedIn && tab === 'assets' && !teamQuery.data?.id,
   })
 
-  const teamId = myTeamsQuery.data?.find((t) => t.slug === slug)?.id ?? ''
+  const teamId =
+    teamQuery.data?.id ?? myTeamsFromCache(myTeamsQuery.data).find((t) => t.slug === slug)?.id ?? ''
 
   const joinMut = useMutation({
     mutationFn: () => requestJoin(slug),
@@ -110,7 +112,7 @@ function TeamDetailInner({ slug }: { slug: string }) {
   const leaveMut = useMutation({
     mutationFn: () => leaveTeam(slug),
     onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ['my-teams'] })
+      qc.invalidateQueries({ queryKey: MY_TEAMS_QUERY_KEY })
       window.location.href = res.team_deleted ? '/teams' : '/me/teams'
     },
     onError: (e: Error) => setError(e.message),

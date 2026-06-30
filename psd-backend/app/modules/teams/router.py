@@ -134,6 +134,7 @@ async def get_team_detail(
         await db.execute(select(TeamMember).where(TeamMember.team_id == t.id))
     ).scalars().all()
     return {
+        "id": t.id,
         "slug": t.slug,
         "name": t.name,
         "description": t.description,

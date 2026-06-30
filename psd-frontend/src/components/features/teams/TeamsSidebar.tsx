@@ -3,8 +3,9 @@
 import { sidebarGradientBr } from '@/components/common/featureGradients'
 import { SidebarStatTile, sidebarSectionClass, sidebarTipClass } from '@/components/common/SidebarStatTile'
 import { getCompetitionStats } from '@/lib/api/competitions'
-import { getMyTeams, listTeams } from '@/lib/api/teams'
+import { listTeams } from '@/lib/api/teams'
 import { useAuth } from '@/lib/auth/useAuth'
+import { fetchMyTeams, MY_TEAMS_QUERY_KEY } from '@/lib/teams/myTeamsQuery'
 import type { MyTeam } from '@/types/api'
 import {
   ArrowRightIcon,
@@ -59,8 +60,8 @@ export function TeamsSidebar({ className, onCreateClick }: Props) {
     staleTime: 60_000,
   })
   const myTeams = useQuery({
-    queryKey: ['my-teams'],
-    queryFn: getMyTeams,
+    queryKey: MY_TEAMS_QUERY_KEY,
+    queryFn: fetchMyTeams,
     enabled: isLoggedIn,
     staleTime: 60_000,
   })
@@ -74,7 +75,7 @@ export function TeamsSidebar({ className, onCreateClick }: Props) {
   const totalMembers = items.reduce((s, t) => s + (t.member_count ?? 0), 0)
   const compTeams = items.filter((t) => (t.competitions_count ?? 0) > 0)
   const topComp = [...items].sort((a, b) => (b.competitions_count ?? 0) - (a.competitions_count ?? 0))[0]
-  const myItems = (myTeams.data?.items ?? []) as MyTeam[]
+  const myItems = myTeams.data ?? []
 
   return (
     <aside className={clsx('space-y-5', className)}>

@@ -7,7 +7,7 @@ import { CategoryFilter } from '@/components/common/CategoryFilter'
 import { QueryState } from '@/components/features/QueryState'
 import { FeaturePageHero, FeaturePageShell, FilterTabs } from '@/components/features/layout'
 import { getCompetitions, getCompetitionStats } from '@/lib/api/competitions'
-import { getMyTeams } from '@/lib/api/teams'
+import { fetchMyTeams, MY_TEAMS_QUERY_KEY } from '@/lib/teams/myTeamsQuery'
 import { CompetitionSummary, PaginatedCompetitionSummary } from '@/types/api'
 import { ArrowsUpDownIcon, CalendarIcon } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
@@ -37,8 +37,8 @@ function CompetitionsList() {
   const teamId = searchParams.get('team_id')
 
   const myTeams = useQuery({
-    queryKey: ['my-teams'],
-    queryFn: async () => (await getMyTeams()).items as { id: string; name: string }[],
+    queryKey: MY_TEAMS_QUERY_KEY,
+    queryFn: fetchMyTeams,
     enabled: !!teamId,
   })
   const teamName = myTeams.data?.find((t) => t.id === teamId)?.name
