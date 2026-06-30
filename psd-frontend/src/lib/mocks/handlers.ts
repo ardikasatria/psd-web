@@ -757,6 +757,78 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 })
   }),
 
+  http.get(`${API}/notebooks/:id/content`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const nb = findNotebook(String(params.id))
+    if (!nb) return errorResponse(404, 'not_found', 'Notebook tidak ditemukan.')
+    return HttpResponse.json({
+      id: nb.id,
+      content: {
+       nbformat: 4,
+        nbformat_minor: 5,
+        metadata: {},
+        cells: [
+          { cell_type: 'markdown', metadata: {}, source: [`# ${nb.title}\n`, '\n', 'Selamat datang di workspace notebook PSD.'] },
+          { cell_type: 'code', metadata: {}, source: ['print("Hello from PSD notebook")'], outputs: [], execution_count: null },
+        ],
+      },
+    })
+  }),
+
+  http.put(`${API}/notebooks/:id/content`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const nb = findNotebook(String(params.id))
+    if (!nb) return errorResponse(404, 'not_found', 'Notebook tidak ditemukan.')
+    await request.json()
+    return HttpResponse.json({ id: String(params.id), saved: true })
+  }),
+
+  http.post(`${API}/notebooks/:id/launch`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const body = (await request.json().catch(() => ({}))) as { runtime?: string }
+    const nb = findNotebook(String(params.id))
+    if (!nb) return errorResponse(404, 'not_found', 'Notebook tidak ditemukan.')
+    if (body.runtime === 'server') {
+      const hubBase = process.env.NEXT_PUBLIC_HUB_URL || 'https://hub.psd.example'
+      return HttpResponse.json({
+        notebook_id: String(params.id),
+        runtime: 'server',
+        provider: 'jupyterhub',
+        base_url: `${hubBase}/user/${user.username}`,
+        kernels_url: `${hubBase}/user/${user.username}/api/kernels`,
+        ws_base: `${hubBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')}/user/${user.username}`,
+        token: 'mock-hub-scoped-token',
+        expires_in: 3600,
+      })
+    }
+    return HttpResponse.json({
+      notebook_id: String(params.id),
+      runtime: 'browser',
+      config: {
+        runtime: 'browser',
+        engine: 'jupyterlite-pyodide',
+        packages: ['numpy', 'pandas'],
+        api_base: 'http://localhost:8000/api/v1',
+        sdk: 'psd',
+        max_notebooks: 10,
+        gpu: 0,
+      },
+    })
+  }),
+
+  http.post(`${API}/notebooks/:id/stop`, ({ request }) => {
+    if (!resolveUserFromRequest(request)) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    return HttpResponse.json({ stopped: true })
+  }),
+
+  http.get(`${API}/notebooks/runtime/status`, ({ request }) => {
+    if (!resolveUserFromRequest(request)) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    return HttpResponse.json({ ready: true, pending: null })
+  }),
+
   // Courses & paths
   http.get(`${API}/courses`, ({ request }) => {
     const url = new URL(request.url)

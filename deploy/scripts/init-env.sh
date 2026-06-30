@@ -25,6 +25,7 @@ GITEA_DB_PASSWORD=$(openssl rand -hex 24)
 # JupyterHub (Langkah 52) — ikut deploy default; HUB_OIDC_SECRET diisi setelah seed-oauth-clients
 JUPYTERHUB_CRYPT_KEY=$(openssl rand -hex 32)
 HUB_OIDC_SECRET=
+PSD_HUB_SERVICE_TOKEN=$(openssl rand -hex 32)
 
 # Opsional — fitur AI (Langkah 38/40); isi sebelum pilot jika sintesis/ruang ide AI aktif
 OPENAI_API_KEY=

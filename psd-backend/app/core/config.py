@@ -98,6 +98,10 @@ class Settings(BaseSettings):
 
     # JupyterHub (Langkah 52)
     PSD_HUB_ENABLED: bool = False
+    PSD_HUB_SERVICE_TOKEN: str = ""
+    PSD_HUB_API_URL: str = ""
+    PSD_HUB_TOKEN_TTL: int = 3600
+    PSD_HUB_SPAWN_TIMEOUT: int = 90
 
     # Superset (Langkah 53)
     PSD_SUPERSET_ENABLED: bool = False

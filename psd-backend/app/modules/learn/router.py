@@ -18,7 +18,12 @@ from app.modules.gamification.tiers import tier_slug_for_reputation
 from app.modules.learn.models import Course, Enrollment, LearningPath, LessonProgress, Notebook
 from app.modules.learn.path_utils import apply_path_payload, path_detail, path_summary
 from app.modules.learn.notebooks import colab_url
-from app.modules.notebook.launch import launch_notebook, user_tier_slug
+from app.modules.notebook.launch import (
+    hub_runtime_status,
+    launch_notebook,
+    stop_server_runtime,
+    user_tier_slug,
+)
 from app.modules.notebook_kernel.grant import effective_notebook_tier
 from app.modules.notebook.store import NotebookStore
 from psd_notebook.policy import NotebookQuotaError
@@ -735,9 +740,28 @@ async def launch_notebook_endpoint(
         tier=tier,
         requested_runtime=body.get("runtime"),
         user_id=user.id,
+        username=user.username,
         api_base=api_base,
     )
     return {"notebook_id": n.id, **out}
+
+
+@router.post("/notebooks/{nb_id}/stop")
+async def stop_notebook_runtime(
+    nb_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    n = (await db.execute(select(Notebook).where(Notebook.id == nb_id))).scalar_one_or_none()
+    if not n:
+        raise ApiError(404, "not_found", "Notebook tidak ditemukan")
+    await _can_edit_notebook(db, n, user)
+    return await stop_server_runtime(user_id=user.id, username=user.username)
+
+
+@router.get("/notebooks/runtime/status")
+async def notebook_runtime_status(user: User = Depends(get_current_user)):
+    return hub_runtime_status(user.username)
 
 
 @router.patch("/notebooks/{nb_id}")

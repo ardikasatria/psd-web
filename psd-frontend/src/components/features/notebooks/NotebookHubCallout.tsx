@@ -1,20 +1,16 @@
 'use client'
 
-import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
-import { useHub } from '@/lib/hub/useHub'
 import { useNotebookKernelAccess } from '@/lib/notebooks/useNotebookKernelAccess'
-import { Button } from '@/shared/Button'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import { CodeBracketSquareIcon, CpuChipIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 
 export function NotebookHubCallout({ compact }: { compact?: boolean }) {
-  const { enabled, isLoading } = useHub()
   const { canServer, pendingGrant, isLoading: accessLoading } = useNotebookKernelAccess()
 
-  if (isLoading || accessLoading) return null
+  if (accessLoading) return null
 
-  if (!enabled && !canServer && !pendingGrant) {
+  if (!canServer && !pendingGrant) {
     return (
       <div
         className={
@@ -54,7 +50,7 @@ export function NotebookHubCallout({ compact }: { compact?: boolean }) {
     )
   }
 
-  if (!enabled) return null
+  if (!canServer) return null
 
   return (
     <div
@@ -71,15 +67,13 @@ export function NotebookHubCallout({ compact }: { compact?: boolean }) {
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Kernel server (tier Ahli+)</h3>
           <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-            Untuk compute berat — kernel terisolasi di belakang layar via OAuth PSD. UI JupyterHub tidak perlu dibuka
-            manual setelah login.
+            Compute berat di JupyterHub VM — UI tetap di workspace PSD. OAuth akun PSD terhubung otomatis.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <OpenHubButton compact />
-            <Button href="/notebooks/workspace" outline>
+            <ButtonPrimary href="/notebooks/workspace">
               <CodeBracketSquareIcon className="size-4" aria-hidden />
-              Workspace
-            </Button>
+              Buka workspace
+            </ButtonPrimary>
           </div>
         </div>
       </div>

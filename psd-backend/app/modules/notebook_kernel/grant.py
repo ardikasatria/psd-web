@@ -48,4 +48,9 @@ async def apply_kernel_grant(db: AsyncSession, user: User, *, granted: bool) -> 
         settings[SETTINGS_GRANT_KEY] = True
     else:
         settings.pop(SETTINGS_GRANT_KEY, None)
+        from app.core.config import settings as app_settings
+        if app_settings.PSD_HUB_ENABLED and app_settings.PSD_HUB_SERVICE_TOKEN:
+            from app.modules.notebook.launch import stop_server_runtime
+
+            await stop_server_runtime(user_id=user.id, username=user.username)
     user.settings = settings

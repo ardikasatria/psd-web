@@ -31,7 +31,7 @@ c.Spawner.auth_state_hook = auth_state_hook
 c.Spawner.pre_spawn_hook = apply_tier_limits
 
 cull_timeout = int(os.environ.get("PSD_HUB_CULL_TIMEOUT", "3600"))
-c.JupyterHub.services = [
+_services = [
     {
         "name": "idle-culler",
         "command": [
@@ -43,10 +43,24 @@ c.JupyterHub.services = [
         ],
     },
 ]
-c.JupyterHub.load_roles = [
+_load_roles = [
     {
         "name": "idle-culler",
         "services": ["idle-culler"],
         "scopes": ["list:users", "read:users:activity", "delete:servers"],
     },
 ]
+
+_psd_hub_token = os.environ.get("PSD_HUB_SERVICE_TOKEN", "").strip()
+if _psd_hub_token:
+    _services.append({"name": "psd", "api_token": _psd_hub_token})
+    _load_roles.append(
+        {
+            "name": "psd-manager",
+            "services": ["psd"],
+            "scopes": ["admin:servers", "tokens", "access:servers", "read:users"],
+        }
+    )
+
+c.JupyterHub.services = _services
+c.JupyterHub.load_roles = _load_roles

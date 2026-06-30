@@ -63,20 +63,31 @@ const NotebookUsageSchema = z.object({
   }),
 })
 
-const NotebookLaunchSchema = z.object({
+export const BrowserRuntimeSchema = z.object({
+  runtime: z.literal('browser'),
+  config: z.any(),
+})
+
+export const ServerRuntimeSchema = z.object({
+  runtime: z.literal('server'),
+  provider: z.literal('jupyterhub'),
+  base_url: z.string(),
+  kernels_url: z.string(),
+  ws_base: z.string(),
+  token: z.string(),
+  expires_in: z.number(),
+})
+
+export const NotebookLaunchSchema = z.object({
   notebook_id: z.string(),
   runtime: z.enum(['browser', 'server']),
-  config: z
-    .object({
-      runtime: z.string(),
-      engine: z.string(),
-      packages: z.array(z.string()),
-      api_base: z.string(),
-      sdk: z.string(),
-      max_notebooks: z.number(),
-      gpu: z.number(),
-    })
-    .optional(),
+  config: z.any().optional(),
+  provider: z.literal('jupyterhub').optional(),
+  base_url: z.string().optional(),
+  kernels_url: z.string().optional(),
+  ws_base: z.string().optional(),
+  token: z.string().optional(),
+  expires_in: z.number().optional(),
   hub_url: z.string().optional(),
   spawn_path: z.string().optional(),
   limits: z
@@ -89,6 +100,11 @@ const NotebookLaunchSchema = z.object({
 })
 
 export type NotebookLaunchResponse = z.infer<typeof NotebookLaunchSchema>
+
+export const RuntimeStatusSchema = z.object({
+  ready: z.boolean(),
+  pending: z.string().nullable(),
+})
 
 export const getNotebookContent = (id: string) =>
   apiFetch<{ id: string; content: IpyNb }>(`/notebooks/${id}/content`, NotebookContentSchema)
@@ -107,3 +123,8 @@ export const launchNotebook = (id: string, runtime?: 'browser' | 'server') =>
     method: 'POST',
     body: JSON.stringify(runtime ? { runtime } : {}),
   })
+
+export const stopRuntime = (id: string) =>
+  apiFetch(`/notebooks/${id}/stop`, z.object({ stopped: z.boolean() }), { method: 'POST' })
+
+export const runtimeStatus = () => apiFetch(`/notebooks/runtime/status`, RuntimeStatusSchema)
