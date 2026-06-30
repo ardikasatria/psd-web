@@ -89,6 +89,8 @@ export function NotebookEditorContent({ id }: { id: string }) {
           setKernelError(err.message)
         } else if (err.code === 'hub_disabled') {
           setKernelError('Kernel server belum diaktifkan di lingkungan ini.')
+        } else if (err.code === 'hub_misconfigured') {
+          setKernelError('Konfigurasi JupyterHub belum benar (token service). Hubungi admin.')
         } else if (err.code === 'hub_unavailable' || err.code === 'hub_timeout' || err.status === 504) {
           setKernelError('Kernel server sedang disiapkan — tunggu 1–2 menit lalu coba lagi.')
         } else if (err.code === 'hub_error' || err.status === 502) {

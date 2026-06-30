@@ -12,6 +12,14 @@ class HubError(RuntimeError):
     def __init__(self, status: int, body: str):
         super().__init__(f"JupyterHub {status}: {body}")
         self.status = status
+        self.body = body
+
+
+class HubConnectionError(HubError):
+    """Backend tidak bisa menjangkau JupyterHub (jaringan / layanan mati)."""
+
+    def __init__(self, detail: str):
+        super().__init__(503, detail)
 
 
 class JupyterHubClient:
@@ -27,10 +35,26 @@ class JupyterHubClient:
         )
 
     def _req(self, method, url, **kw):
-        r = self._c.request(method, url, **kw)
+        try:
+            r = self._c.request(method, url, **kw)
+        except httpx.TimeoutException as exc:
+            raise HubError(504, f"timeout: {exc}") from exc
+        except httpx.RequestError as exc:
+            raise HubConnectionError(str(exc)) from exc
         if r.status_code >= 400:
             raise HubError(r.status_code, r.text)
         return r
+
+    def create_user(self, name: str) -> dict:
+        return self._req("POST", f"/users/{name}").json()
+
+    def ensure_user(self, name: str) -> dict:
+        try:
+            return self.get_user(name)
+        except HubError as exc:
+            if exc.status == 404:
+                return self.create_user(name)
+            raise
 
     def get_user(self, name: str) -> dict:
         return self._req("GET", f"/users/{name}").json()
@@ -67,6 +91,7 @@ class JupyterHubClient:
         sleep=time.sleep,
         clock=time.monotonic,
     ) -> dict:
+        self.ensure_user(name)
         model = self.get_user(name)
         if server_ready(model, server_name):
             return model

@@ -96,7 +96,7 @@ async def launch_notebook(
         raise ApiError(503, "hub_disabled", "JupyterHub belum aktif di lingkungan ini.")
 
     from app.hub import launch as hub_launch
-    from app.hub.hub_client import HubError
+    from app.hub.hub_client import HubError, HubConnectionError
 
     client = _hub_client()
     try:
@@ -108,9 +108,16 @@ async def launch_notebook(
             running_count=running,
             max_concurrent=lim.max_concurrent_kernels,
             token_ttl=settings.PSD_HUB_TOKEN_TTL,
+            spawn_timeout_s=settings.PSD_HUB_SPAWN_TIMEOUT,
         )
     except hub_launch.HubAccessError as exc:
         raise ApiError(exc.status, exc.slug, exc.message) from exc
+    except HubConnectionError as exc:
+        raise ApiError(
+            503,
+            "hub_unavailable",
+            "Backend tidak dapat menjangkau JupyterHub. Pastikan service jupyterhub berjalan.",
+        ) from exc
     except HubError as exc:
         if exc.status in (502, 503, 504):
             raise ApiError(
@@ -118,8 +125,16 @@ async def launch_notebook(
                 "hub_unavailable",
                 "Kernel server sedang tidak tersedia. Coba lagi dalam 1–2 menit.",
             ) from exc
+        if exc.status == 403:
+            raise ApiError(
+                503,
+                "hub_misconfigured",
+                "Token service JupyterHub ditolak — periksa PSD_HUB_SERVICE_TOKEN sama di backend & Hub.",
+            ) from exc
+        if exc.status == 404:
+            raise ApiError(503, "hub_unavailable", "Pengguna/server Hub tidak ditemukan.")
         code = "hub_timeout" if exc.status == 504 else "hub_error"
-        raise ApiError(exc.status if exc.status in (502, 504) else 502, code, str(exc)) from exc
+        raise ApiError(502, code, str(exc)) from exc
 
     await increment_kernel_count(user_id)
     return cfg

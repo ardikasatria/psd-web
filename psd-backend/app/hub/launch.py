@@ -22,6 +22,7 @@ def open_server_runtime(
     max_concurrent: int,
     server_name: str = "",
     token_ttl: int = 3600,
+    spawn_timeout_s: int = 90,
 ) -> dict:
     if not grant_active:
         raise HubAccessError(
@@ -36,7 +37,7 @@ def open_server_runtime(
             f"Batas kernel server tercapai ({max_concurrent}).",
         )
 
-    hub_client.ensure_server(name, server_name=server_name)
+    hub_client.ensure_server(name, server_name=server_name, timeout_s=spawn_timeout_s)
 
     scope = hub_urls.access_scope(name, server_name)
     tok = hub_client.create_user_token(name, scopes=[scope], expires_in=token_ttl)

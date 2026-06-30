@@ -58,7 +58,7 @@ if _psd_hub_token:
         {
             "name": "psd-manager",
             "services": ["psd"],
-            "scopes": ["admin:servers", "tokens", "access:servers", "read:users"],
+            "scopes": ["admin:servers", "admin:users", "tokens", "access:servers", "read:users"],
         }
     )
 
