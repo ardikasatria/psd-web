@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -50,4 +50,37 @@ class TeamJoinRequest(Base):
     team_id: Mapped[str] = mapped_column(ForeignKey("teams.id"), index=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     status: Mapped[str] = mapped_column(String, default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TeamChannel(Base):
+    __tablename__ = "team_channels"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: f"ch_{uuid.uuid4().hex[:12]}")
+    team_id: Mapped[str] = mapped_column(ForeignKey("teams.id"), index=True)
+    name: Mapped[str] = mapped_column(String, default="umum")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TeamMessage(Base):
+    __tablename__ = "team_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    channel_id: Mapped[str] = mapped_column(ForeignKey("team_channels.id"), index=True)
+    author_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TeamFile(Base):
+    __tablename__ = "team_files"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: f"tf_{uuid.uuid4().hex[:12]}")
+    team_id: Mapped[str] = mapped_column(ForeignKey("teams.id"), index=True)
+    channel_id: Mapped[str | None] = mapped_column(ForeignKey("team_channels.id"), nullable=True)
+    message_id: Mapped[int | None] = mapped_column(ForeignKey("team_messages.id"), nullable=True)
+    uploader_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    filename: Mapped[str] = mapped_column(String)
+    size_bytes: Mapped[int] = mapped_column(BigInteger)
+    storage_key: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

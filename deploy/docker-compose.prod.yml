@@ -207,8 +207,7 @@ services:
         condition: service_started
       gitea:
         condition: service_started
-      jupyterhub:
-        condition: service_started
+    # Jangan depends_on jupyterhub — Hub sudah depends_on backend (OAuth); siklus memblokir compose build/up.
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     restart: unless-stopped
 

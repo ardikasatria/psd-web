@@ -87,11 +87,15 @@ import {
 import { mockNotifications, notificationsForUser, unreadCountForUser } from './data/notifications'
 import {
   findTeam,
+  mockTeamChannels,
+  mockTeamFiles,
   mockTeamInvites,
   mockTeamJoinRequests,
   mockTeamMembers,
+  mockTeamMessages,
   mockTeams,
   myTeamsOf,
+  normalizeMockRole,
   teamDetailOf,
   teamSummaryOf,
   userMembership,
@@ -3357,7 +3361,7 @@ export const handlers = [
     const t = findTeam(String(params.slug))
     if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
     const mem = userMembership(t.id, user.id)
-    if (!mem || !['owner', 'admin'].includes(mem.role)) return errorResponse(403, 'forbidden', 'Butuh admin')
+    if (!mem || !['owner', 'co-owner', 'admin'].includes(mem.role)) return errorResponse(403, 'forbidden', 'Butuh owner/co-owner')
     const body = (await request.json()) as Record<string, unknown>
     if (body.name !== undefined) t.name = String(body.name)
     if (body.description !== undefined) t.description = String(body.description)
@@ -3386,19 +3390,25 @@ export const handlers = [
     const t = findTeam(String(params.slug))
     if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
     const me = userMembership(t.id, user.id)
-    if (!me || !['owner', 'admin'].includes(me.role)) return errorResponse(403, 'forbidden', 'Butuh admin')
+    if (!me || !['owner', 'co-owner', 'admin'].includes(me.role)) return errorResponse(403, 'forbidden', 'Butuh owner/co-owner')
     const target = users.find((u) => u.username === params.username)
     const tm = target ? userMembership(t.id, target.id) : undefined
     if (!tm) return errorResponse(404, 'not_found', 'Bukan anggota')
     const body = (await request.json()) as { role: string }
-    if (body.role === 'owner') {
+    const newRole = body.role === 'admin' ? 'co-owner' : body.role
+    if (newRole === 'owner') {
       if (me.role !== 'owner') return errorResponse(403, 'forbidden', 'Hanya owner')
-      me.role = 'admin'
+      me.role = 'co-owner'
       tm.role = 'owner'
+    } else if (me.role === 'owner') {
+      tm.role = newRole as 'co-owner' | 'member'
+    } else if (me.role === 'co-owner' || me.role === 'admin') {
+      if (tm.role === 'owner' || newRole === 'owner') return errorResponse(403, 'forbidden', 'Co-owner tidak boleh menyentuh owner')
+      tm.role = newRole as 'co-owner' | 'member'
     } else {
-      tm.role = body.role as 'admin' | 'member'
+      return errorResponse(403, 'forbidden', 'Tidak boleh mengubah peran')
     }
-    return HttpResponse.json({ role: tm.role })
+    return HttpResponse.json({ role: normalizeMockRole(tm.role) })
   }),
 
   http.delete(`${API}/teams/:slug/members/:username`, ({ request, params }) => {
@@ -3414,9 +3424,9 @@ export const handlers = [
     const tm = mockTeamMembers[tmIdx]
     if (target?.id !== user.id) {
       const me = userMembership(t.id, user.id)
-      if (!me || !['owner', 'admin'].includes(me.role)) return errorResponse(403, 'forbidden', 'Butuh admin')
+      if (!me || me.role !== 'owner') return errorResponse(403, 'forbidden', 'Hanya owner')
     }
-    if (tm.role === 'owner') return errorResponse(400, 'owner', 'Owner harus transfer dulu')
+    if (tm.role === 'owner') return errorResponse(400, 'use_leave', 'Gunakan POST /teams/{slug}/leave')
     mockTeamMembers.splice(tmIdx, 1)
     return new HttpResponse(null, { status: 204 })
   }),
@@ -3427,7 +3437,7 @@ export const handlers = [
     const t = findTeam(String(params.slug))
     if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
     const me = userMembership(t.id, user.id)
-    if (!me || !['owner', 'admin'].includes(me.role)) return errorResponse(403, 'forbidden', 'Butuh admin')
+    if (!me || me.role !== 'owner') return errorResponse(403, 'forbidden', 'Hanya owner')
     const body = (await request.json()) as { username: string }
     const target = users.find((u) => u.username === body.username)
     if (!target) return errorResponse(404, 'not_found', 'Pengguna tidak ditemukan')
@@ -3487,7 +3497,7 @@ export const handlers = [
     const t = findTeam(String(params.slug))
     if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
     const me = userMembership(t.id, user.id)
-    if (!me || !['owner', 'admin'].includes(me.role)) return errorResponse(403, 'forbidden', 'Butuh admin')
+    if (!me || !['owner', 'co-owner', 'admin'].includes(me.role)) return errorResponse(403, 'forbidden', 'Butuh owner/co-owner')
     const items = mockTeamJoinRequests
       .filter((r) => r.team_id === t.id && r.status === 'pending')
       .map((r) => {
@@ -3503,7 +3513,7 @@ export const handlers = [
     const t = findTeam(String(params.slug))
     if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
     const me = userMembership(t.id, user.id)
-    if (!me || !['owner', 'admin'].includes(me.role)) return errorResponse(403, 'forbidden', 'Butuh admin')
+    if (!me || !['owner', 'co-owner', 'admin'].includes(me.role)) return errorResponse(403, 'forbidden', 'Butuh owner/co-owner')
     const jr = mockTeamJoinRequests.find((r) => r.id === params.id && r.team_id === t.id)
     if (!jr || jr.status !== 'pending') return errorResponse(404, 'not_found', 'Permintaan tidak valid')
     if (params.decision === 'approve') {
@@ -3515,6 +3525,244 @@ export const handlers = [
       jr.status = 'rejected'
     }
     return HttpResponse.json({ status: jr.status })
+  }),
+
+  http.post(`${API}/teams/:slug/leave`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const t = findTeam(String(params.slug))
+    if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    const meIdx = mockTeamMembers.findIndex((m) => m.team_id === t.id && m.user_id === user.id)
+    if (meIdx < 0) return errorResponse(403, 'forbidden', 'Bukan anggota')
+    const me = mockTeamMembers[meIdx]
+    if (me.role === 'owner') {
+      const others = mockTeamMembers.filter((m) => m.team_id === t.id && m.user_id !== user.id)
+      if (others.length === 0) {
+        const idx = mockTeams.findIndex((x) => x.id === t.id)
+        if (idx >= 0) mockTeams.splice(idx, 1)
+        for (let i = mockTeamMembers.length - 1; i >= 0; i--) {
+          if (mockTeamMembers[i].team_id === t.id) mockTeamMembers.splice(i, 1)
+        }
+        return HttpResponse.json({ left: true, team_deleted: true })
+      }
+      const successor = others.find((m) => m.role === 'co-owner') ?? others[0]
+      successor.role = 'owner'
+      me.role = 'co-owner'
+      mockTeamMembers.splice(meIdx, 1)
+      const su = users.find((u) => u.id === successor.user_id) ?? demoUser
+      return HttpResponse.json({ left: true, successor: { username: su.username, name: su.name } })
+    }
+    mockTeamMembers.splice(meIdx, 1)
+    return HttpResponse.json({ left: true })
+  }),
+
+  http.post(`${API}/teams/:slug/transfer`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const t = findTeam(String(params.slug))
+    if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    const me = userMembership(t.id, user.id)
+    if (!me || me.role !== 'owner') return errorResponse(403, 'forbidden', 'Hanya owner')
+    const body = (await request.json()) as { username: string }
+    const target = users.find((u) => u.username === body.username)
+    const tm = target ? userMembership(t.id, target.id) : undefined
+    if (!tm) return errorResponse(404, 'not_found', 'Bukan anggota')
+    me.role = 'co-owner'
+    tm.role = 'owner'
+    return HttpResponse.json({ owner: { username: target!.username, name: target!.name } })
+  }),
+
+  http.get(`${API}/teams/:slug/channels`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const t = findTeam(String(params.slug))
+    if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    if (!userMembership(t.id, user.id)) return errorResponse(403, 'forbidden', 'Bukan anggota')
+    const items = mockTeamChannels.filter((c) => c.team_id === t.id)
+    if (!items.length) {
+      const ch = { id: `ch_${Date.now()}`, team_id: t.id, name: 'umum', created_at: new Date().toISOString() }
+      mockTeamChannels.push(ch)
+      items.push(ch)
+    }
+    return HttpResponse.json({ items })
+  }),
+
+  http.post(`${API}/teams/:slug/channels`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const t = findTeam(String(params.slug))
+    if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    const me = userMembership(t.id, user.id)
+    if (!me || !['owner', 'co-owner', 'admin'].includes(me.role)) return errorResponse(403, 'forbidden', 'Butuh co-owner')
+    const body = (await request.json()) as { name?: string }
+    const ch = { id: `ch_${Date.now()}`, team_id: t.id, name: body.name?.trim() || 'umum', created_at: new Date().toISOString() }
+    mockTeamChannels.push(ch)
+    return HttpResponse.json(ch, { status: 201 })
+  }),
+
+  http.get(`${API}/teams/:slug/channels/:cid/messages`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const t = findTeam(String(params.slug))
+    if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    if (!userMembership(t.id, user.id)) return errorResponse(403, 'forbidden', 'Bukan anggota')
+    const page = Number(new URL(request.url).searchParams.get('page') ?? 1)
+    const msgs = mockTeamMessages.filter((m) => m.channel_id === params.cid)
+    const items = msgs.map((m) => {
+      const u = users.find((x) => x.id === m.author_id) ?? demoUser
+      const files = mockTeamFiles
+        .filter((f) => f.message_id === m.id)
+        .map((f) => ({
+          id: f.id,
+          filename: f.filename,
+          download_url: `https://mock.psd.local/files/${f.id}`,
+        }))
+      return {
+        id: m.id,
+        body: m.body,
+        author: { username: u.username, name: u.name, avatar_url: u.avatar_url },
+        created_at: m.created_at,
+        files,
+      }
+    })
+    return HttpResponse.json({ items, total: items.length, page, page_size: 50 })
+  }),
+
+  http.post(`${API}/teams/:slug/channels/:cid/messages`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const t = findTeam(String(params.slug))
+    if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    if (!userMembership(t.id, user.id)) return errorResponse(403, 'forbidden', 'Bukan anggota')
+    const body = (await request.json()) as { body?: string; file_ids?: string[] }
+    if (!body.body?.trim() && !(body.file_ids?.length)) {
+      return errorResponse(422, 'empty_message', 'Pesan tidak boleh kosong')
+    }
+    const id = mockTeamMessages.length ? Math.max(...mockTeamMessages.map((m) => m.id)) + 1 : 1
+    const msg = {
+      id,
+      channel_id: String(params.cid),
+      author_id: user.id,
+      body: body.body ?? null,
+      created_at: new Date().toISOString(),
+    }
+    mockTeamMessages.push(msg)
+    for (const fid of body.file_ids ?? []) {
+      const f = mockTeamFiles.find((x) => x.id === fid)
+      if (f) {
+        f.message_id = id
+        f.channel_id = String(params.cid)
+      }
+    }
+    const files = mockTeamFiles
+      .filter((f) => f.message_id === id)
+      .map((f) => ({ id: f.id, filename: f.filename, download_url: `https://mock.psd.local/files/${f.id}` }))
+    return HttpResponse.json(
+      {
+        id,
+        body: msg.body,
+        author: { username: user.username, name: user.name, avatar_url: user.avatar_url },
+        created_at: msg.created_at,
+        files,
+      },
+      { status: 201 },
+    )
+  }),
+
+  http.post(`${API}/teams/:slug/files/presign`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const t = findTeam(String(params.slug))
+    if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    if (!userMembership(t.id, user.id)) return errorResponse(403, 'forbidden', 'Bukan anggota')
+    const body = (await request.json()) as { filename: string }
+    const key = `teams/${t.id}/${Date.now()}_${body.filename}`
+    return HttpResponse.json({
+      upload_url: `https://mock.psd.local/upload/${encodeURIComponent(key)}`,
+      storage_key: key,
+      filename: body.filename,
+    })
+  }),
+
+  http.post(`${API}/teams/:slug/files`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const t = findTeam(String(params.slug))
+    if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    if (!userMembership(t.id, user.id)) return errorResponse(403, 'forbidden', 'Bukan anggota')
+    const body = (await request.json()) as {
+      filename: string
+      size_bytes: number
+      storage_key: string
+      channel_id?: string
+    }
+    if (body.size_bytes > 25 * 1024 * 1024) return errorResponse(413, 'file_too_large', 'Terlalu besar')
+    const ext = body.filename.split('.').pop()?.toLowerCase()
+    if (ext && ['exe', 'sh', 'bat'].includes(ext)) return errorResponse(415, 'blocked_type', 'Tipe diblokir')
+    const f = {
+      id: `tf_${Date.now()}`,
+      team_id: t.id,
+      channel_id: body.channel_id,
+      uploader_id: user.id,
+      filename: body.filename,
+      size_bytes: body.size_bytes,
+      storage_key: body.storage_key,
+      created_at: new Date().toISOString(),
+    }
+    mockTeamFiles.push(f)
+    return HttpResponse.json(
+      {
+        ...f,
+        uploader: { username: user.username, name: user.name },
+        download_url: `https://mock.psd.local/files/${f.id}`,
+      },
+      { status: 201 },
+    )
+  }),
+
+  http.get(`${API}/teams/:slug/files`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const t = findTeam(String(params.slug))
+    if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    if (!userMembership(t.id, user.id)) return errorResponse(403, 'forbidden', 'Bukan anggota')
+    const items = mockTeamFiles
+      .filter((f) => f.team_id === t.id)
+      .map((f) => {
+        const u = users.find((x) => x.id === f.uploader_id) ?? demoUser
+        return {
+          ...f,
+          uploader: { username: u.username, name: u.name },
+          download_url: `https://mock.psd.local/files/${f.id}`,
+        }
+      })
+    return HttpResponse.json({ items })
+  }),
+
+  http.get(`${API}/teams/:slug/assets`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const t = findTeam(String(params.slug))
+    if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    if (!userMembership(t.id, user.id)) return errorResponse(403, 'forbidden', 'Bukan anggota')
+    return HttpResponse.json({ items: [] })
+  }),
+
+  http.post(`${API}/teams/:slug/assets`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const t = findTeam(String(params.slug))
+    if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    if (!userMembership(t.id, user.id)) return errorResponse(403, 'forbidden', 'Bukan anggota')
+    const body = (await request.json()) as { kind: string }
+    const paths: Record<string, string> = {
+      project: '/projects/new',
+      dataset: '/datasets/new',
+      model: '/models/new',
+      notebook: '/notebooks/new',
+    }
+    const base = paths[body.kind] ?? '/projects/new'
+    return HttpResponse.json({ kind: body.kind, create_url: `${base}?team_id=${t.id}` }, { status: 201 })
   }),
 
   http.get(`${API}/me/synthesis/quota`, ({ request }) => {

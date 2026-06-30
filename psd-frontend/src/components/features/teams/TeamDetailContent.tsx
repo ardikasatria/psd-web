@@ -1,48 +1,48 @@
 'use client'
 
 import { TeamCreateAssetsPanel } from '@/components/features/teams/TeamCreateAssetsPanel'
+import { TeamDiscussionTab } from '@/components/features/teams/TeamDiscussionTab'
+import { TeamFilesTab } from '@/components/features/teams/TeamFilesTab'
+import { TeamMembersTab } from '@/components/features/teams/TeamMembersTab'
+import { TeamOverviewTab } from '@/components/features/teams/TeamOverviewTab'
+import { OwnerLeaveDialog } from '@/components/features/teams/OwnerLeaveDialog'
 import { NotebookCard } from '@/components/features/NotebookCard'
 import { RepoCard } from '@/components/features/RepoCard'
 import { QueryState } from '@/components/features/QueryState'
 import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import { getNotebooks } from '@/lib/api/notebooks'
 import { getRepos } from '@/lib/api/repos'
-import {
-  deleteTeam,
-  getMyTeams,
-  getTeam,
-  inviteMember,
-  removeMember,
-  requestJoin,
-  setRole,
-} from '@/lib/api/teams'
+import { deleteTeam, getMyTeams, getTeam, leaveTeam, requestJoin } from '@/lib/api/teams'
 import { useAuth } from '@/lib/auth/useAuth'
-import { Team, TeamMember, RepoSummary, NotebookSummary } from '@/types/api'
+import { can, normalizeTeamRole } from '@/lib/teams/permissions'
+import { teamTabActive, teamTabIdle, teamTextMuted } from '@/lib/teams/team-ui'
+import { RepoSummary, NotebookSummary } from '@/types/api'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import { Badge } from '@/shared/Badge'
-import Input from '@/shared/Input'
-import Select from '@/shared/Select'
-import {
-  LockClosedIcon,
-  UserGroupIcon,
-  UserMinusIcon,
-} from '@heroicons/react/24/outline'
+import { LockClosedIcon, UserMinusIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
 
-const roleLabel: Record<string, string> = {
-  owner: 'Owner',
-  admin: 'Admin',
-  member: 'Anggota',
-}
+const TABS = [
+  { id: 'overview', label: 'Ikhtisar' },
+  { id: 'assets', label: 'Aset' },
+  { id: 'discussion', label: 'Diskusi' },
+  { id: 'files', label: 'File' },
+  { id: 'members', label: 'Anggota' },
+] as const
 
-export function TeamDetailContent({ slug }: { slug: string }) {
+type TabId = (typeof TABS)[number]['id']
+
+function TeamDetailInner({ slug }: { slug: string }) {
+  const searchParams = useSearchParams()
+  const initialTab = (searchParams.get('tab') as TabId) || 'overview'
   const { user, isLoggedIn } = useAuth()
   const qc = useQueryClient()
-  const [tab, setTab] = useState<'members' | 'assets'>('members')
-  const [inviteUsername, setInviteUsername] = useState('')
+  const [tab, setTab] = useState<TabId>(TABS.some((t) => t.id === initialTab) ? initialTab : 'overview')
   const [error, setError] = useState<string | null>(null)
+  const [leaveOpen, setLeaveOpen] = useState(false)
 
   const teamQuery = useQuery({
     queryKey: ['team', slug],
@@ -76,8 +76,6 @@ export function TeamDetailContent({ slug }: { slug: string }) {
 
   const teamId = myTeamsQuery.data?.find((t) => t.slug === slug)?.id ?? ''
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['team', slug] })
-
   const joinMut = useMutation({
     mutationFn: () => requestJoin(slug),
     onSuccess: () => setError(null),
@@ -85,32 +83,11 @@ export function TeamDetailContent({ slug }: { slug: string }) {
   })
 
   const leaveMut = useMutation({
-    mutationFn: () => removeMember(slug, user!.username),
-    onSuccess: () => {
+    mutationFn: () => leaveTeam(slug),
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['my-teams'] })
-      window.location.href = '/me/teams'
+      window.location.href = res.team_deleted ? '/teams' : '/me/teams'
     },
-    onError: (e: Error) => setError(e.message),
-  })
-
-  const inviteMut = useMutation({
-    mutationFn: () => inviteMember(slug, inviteUsername.trim()),
-    onSuccess: () => {
-      setInviteUsername('')
-      setError(null)
-    },
-    onError: (e: Error) => setError(e.message),
-  })
-
-  const roleMut = useMutation({
-    mutationFn: ({ username, role }: { username: string; role: string }) => setRole(slug, username, role),
-    onSuccess: invalidate,
-    onError: (e: Error) => setError(e.message),
-  })
-
-  const removeMut = useMutation({
-    mutationFn: (username: string) => removeMember(slug, username),
-    onSuccess: invalidate,
     onError: (e: Error) => setError(e.message),
   })
 
@@ -123,14 +100,14 @@ export function TeamDetailContent({ slug }: { slug: string }) {
   })
 
   const team = teamQuery.data
-  const isAdmin = team?.my_role === 'owner' || team?.my_role === 'admin'
-  const isMember = !!team?.my_role
-  const isOwner = team?.my_role === 'owner'
+  const myRole = normalizeTeamRole(team?.my_role)
+  const isMember = !!myRole
+  const isOwner = myRole === 'owner'
 
   if (teamQuery.isLoading) {
     return (
       <DetailPageShell>
-        <p className="text-neutral-500">Memuat tim…</p>
+        <p className={teamTextMuted}>Memuat tim…</p>
       </DetailPageShell>
     )
   }
@@ -138,8 +115,8 @@ export function TeamDetailContent({ slug }: { slug: string }) {
   if (teamQuery.isError || !team) {
     return (
       <DetailPageShell>
-        <p className="text-red-600">Tim tidak ditemukan atau tidak dapat diakses.</p>
-        <Link href="/teams" className="mt-4 inline-block text-sm text-primary-600">
+        <p className="text-red-600 dark:text-red-400">Tim tidak ditemukan atau tidak dapat diakses.</p>
+        <Link href="/teams" className="mt-4 inline-block text-sm text-primary-600 dark:text-primary-400">
           ← Kembali ke direktori
         </Link>
       </DetailPageShell>
@@ -148,7 +125,10 @@ export function TeamDetailContent({ slug }: { slug: string }) {
 
   return (
     <DetailPageShell>
-      <Link href="/teams" className="inline-flex text-sm font-medium text-neutral-500 hover:text-primary-600">
+      <Link
+        href="/teams"
+        className="inline-flex text-sm font-medium text-neutral-500 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+      >
         ← Semua tim
       </Link>
 
@@ -160,7 +140,7 @@ export function TeamDetailContent({ slug }: { slug: string }) {
             <Badge color={team.visibility === 'public' ? 'green' : 'zinc'}>
               {team.visibility === 'public' ? 'Publik' : 'Privat'}
             </Badge>
-            <span className="text-sm text-neutral-500">{team.members.length} anggota</span>
+            <span className={`text-sm ${teamTextMuted}`}>{team.members.length} anggota</span>
           </div>
         }
       />
@@ -172,23 +152,28 @@ export function TeamDetailContent({ slug }: { slug: string }) {
           </ButtonPrimary>
         )}
         {!isMember && team.visibility === 'private' && (
-          <p className="flex items-center gap-1.5 text-sm text-neutral-500">
+          <p className={`flex items-center gap-1.5 text-sm ${teamTextMuted}`}>
             <LockClosedIcon className="size-4" aria-hidden />
             Tim privat — perlu undangan
           </p>
         )}
-        {isMember && !isOwner && (
-          <ButtonPrimary type="button" outline onClick={() => leaveMut.mutate()} disabled={leaveMut.isPending}>
+        {isMember && (
+          <ButtonPrimary
+            type="button"
+            outline
+            onClick={() => (isOwner ? setLeaveOpen(true) : leaveMut.mutate())}
+            disabled={leaveMut.isPending}
+          >
             <UserMinusIcon className="size-4" aria-hidden />
             Keluar
           </ButtonPrimary>
         )}
-        {isAdmin && (
+        {can(myRole, 'moderate_members') && (
           <ButtonPrimary href={`/teams/${slug}/requests`} outline>
             Permintaan bergabung
           </ButtonPrimary>
         )}
-        {isOwner && (
+        {can(myRole, 'delete_team') && (
           <ButtonPrimary
             type="button"
             outline
@@ -202,94 +187,44 @@ export function TeamDetailContent({ slug }: { slug: string }) {
         )}
       </div>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p className="mb-4 text-sm text-red-600 dark:text-red-400" role="alert">
+          {error}
+        </p>
+      )}
 
-      <div className="mb-6 flex gap-2 border-b border-neutral-200 dark:border-neutral-700">
-        {(['members', 'assets'] as const).map((t) => (
+      <div className="mb-6 flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-700">
+        {TABS.map((t) => (
           <button
-            key={t}
+            key={t.id}
             type="button"
-            onClick={() => setTab(t)}
+            onClick={() => setTab(t.id)}
             className={`border-b-2 px-4 py-2 text-sm font-medium transition ${
-              tab === t
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-neutral-500 hover:text-neutral-700'
+              tab === t.id ? teamTabActive : teamTabIdle
             }`}
           >
-            {t === 'members' ? 'Anggota' : 'Aset tim'}
+            {t.label}
           </button>
         ))}
       </div>
 
-      {tab === 'members' && (
-        <div className="space-y-6">
-          {isAdmin && (
-            <div className="flex flex-wrap gap-2 rounded-2xl border border-neutral-200/80 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800">
-              <Input
-                value={inviteUsername}
-                onChange={(e) => setInviteUsername(e.target.value)}
-                placeholder="Username untuk diundang"
-                className="!rounded-xl flex-1 min-w-[200px]"
-              />
-              <ButtonPrimary type="button" onClick={() => inviteMut.mutate()} disabled={inviteMut.isPending || !inviteUsername.trim()}>
-                Undang
-              </ButtonPrimary>
-            </div>
-          )}
-
-          <ul className="divide-y divide-neutral-100 rounded-2xl border border-neutral-200/80 bg-white dark:divide-neutral-700 dark:border-neutral-700 dark:bg-neutral-800">
-            {team.members.map((m: TeamMember) => (
-              <li key={m.username} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-700">
-                    <UserGroupIcon className="size-4 text-neutral-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-neutral-900 dark:text-neutral-100">{m.name ?? m.username}</p>
-                    <p className="text-sm text-neutral-500">@{m.username}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {isAdmin && m.username !== user?.username && m.role !== 'owner' ? (
-                    <>
-                      <Select
-                        value={m.role}
-                        onChange={(e) => {
-                          const newRole = e.target.value
-                          if (newRole === 'owner') {
-                            if (!confirm(`Transfer kepemilikan tim ke ${m.username}? Anda akan menjadi admin.`)) return
-                          }
-                          roleMut.mutate({ username: m.username, role: newRole })
-                        }}
-                        className="!rounded-lg text-sm"
-                      >
-                        <option value="member">Anggota</option>
-                        <option value="admin">Admin</option>
-                        {isOwner && <option value="owner">Transfer owner</option>}
-                      </Select>
-                      <ButtonPrimary
-                        type="button"
-                        outline
-                        onClick={() => {
-                          if (confirm(`Keluarkan ${m.username} dari tim?`)) removeMut.mutate(m.username)
-                        }}
-                      >
-                        Keluarkan
-                      </ButtonPrimary>
-                    </>
-                  ) : (
-                    <Badge color="zinc">{roleLabel[m.role] ?? m.role}</Badge>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {tab === 'overview' && (
+        <TeamOverviewTab team={team} slug={slug} myRole={myRole} isMember={isMember} />
       )}
+
+      {tab === 'members' && isMember && (
+        <TeamMembersTab slug={slug} team={team} myRole={myRole} currentUsername={user?.username} />
+      )}
+
+      {tab === 'discussion' && isMember && <TeamDiscussionTab slug={slug} myRole={myRole} />}
+
+      {tab === 'files' && isMember && <TeamFilesTab slug={slug} />}
 
       {tab === 'assets' && (
         <div className="space-y-6">
-          {isMember && <TeamCreateAssetsPanel teamId={teamId} teamName={team.name} />}
+          {isMember && can(myRole, 'manage_asset') && (
+            <TeamCreateAssetsPanel teamId={teamId} teamName={team.name} />
+          )}
 
           <QueryState
             isLoading={reposQuery.isLoading || notebooksQuery.isLoading}
@@ -303,7 +238,9 @@ export function TeamDetailContent({ slug }: { slug: string }) {
             <div className="space-y-8">
               {(reposQuery.data?.length ?? 0) > 0 && (
                 <section>
-                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Repositori</h3>
+                  <h3 className={`mb-3 text-sm font-semibold uppercase tracking-wide ${teamTextMuted}`}>
+                    Repositori
+                  </h3>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {reposQuery.data!.map((r: RepoSummary) => (
                       <RepoCard key={r.id} repo={r} />
@@ -313,7 +250,9 @@ export function TeamDetailContent({ slug }: { slug: string }) {
               )}
               {(notebooksQuery.data?.items.length ?? 0) > 0 && (
                 <section>
-                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Notebook</h3>
+                  <h3 className={`mb-3 text-sm font-semibold uppercase tracking-wide ${teamTextMuted}`}>
+                    Notebook
+                  </h3>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {notebooksQuery.data!.items.map((nb: NotebookSummary) => (
                       <NotebookCard key={nb.id} notebook={nb} />
@@ -325,6 +264,29 @@ export function TeamDetailContent({ slug }: { slug: string }) {
           </QueryState>
         </div>
       )}
+
+      <OwnerLeaveDialog
+        open={leaveOpen}
+        teamName={team.name}
+        memberCount={team.members.length}
+        pending={leaveMut.isPending}
+        onCancel={() => setLeaveOpen(false)}
+        onConfirm={() => leaveMut.mutate()}
+      />
     </DetailPageShell>
+  )
+}
+
+export function TeamDetailContent({ slug }: { slug: string }) {
+  return (
+    <Suspense
+      fallback={
+        <DetailPageShell>
+          <p className={teamTextMuted}>Memuat tim…</p>
+        </DetailPageShell>
+      }
+    >
+      <TeamDetailInner slug={slug} />
+    </Suspense>
   )
 }

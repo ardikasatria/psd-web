@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ApiError
 from app.modules.teams.models import Team, TeamMember
+from app.modules.teams.roles import CO_OWNER, OWNER, can, normalize_role
 from app.modules.users.models import User
 
 
@@ -21,11 +22,31 @@ async def membership(db: AsyncSession, team_id: str, user_id: str) -> TeamMember
     ).scalar_one_or_none()
 
 
-async def require_admin(db: AsyncSession, team: Team, user: User) -> TeamMember:
+async def require_member(db: AsyncSession, team: Team, user: User) -> TeamMember:
     m = await membership(db, team.id, user.id)
-    if not m or m.role not in ("owner", "admin"):
-        raise ApiError(403, "forbidden", "Butuh peran admin/owner tim")
+    if not m:
+        raise ApiError(403, "forbidden", "Bukan anggota tim")
     return m
+
+
+async def require_moderator(db: AsyncSession, team: Team, user: User) -> TeamMember:
+    m = await require_member(db, team, user)
+    role = normalize_role(m.role)
+    if not can(role, "moderate_members"):
+        raise ApiError(403, "forbidden", "Butuh peran owner/co-owner")
+    return m
+
+
+async def require_owner(db: AsyncSession, team: Team, user: User) -> TeamMember:
+    m = await require_member(db, team, user)
+    if normalize_role(m.role) != OWNER:
+        raise ApiError(403, "forbidden", "Hanya owner tim")
+    return m
+
+
+# Backward compat alias
+async def require_admin(db: AsyncSession, team: Team, user: User) -> TeamMember:
+    return await require_moderator(db, team, user)
 
 
 async def team_ref(db: AsyncSession, team_id: str | None) -> dict | None:

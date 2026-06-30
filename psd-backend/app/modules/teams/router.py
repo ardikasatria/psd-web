@@ -10,9 +10,20 @@ from app.core.errors import ApiError
 from app.core.pagination import PageParams, page_params, paginated
 from app.modules.categories.util import slugify
 from app.modules.notifications.service import notify
-from app.modules.teams.deps import get_team, membership, require_admin
+from app.modules.teams.assets_policy import can_post, validate_message
+from app.modules.teams.deps import get_team, membership, require_member, require_moderator, require_owner
+from app.modules.teams.models import (
+    Team,
+    TeamChannel,
+    TeamFile,
+    TeamInvite,
+    TeamJoinRequest,
+    TeamMember,
+    TeamMessage,
+)
+from app.modules.teams.roles import can_set_role, normalize_role, require as require_perm
 from app.modules.teams.rls import next_team_rls_id
-from app.modules.teams.models import Team, TeamInvite, TeamJoinRequest, TeamMember
+from app.modules.teams import service as team_svc
 from app.modules.users.models import User
 
 router = APIRouter(tags=["teams"])
@@ -20,7 +31,12 @@ router = APIRouter(tags=["teams"])
 
 async def _ser_member(db: AsyncSession, m: TeamMember) -> dict:
     u = (await db.execute(select(User).where(User.id == m.user_id))).scalar_one()
-    return {"username": u.username, "name": u.name, "avatar_url": u.avatar_url, "role": m.role}
+    return {
+        "username": u.username,
+        "name": u.name,
+        "avatar_url": u.avatar_url,
+        "role": normalize_role(m.role),
+    }
 
 
 @router.post("/teams", status_code=201)
@@ -44,6 +60,7 @@ async def create_team(
     db.add(t)
     await db.flush()
     db.add(TeamMember(team_id=t.id, user_id=user.id, role="owner"))
+    db.add(TeamChannel(team_id=t.id, name="umum"))
     await db.commit()
     return {"slug": t.slug}
 
@@ -91,7 +108,13 @@ async def my_teams(user: User = Depends(get_current_user), db: AsyncSession = De
     ).all()
     return {
         "items": [
-            {"id": t.id, "slug": t.slug, "name": t.name, "avatar_url": t.avatar_url, "role": m.role}
+            {
+                "id": t.id,
+                "slug": t.slug,
+                "name": t.name,
+                "avatar_url": t.avatar_url,
+                "role": normalize_role(m.role),
+            }
             for t, m in rows
         ]
     }
@@ -116,7 +139,7 @@ async def get_team_detail(
         "description": t.description,
         "avatar_url": t.avatar_url,
         "visibility": t.visibility,
-        "my_role": mem.role if mem else None,
+        "my_role": normalize_role(mem.role) if mem else None,
         "members": [await _ser_member(db, m) for m in members],
     }
 
@@ -129,7 +152,8 @@ async def update_team(
     db: AsyncSession = Depends(get_db),
 ):
     t = await get_team(db, slug)
-    await require_admin(db, t, user)
+    me = await require_moderator(db, t, user)
+    require_perm(normalize_role(me.role), "moderate_members")
     for k in ("name", "description", "avatar_url", "visibility"):
         if k in body:
             setattr(t, k, body[k])
@@ -144,13 +168,46 @@ async def delete_team(
     db: AsyncSession = Depends(get_db),
 ):
     t = await get_team(db, slug)
-    m = await membership(db, t.id, user.id)
-    if not m or m.role != "owner":
-        raise ApiError(403, "forbidden", "Hanya owner")
-    for tbl in (TeamMember, TeamInvite, TeamJoinRequest):
-        await db.execute(tbl.__table__.delete().where(tbl.team_id == t.id))
-    await db.delete(t)
+    me = await require_owner(db, t, user)
+    require_perm(normalize_role(me.role), "delete_team")
+    await team_svc.delete_team_cascade(db, t)
     await db.commit()
+
+
+@router.post("/teams/{slug}/leave")
+async def leave_team_endpoint(
+    slug: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await get_team(db, slug)
+    return await team_svc.leave_team(db, t, user)
+
+
+@router.post("/teams/{slug}/transfer")
+async def transfer_owner(
+    slug: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await get_team(db, slug)
+    me = await require_owner(db, t, user)
+    require_perm(normalize_role(me.role), "transfer_ownership")
+    username = body.get("username") or body.get("user_id")
+    if not username:
+        raise ApiError(422, "bad_request", "username wajib")
+    target = (
+        await db.execute(select(User).where(User.username == username))
+    ).scalar_one_or_none()
+    if not target:
+        target = (await db.execute(select(User).where(User.id == username))).scalar_one_or_none()
+    if not target:
+        raise ApiError(404, "not_found", "Pengguna tidak ditemukan")
+    await team_svc.transfer_ownership(db, t.id, target.id, user.id)
+    await db.commit()
+    u = target
+    return {"owner": {"username": u.username, "name": u.name}}
 
 
 @router.patch("/teams/{slug}/members/{username}")
@@ -162,23 +219,24 @@ async def set_role(
     db: AsyncSession = Depends(get_db),
 ):
     t = await get_team(db, slug)
-    me = await require_admin(db, t, user)
+    me = await require_member(db, t, user)
     target_user = (
         await db.execute(select(User).where(User.username == username))
     ).scalar_one_or_none()
     tm = await membership(db, t.id, target_user.id) if target_user else None
     if not tm:
         raise ApiError(404, "not_found", "Bukan anggota")
-    new_role = body["role"]
+    new_role = normalize_role(body.get("role"))
+    if not new_role:
+        raise ApiError(422, "bad_role", "Peran tidak valid")
+    if not can_set_role(normalize_role(me.role), tm.role, new_role):
+        raise ApiError(403, "forbidden", "Tidak boleh mengubah peran ini")
     if new_role == "owner":
-        if me.role != "owner":
-            raise ApiError(403, "forbidden", "Hanya owner bisa transfer")
-        me.role = "admin"
-        tm.role = "owner"
+        await team_svc.transfer_ownership(db, t.id, target_user.id, user.id)
     else:
         tm.role = new_role
     await db.commit()
-    return {"role": tm.role}
+    return {"role": normalize_role(tm.role)}
 
 
 @router.delete("/teams/{slug}/members/{username}", status_code=204)
@@ -193,10 +251,12 @@ async def remove_member(
     tm = await membership(db, t.id, target.id) if target else None
     if not tm:
         raise ApiError(404, "not_found", "Bukan anggota")
-    if target.id != user.id:
-        await require_admin(db, t, user)
-    if tm.role == "owner":
-        raise ApiError(400, "owner", "Owner harus transfer dulu")
+    if target.id == user.id:
+        raise ApiError(400, "use_leave", "Gunakan POST /teams/{slug}/leave untuk keluar")
+    me = await require_owner(db, t, user)
+    require_perm(normalize_role(me.role), "kick")
+    if normalize_role(tm.role) == "owner":
+        raise ApiError(400, "owner", "Tidak bisa mengeluarkan owner")
     await db.delete(tm)
     await db.commit()
 
@@ -209,7 +269,8 @@ async def invite(
     db: AsyncSession = Depends(get_db),
 ):
     t = await get_team(db, slug)
-    await require_admin(db, t, user)
+    me = await require_owner(db, t, user)
+    require_perm(normalize_role(me.role), "invite")
     target = (
         await db.execute(select(User).where(User.username == body["username"]))
     ).scalar_one_or_none()
@@ -320,7 +381,7 @@ async def list_requests(
     db: AsyncSession = Depends(get_db),
 ):
     t = await get_team(db, slug)
-    await require_admin(db, t, user)
+    await require_moderator(db, t, user)
     rows = (
         await db.execute(
             select(TeamJoinRequest, User)
@@ -348,7 +409,7 @@ async def decide_request(
     db: AsyncSession = Depends(get_db),
 ):
     t = await get_team(db, slug)
-    await require_admin(db, t, user)
+    await require_moderator(db, t, user)
     jr = (
         await db.execute(
             select(TeamJoinRequest).where(TeamJoinRequest.id == rid, TeamJoinRequest.team_id == t.id)
@@ -371,3 +432,212 @@ async def decide_request(
         jr.status = "rejected"
     await db.commit()
     return {"status": jr.status}
+
+
+# --- Aset tim ---
+
+
+@router.get("/teams/{slug}/assets")
+async def list_assets(
+    slug: str,
+    kind: str | None = None,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await get_team(db, slug)
+    await require_member(db, t, user)
+    items = await team_svc.list_team_assets(db, t.id, kind)
+    return {"items": items}
+
+
+@router.post("/teams/{slug}/assets", status_code=201)
+async def create_asset(
+    slug: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await get_team(db, slug)
+    me = await require_member(db, t, user)
+    require_perm(normalize_role(me.role), "manage_asset")
+    return team_svc.create_asset_redirect(t.id, body["kind"])
+
+
+# --- Diskusi & file ---
+
+
+@router.get("/teams/{slug}/channels")
+async def list_channels(
+    slug: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await get_team(db, slug)
+    await require_member(db, t, user)
+    await team_svc.ensure_default_channel(db, t.id)
+    await db.commit()
+    rows = (
+        await db.execute(select(TeamChannel).where(TeamChannel.team_id == t.id).order_by(TeamChannel.created_at))
+    ).scalars().all()
+    return {
+        "items": [{"id": c.id, "name": c.name, "created_at": c.created_at.isoformat() if c.created_at else None} for c in rows]
+    }
+
+
+@router.post("/teams/{slug}/channels", status_code=201)
+async def create_channel(
+    slug: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await get_team(db, slug)
+    me = await require_member(db, t, user)
+    require_perm(normalize_role(me.role), "manage_discussion")
+    name = (body.get("name") or "umum").strip()
+    if not name:
+        raise ApiError(422, "bad_name", "Nama channel wajib")
+    ch = TeamChannel(team_id=t.id, name=name)
+    db.add(ch)
+    await db.commit()
+    return {"id": ch.id, "name": ch.name}
+
+
+@router.get("/teams/{slug}/channels/{cid}/messages")
+async def list_messages(
+    slug: str,
+    cid: str,
+    p: PageParams = Depends(page_params),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await get_team(db, slug)
+    await require_member(db, t, user)
+    ch = (
+        await db.execute(select(TeamChannel).where(TeamChannel.id == cid, TeamChannel.team_id == t.id))
+    ).scalar_one_or_none()
+    if not ch:
+        raise ApiError(404, "not_found", "Channel tidak ditemukan")
+    stmt = select(TeamMessage).where(TeamMessage.channel_id == cid)
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
+    rows = (
+        await db.execute(stmt.order_by(TeamMessage.created_at.asc()).offset(p.offset).limit(p.page_size))
+    ).scalars().all()
+    items = []
+    for msg in rows:
+        u = (await db.execute(select(User).where(User.id == msg.author_id))).scalar_one()
+        files = (
+            await db.execute(select(TeamFile).where(TeamFile.message_id == msg.id))
+        ).scalars().all()
+        items.append(
+            {
+                "id": msg.id,
+                "body": msg.body,
+                "author": {"username": u.username, "name": u.name, "avatar_url": u.avatar_url},
+                "created_at": msg.created_at.isoformat() if msg.created_at else None,
+                "files": [await team_svc.serialize_file(db, f) for f in files],
+            }
+        )
+    return paginated(items, total, p)
+
+
+@router.post("/teams/{slug}/channels/{cid}/messages", status_code=201)
+async def post_message(
+    slug: str,
+    cid: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await get_team(db, slug)
+    me = await require_member(db, t, user)
+    if not can_post(normalize_role(me.role)):
+        raise ApiError(403, "forbidden", "Tidak boleh mengirim pesan")
+    ch = (
+        await db.execute(select(TeamChannel).where(TeamChannel.id == cid, TeamChannel.team_id == t.id))
+    ).scalar_one_or_none()
+    if not ch:
+        raise ApiError(404, "not_found", "Channel tidak ditemukan")
+    file_ids = body.get("file_ids") or []
+    attachments = [{"id": fid} for fid in file_ids] if file_ids else None
+    validate_message(body.get("body"), attachments)
+    msg = TeamMessage(channel_id=cid, author_id=user.id, body=body.get("body"))
+    db.add(msg)
+    await db.flush()
+    if file_ids:
+        for fid in file_ids:
+            f = (
+                await db.execute(
+                    select(TeamFile).where(TeamFile.id == fid, TeamFile.team_id == t.id, TeamFile.message_id.is_(None))
+                )
+            ).scalar_one_or_none()
+            if f:
+                f.message_id = msg.id
+                f.channel_id = cid
+    await db.commit()
+    u = user
+    files = (
+        await db.execute(select(TeamFile).where(TeamFile.message_id == msg.id))
+    ).scalars().all()
+    return {
+        "id": msg.id,
+        "body": msg.body,
+        "author": {"username": u.username, "name": u.name, "avatar_url": u.avatar_url},
+        "created_at": msg.created_at.isoformat() if msg.created_at else None,
+        "files": [await team_svc.serialize_file(db, f) for f in files],
+    }
+
+
+@router.post("/teams/{slug}/files/presign")
+async def presign_file(
+    slug: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await get_team(db, slug)
+    me = await require_member(db, t, user)
+    if not can_post(normalize_role(me.role)):
+        raise ApiError(403, "forbidden", "Tidak boleh mengunggah file")
+    filename = body.get("filename") or "file"
+    return team_svc.presign_upload(t.id, filename)
+
+
+@router.post("/teams/{slug}/files", status_code=201)
+async def register_file(
+    slug: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await get_team(db, slug)
+    me = await require_member(db, t, user)
+    if not can_post(normalize_role(me.role)):
+        raise ApiError(403, "forbidden", "Tidak boleh mengunggah file")
+    f = await team_svc.attach_file(
+        db,
+        t.id,
+        user.id,
+        {
+            "filename": body["filename"],
+            "size_bytes": body["size_bytes"],
+            "storage_key": body["storage_key"],
+            "channel_id": body.get("channel_id"),
+        },
+    )
+    await db.commit()
+    return await team_svc.serialize_file(db, f)
+
+
+@router.get("/teams/{slug}/files")
+async def list_files(
+    slug: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await get_team(db, slug)
+    await require_member(db, t, user)
+    rows = (
+        await db.execute(select(TeamFile).where(TeamFile.team_id == t.id).order_by(TeamFile.created_at.desc()))
+    ).scalars().all()
+    return {"items": [await team_svc.serialize_file(db, f) for f in rows]}

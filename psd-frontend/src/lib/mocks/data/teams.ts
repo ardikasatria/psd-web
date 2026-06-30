@@ -16,7 +16,7 @@ export type MockTeam = {
 export type MockTeamMember = {
   team_id: string
   user_id: string
-  role: 'owner' | 'admin' | 'member'
+  role: 'owner' | 'co-owner' | 'admin' | 'member'
 }
 
 export type MockTeamInvite = {
@@ -99,14 +99,14 @@ export const mockTeams: MockTeam[] = [
 
 export const mockTeamMembers: MockTeamMember[] = [
   { team_id: 'team_ds_lampung', user_id: demoUser.id, role: 'owner' },
-  { team_id: 'team_ds_lampung', user_id: users[1]?.id ?? demoUser.id, role: 'admin' },
+  { team_id: 'team_ds_lampung', user_id: users[1]?.id ?? demoUser.id, role: 'co-owner' },
   { team_id: 'team_ds_lampung', user_id: users[2]?.id ?? demoUser.id, role: 'member' },
   { team_id: 'team_itera_nlp', user_id: users[1]?.id ?? demoUser.id, role: 'owner' },
   { team_id: 'team_itera_nlp', user_id: users[2]?.id ?? demoUser.id, role: 'member' },
   { team_id: 'team_umkm_analytics', user_id: users[2]?.id ?? demoUser.id, role: 'owner' },
   { team_id: 'team_umkm_analytics', user_id: demoUser.id, role: 'member' },
   { team_id: 'team_tabular', user_id: demoUser.id, role: 'owner' },
-  { team_id: 'team_tabular', user_id: users[1]?.id ?? demoUser.id, role: 'admin' },
+  { team_id: 'team_tabular', user_id: users[1]?.id ?? demoUser.id, role: 'co-owner' },
   { team_id: 'team_psd_core', user_id: users[1]?.id ?? demoUser.id, role: 'owner' },
 ]
 
@@ -128,6 +128,48 @@ export const mockTeamJoinRequests: MockTeamJoinRequest[] = [
     status: 'pending',
   },
 ]
+
+export type MockTeamChannel = { id: string; team_id: string; name: string; created_at: string }
+export type MockTeamMessage = {
+  id: number
+  channel_id: string
+  author_id: string
+  body: string | null
+  created_at: string
+  file_ids?: string[]
+}
+export type MockTeamFile = {
+  id: string
+  team_id: string
+  channel_id?: string
+  message_id?: number
+  uploader_id: string
+  filename: string
+  size_bytes: number
+  storage_key: string
+  created_at: string
+}
+
+
+export const mockTeamChannels: MockTeamChannel[] = [
+  { id: 'ch_umum_ds', team_id: 'team_ds_lampung', name: 'umum', created_at: new Date().toISOString() },
+]
+
+export const mockTeamMessages: MockTeamMessage[] = [
+  {
+    id: 1,
+    channel_id: 'ch_umum_ds',
+    author_id: demoUser.id,
+    body: 'Selamat datang di diskusi tim DS Lampung!',
+    created_at: new Date().toISOString(),
+  },
+]
+
+export const mockTeamFiles: MockTeamFile[] = []
+
+export function normalizeMockRole(role: string) {
+  return role === 'admin' ? 'co-owner' : role
+}
 
 export function findTeam(slug: string) {
   return mockTeams.find((t) => t.slug === slug)
@@ -153,7 +195,7 @@ export function teamDetailOf(t: MockTeam, viewerId?: string) {
       username: u.username,
       name: u.name,
       avatar_url: u.avatar_url,
-      role: m.role,
+      role: normalizeMockRole(m.role),
     }
   })
   return {
@@ -162,7 +204,7 @@ export function teamDetailOf(t: MockTeam, viewerId?: string) {
     description: t.description,
     avatar_url: t.avatar_url,
     visibility: t.visibility,
-    my_role: mem?.role ?? null,
+    my_role: mem ? normalizeMockRole(mem.role) : null,
     members,
   }
 }
@@ -192,6 +234,6 @@ export function myTeamsOf(userId: string) {
     .filter((m) => m.user_id === userId)
     .map((m) => {
       const t = mockTeams.find((x) => x.id === m.team_id)!
-      return { id: t.id, slug: t.slug, name: t.name, avatar_url: t.avatar_url, role: m.role }
+      return { id: t.id, slug: t.slug, name: t.name, avatar_url: t.avatar_url, role: normalizeMockRole(m.role) }
     })
 }

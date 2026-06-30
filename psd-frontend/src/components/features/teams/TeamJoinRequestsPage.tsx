@@ -3,6 +3,7 @@
 import { QueryState } from '@/components/features/QueryState'
 import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import { decideRequest, getTeam, listJoinRequests } from '@/lib/api/teams'
+import { can } from '@/lib/teams/permissions'
 import { useAuthGuard } from '@/lib/auth/useAuthGuard'
 import { TeamJoinRequest } from '@/types/api'
 import ButtonPrimary from '@/shared/ButtonPrimary'
@@ -36,7 +37,7 @@ export function TeamJoinRequestsPage({ slug }: { slug: string }) {
     },
   })
 
-  const isAdmin = teamQuery.data?.my_role === 'owner' || teamQuery.data?.my_role === 'admin'
+  const canModerate = can(teamQuery.data?.my_role, 'moderate_members')
   const items = requestsQuery.data ?? []
 
   if (teamQuery.isLoading) {
@@ -47,7 +48,7 @@ export function TeamJoinRequestsPage({ slug }: { slug: string }) {
     )
   }
 
-  if (!isAdmin) {
+  if (!canModerate) {
     return (
       <DetailPageShell>
         <p className="text-red-600">Hanya admin/owner yang dapat mengelola permintaan.</p>

@@ -676,7 +676,7 @@ export const TeamSchema = z.object({
   description: z.string(),
   avatar_url: z.string().nullable(),
   visibility: z.enum(['public', 'private']),
-  my_role: z.enum(['owner', 'admin', 'member']).nullable().optional(),
+  my_role: z.enum(['owner', 'co-owner', 'admin', 'member']).nullable().optional(),
   members: z.array(TeamMemberSchema),
 })
 export type Team = z.infer<typeof TeamSchema>
@@ -686,7 +686,7 @@ export const MyTeamSchema = z.object({
   slug: z.string(),
   name: z.string(),
   avatar_url: z.string().nullable(),
-  role: z.enum(['owner', 'admin', 'member']),
+  role: z.enum(['owner', 'co-owner', 'admin', 'member']),
 })
 export type MyTeam = z.infer<typeof MyTeamSchema>
 

@@ -18,6 +18,7 @@ import {
   submitCompetition,
   submitEntry,
 } from '@/lib/api/competitions'
+import { getMyTeams } from '@/lib/api/teams'
 import { useAuth } from '@/lib/auth/useAuth'
 import {
   CompetitionDetail,
@@ -29,6 +30,7 @@ import {
 import { Badge } from '@/shared/Badge'
 import { Button } from '@/shared/Button'
 import ButtonPrimary from '@/shared/ButtonPrimary'
+import Select from '@/shared/Select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/table'
 import { LockClosedIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -102,6 +104,7 @@ function CompetitionDetailInner({ slug }: { slug: string }) {
   const [board, setBoard] = useState<'public' | 'private'>('public')
   const [file, setFile] = useState<File | null>(null)
   const [note, setNote] = useState('')
+  const [submitTeamId, setSubmitTeamId] = useState('')
   const [submitError, setSubmitError] = useState<string | null>(null)
   const { user, isLoggedIn } = useAuth()
   const qc = useQueryClient()
@@ -142,13 +145,23 @@ function CompetitionDetailInner({ slug }: { slug: string }) {
     enabled: tab === 'submissions' && isLoggedIn,
   })
 
+  const myTeams = useQuery({
+    queryKey: ['my-teams'],
+    queryFn: async () => (await getMyTeams()).items as { id: string; name: string }[],
+    enabled: tab === 'submissions' && isLoggedIn,
+  })
+
   const hasScoredSubmission = useMemo(
     () => (submissions.data ?? []).some((s) => s.status === 'scored'),
     [submissions.data]
   )
 
   const submitFile = useMutation({
-    mutationFn: () => submitCompetition(slug, file!, { note: note || undefined }),
+    mutationFn: () =>
+      submitCompetition(slug, file!, {
+        note: note || undefined,
+        team_id: submitTeamId || undefined,
+      }),
     onSuccess: () => {
       setFile(null)
       setNote('')
@@ -162,7 +175,8 @@ function CompetitionDetailInner({ slug }: { slug: string }) {
   })
 
   const submitJson = useMutation({
-    mutationFn: () => submitEntry(slug, { note: note || undefined }),
+    mutationFn: () =>
+      submitEntry(slug, { note: note || undefined, team_id: submitTeamId || undefined }),
     onSuccess: () => {
       setNote('')
       setSubmitError(null)
@@ -373,6 +387,25 @@ function CompetitionDetailInner({ slug }: { slug: string }) {
                           <p className="mb-4 text-xs text-neutral-500">
                             Batas: {c.daily_submission_limit} submission/hari
                           </p>
+                          {(myTeams.data?.length ?? 0) > 0 && (
+                            <div className="mb-4">
+                              <label className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                                Submit sebagai
+                              </label>
+                              <Select
+                                value={submitTeamId}
+                                onChange={(e) => setSubmitTeamId(e.target.value)}
+                                className="!rounded-xl w-full max-w-md text-sm"
+                              >
+                                <option value="">Solo (individu)</option>
+                                {myTeams.data!.map((t) => (
+                                  <option key={t.id} value={t.id}>
+                                    Tim: {t.name}
+                                  </option>
+                                ))}
+                              </Select>
+                            </div>
+                          )}
                           <input
                             type="file"
                             accept=".csv"
