@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import clsx from 'clsx'
 import Link from 'next/link'
-import { CalendarDaysIcon, LinkIcon, MapPinIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
+import { CalendarDaysIcon, EnvelopeIcon, LinkIcon, MapPinIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
 import type { Profile, UserProfile } from '@/types/api'
 import { AchievementBadge, BADGE_META } from '@/components/features/gamification/AchievementBadge'
 import { TierBadge } from '@/components/features/gamification/TierBadge'
@@ -132,6 +132,14 @@ export function ProfileCard({
           ) : (
             <p className="mt-1 text-sm text-neutral-400 dark:text-neutral-500">Belum ada bio singkat.</p>
           )}
+          {profile.email && (
+            <p className="mt-2 flex items-center gap-1.5 text-sm text-neutral-500 dark:text-neutral-400">
+              <EnvelopeIcon className="size-3.5 shrink-0" aria-hidden />
+              <a href={`mailto:${profile.email}`} className="text-primary-600 hover:underline dark:text-primary-400">
+                {profile.email}
+              </a>
+            </p>
+          )}
         </div>
       </div>
 
@@ -218,6 +226,18 @@ export function ProfileCard({
           <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-xs text-neutral-500 dark:text-neutral-400">
             <MapPinIcon className="size-3.5 shrink-0" aria-hidden />
             {profile.location}
+          </p>
+        )}
+
+        {profile.email && (
+          <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-xs text-neutral-500 dark:text-neutral-400">
+            <EnvelopeIcon className="size-3.5 shrink-0" aria-hidden />
+            <a
+              href={`mailto:${profile.email}`}
+              className="break-all text-primary-600 hover:underline dark:text-primary-400"
+            >
+              {profile.email}
+            </a>
           </p>
         )}
 

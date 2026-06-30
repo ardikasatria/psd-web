@@ -439,7 +439,8 @@ export const handlers = [
         return { reputation: g.tier.reputation, tier: g.tier, badges: g.badges.filter((b) => b.earned).map((b) => b.id) }
       })(),
     }
-    if (!(settings.privacy.show_email && viewer?.id === user.id)) {
+    const isOwner = viewer?.id === user.id
+    if (!isOwner && !settings.privacy.show_email) {
       delete payload.email
     }
     return HttpResponse.json(payload)

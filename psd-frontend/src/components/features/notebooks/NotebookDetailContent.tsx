@@ -70,6 +70,17 @@ export function NotebookDetailContent({ id }: { id: string }) {
 
             <DetailPageHeader
               title={data.title}
+              byline={
+                <p className="text-sm">
+                  <span className="text-neutral-600 dark:text-neutral-400">oleh </span>
+                  <Link
+                    href={profilePath(data.owner.username)}
+                    className="font-medium text-primary-700 hover:underline dark:text-primary-300"
+                  >
+                    {data.owner.username}
+                  </Link>
+                </p>
+              }
               subtitle={data.description}
               badges={
                 <>
@@ -82,9 +93,6 @@ export function NotebookDetailContent({ id }: { id: string }) {
                       </span>
                     </Badge>
                   )}
-                  <Link href={profilePath(data.owner.username)} className="text-sm text-primary-600 hover:underline">
-                    {data.owner.username}
-                  </Link>
                   {data.owner.is_official && <OfficialBadge />}
                   {data.team && <TeamBadge team={data.team} />}
                 </>
@@ -142,60 +150,61 @@ export function NotebookDetailContent({ id }: { id: string }) {
               </div>
             )}
 
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="space-y-6">
-                {data.source_url && (
-                  <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
-                    <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                      <LinkIcon className="size-4 text-primary-500" aria-hidden />
-                      Sumber notebook
-                    </h2>
-                    <a
-                      href={data.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 inline-flex items-center gap-1 break-all text-sm text-primary-600 hover:underline dark:text-primary-400"
-                    >
-                      {data.source_url}
-                      <ArrowTopRightOnSquareIcon className="size-3.5 shrink-0" aria-hidden />
-                    </a>
-                    {data.colab_url && (
-                      <ButtonPrimary
-                        href={data.colab_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-4"
-                      >
-                        Buka di Google Colab
-                      </ButtonPrimary>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <aside className="lg:sticky lg:top-24 lg:self-start">
-                <div className="overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-700 dark:bg-neutral-800">
-                  <div className="bg-gradient-to-br from-violet-500 to-indigo-600 px-5 py-6 text-white">
-                    <CodeBracketSquareIcon className="size-8" aria-hidden />
-                    <p className="mt-3 text-sm font-medium text-white/90">Notebook PSD</p>
-                    <p className="mt-1 text-lg font-semibold">Workspace notebook</p>
-                  </div>
-                  <div className="space-y-4 p-5">
-                    <OpenNotebookButton
-                      notebookId={id}
-                      className="w-full [&_a]:w-full [&_button]:w-full [&_a]:justify-center [&_button]:justify-center"
-                    />
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      Jalankan di editor terintegrasi PSD — lihat{' '}
-                      <Link href="/help/notebook-membuka" className="text-primary-600 hover:underline dark:text-primary-400">
-                        panduan notebook
-                      </Link>
-                      .
+            <div className="overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-700 dark:bg-neutral-800">
+              <div className="flex flex-col lg:flex-row lg:items-stretch">
+                <div className="bg-gradient-to-br from-violet-500 to-indigo-600 px-6 py-8 text-white lg:flex lg:flex-1 lg:items-center lg:gap-5">
+                  <CodeBracketSquareIcon className="size-10 shrink-0" aria-hidden />
+                  <div className="mt-4 lg:mt-0">
+                    <p className="text-sm font-medium text-white/90">Notebook PSD</p>
+                    <p className="mt-1 text-xl font-semibold">Workspace notebook</p>
+                    <p className="mt-2 text-sm text-white/85">
+                      Jalankan di editor terintegrasi PSD — tanpa membuka tab baru.
                     </p>
                   </div>
                 </div>
-              </aside>
+                <div className="flex flex-col justify-center gap-3 border-t border-neutral-200/80 p-6 dark:border-neutral-700 lg:w-72 lg:shrink-0 lg:border-t-0 lg:border-s">
+                  <OpenNotebookButton
+                    notebookId={id}
+                    className="w-full [&_a]:w-full [&_button]:w-full [&_a]:justify-center [&_button]:justify-center"
+                  />
+                  <p className="text-center text-xs text-neutral-500 dark:text-neutral-400 lg:text-left">
+                    Lihat{' '}
+                    <Link href="/help/notebook-membuka" className="text-primary-600 hover:underline dark:text-primary-400">
+                      panduan notebook
+                    </Link>
+                    .
+                  </p>
+                </div>
+              </div>
             </div>
+
+            {data.source_url && (
+              <div className="mt-8 rounded-2xl border border-neutral-200/80 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                  <LinkIcon className="size-4 text-primary-500" aria-hidden />
+                  Sumber notebook
+                </h2>
+                <a
+                  href={data.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1 break-all text-sm text-primary-600 hover:underline dark:text-primary-400"
+                >
+                  {data.source_url}
+                  <ArrowTopRightOnSquareIcon className="size-3.5 shrink-0" aria-hidden />
+                </a>
+                {data.colab_url && (
+                  <ButtonPrimary
+                    href={data.colab_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4"
+                  >
+                    Buka di Google Colab
+                  </ButtonPrimary>
+                )}
+              </div>
+            )}
           </>
         )}
       </QueryState>
