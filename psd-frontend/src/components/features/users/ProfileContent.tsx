@@ -1,15 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import clsx from 'clsx'
 import { QueryState } from '@/components/features/QueryState'
 import { NotebookCard } from '@/components/features/NotebookCard'
 import { ThreadCard } from '@/components/features/ThreadCard'
-import { DetailPageShell } from '@/components/features/layout'
+import { CardGridSkeleton, DetailPageShell } from '@/components/features/layout'
 import { ProfileEngagementStats } from '@/components/features/engagement/ProfileEngagementStats'
 import { ProfileUserSearch } from '@/components/features/users/ProfileUserSearch'
 import { ProfileCard } from '@/components/features/users/ProfileCard'
 import { ProfileCover } from '@/components/features/users/ProfileCover'
+import { ProfileLikedTab } from '@/components/features/users/ProfileLikedTab'
 import { ProfileRepoRow } from '@/components/features/users/ProfileRepoRow'
 import { getMe } from '@/lib/api/auth'
 import { getThreads } from '@/lib/api/community'
@@ -47,7 +48,7 @@ const TAB_LABELS: Record<Tab, string> = {
   liked: 'Disukai',
 }
 
-export function ProfileContent({ username }: { username: string }) {
+function ProfileContentInner({ username }: { username: string }) {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
   const initialTab: Tab =
@@ -327,5 +328,19 @@ export function ProfileContent({ username }: { username: string }) {
         )}
       </QueryState>
     </DetailPageShell>
+  )
+}
+
+export function ProfileContent({ username }: { username: string }) {
+  return (
+    <Suspense
+      fallback={
+        <DetailPageShell>
+          <CardGridSkeleton columns={2} />
+        </DetailPageShell>
+      }
+    >
+      <ProfileContentInner username={username} />
+    </Suspense>
   )
 }
