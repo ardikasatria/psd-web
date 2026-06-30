@@ -22,7 +22,7 @@ async function hubFetch(url: string, token: string, init?: RequestInit) {
   })
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText)
-    throw new Error(`JupyterHub ${res.status}: ${text}`)
+    throw new Error(`Kernel server ${res.status}: ${text}`)
   }
   if (res.status === 204) return null
   return res.json()

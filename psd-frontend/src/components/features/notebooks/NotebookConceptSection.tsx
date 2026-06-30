@@ -1,6 +1,5 @@
 'use client'
 
-import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
 import { OpenNotebookButton } from '@/components/features/notebooks/OpenNotebookButton'
 import {
   ArrowTopRightOnSquareIcon,

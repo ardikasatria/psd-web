@@ -13,7 +13,6 @@ import type { IpyNb } from '@/lib/notebooks/ipynb'
 import type { NotebookKernel } from '@/lib/notebooks/kernels/kernelInterface'
 import { createHubServerKernel } from '@/lib/notebooks/kernels/serverKernel'
 import { createPyodideKernel } from '@/lib/notebooks/kernels/pyodideKernel'
-import { useHub } from '@/lib/hub/useHub'
 import { Button } from '@/shared/Button'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import { ArrowLeftIcon, CpuChipIcon } from '@heroicons/react/24/outline'
@@ -26,7 +25,6 @@ type RuntimeMode = 'browser' | 'server'
 
 export function NotebookEditorContent({ id }: { id: string }) {
   useAuthGuard(`/login?next=/notebooks/${id}/workspace`)
-  const { enabled: hubEnabled } = useHub()
 
   const [runtimeMode, setRuntimeMode] = useState<RuntimeMode>('browser')
   const [preparing, setPreparing] = useState(false)
@@ -51,7 +49,7 @@ export function NotebookEditorContent({ id }: { id: string }) {
 
   const tierSlug = hubTierFromGamificationLevel(gamification.data?.tier.level ?? 0)
   const { canServer: canServerGrant, pendingGrant } = useNotebookKernelAccess()
-  const canServer = (kernelServerAvailable(tierSlug) || canServerGrant) && hubEnabled
+  const canServer = kernelServerAvailable(tierSlug) || canServerGrant
 
   const initBrowserKernel = useCallback(async () => {
     setKernelError(null)
@@ -74,7 +72,7 @@ export function NotebookEditorContent({ id }: { id: string }) {
         throw new Error('Respons runtime server tidak valid')
       }
       if (!out.kernels_url || !out.ws_base || !out.token) {
-        throw new Error('Konfigurasi JupyterHub tidak lengkap')
+        throw new Error('Konfigurasi kernel server tidak lengkap')
       }
       const k = await createHubServerKernel({
         kernelsUrl: out.kernels_url,
@@ -89,8 +87,12 @@ export function NotebookEditorContent({ id }: { id: string }) {
           setKernelError('Akses kernel server belum tersedia. Ajukan akses kernel terlebih dahulu.')
         } else if (err.code === 'kernel_limit') {
           setKernelError(err.message)
-        } else if (err.code === 'hub_timeout' || err.status === 504) {
-          setKernelError('Server JupyterHub masih disiapkan — coba lagi dalam beberapa saat.')
+        } else if (err.code === 'hub_disabled') {
+          setKernelError('Kernel server belum diaktifkan di lingkungan ini.')
+        } else if (err.code === 'hub_unavailable' || err.code === 'hub_timeout' || err.status === 504) {
+          setKernelError('Kernel server sedang disiapkan — tunggu 1–2 menit lalu coba lagi.')
+        } else if (err.code === 'hub_error' || err.status === 502) {
+          setKernelError('Kernel server sementara tidak tersedia. Coba lagi sebentar lagi.')
         } else {
           setKernelError(err.message)
         }
@@ -185,7 +187,7 @@ export function NotebookEditorContent({ id }: { id: string }) {
                 </div>
                 {runtimeMode === 'server' && (
                   <Button outline onClick={() => void stopServer()} className="!text-xs">
-                    Hentikan server
+                    Hentikan kernel
                   </Button>
                 )}
                 {!canServer && !pendingGrant && (
@@ -202,9 +204,9 @@ export function NotebookEditorContent({ id }: { id: string }) {
             <div className="border-b border-violet-200/80 bg-violet-50/80 px-4 py-4 text-center dark:border-violet-900/50 dark:bg-violet-950/30">
               <div className="mx-auto flex max-w-md flex-col items-center gap-2">
                 <div className="size-8 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" aria-hidden />
-                <p className="text-sm font-medium text-violet-900 dark:text-violet-100">Menyiapkan server JupyterHub…</p>
+                <p className="text-sm font-medium text-violet-900 dark:text-violet-100">Menyiapkan kernel server…</p>
                 <p className="text-xs text-violet-700 dark:text-violet-300">
-                  Kernel di VM infra — UI tetap di PSD. Login OAuth sudah terhubung via akun Anda.
+                  Menghubungkan ke lingkungan Python terisolasi — tetap di editor PSD.
                 </p>
               </div>
             </div>

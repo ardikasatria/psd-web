@@ -1,5 +1,6 @@
 'use client'
 
+import { TeamCreateAssetsPanel } from '@/components/features/teams/TeamCreateAssetsPanel'
 import { NotebookCard } from '@/components/features/NotebookCard'
 import { RepoCard } from '@/components/features/RepoCard'
 import { QueryState } from '@/components/features/QueryState'
@@ -8,6 +9,7 @@ import { getNotebooks } from '@/lib/api/notebooks'
 import { getRepos } from '@/lib/api/repos'
 import {
   deleteTeam,
+  getMyTeams,
   getTeam,
   inviteMember,
   removeMember,
@@ -65,6 +67,14 @@ export function TeamDetailContent({ slug }: { slug: string }) {
     queryFn: () => getNotebooks({ team: slug, page_size: 50 }),
     enabled: tab === 'assets' && !!teamQuery.data,
   })
+
+  const myTeamsQuery = useQuery({
+    queryKey: ['my-teams'],
+    queryFn: async () => (await getMyTeams()).items as { id: string; slug: string }[],
+    enabled: isLoggedIn && tab === 'assets',
+  })
+
+  const teamId = myTeamsQuery.data?.find((t) => t.slug === slug)?.id ?? ''
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['team', slug] })
 
@@ -278,38 +288,42 @@ export function TeamDetailContent({ slug }: { slug: string }) {
       )}
 
       {tab === 'assets' && (
-        <QueryState
-          isLoading={reposQuery.isLoading || notebooksQuery.isLoading}
-          isError={reposQuery.isError || notebooksQuery.isError}
-          error={reposQuery.error ?? notebooksQuery.error}
-          isEmpty={!(reposQuery.data?.length || notebooksQuery.data?.items.length)}
-          emptyTitle="Belum ada aset tim"
-          emptyDescription="Buat proyek, dataset, model, atau notebook dengan pemilik tim."
-          skeletonColumns={2}
-        >
-          <div className="space-y-8">
-            {(reposQuery.data?.length ?? 0) > 0 && (
-              <section>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Repositori</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {reposQuery.data!.map((r: RepoSummary) => (
-                    <RepoCard key={r.id} repo={r} />
-                  ))}
-                </div>
-              </section>
-            )}
-            {(notebooksQuery.data?.items.length ?? 0) > 0 && (
-              <section>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Notebook</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {notebooksQuery.data!.items.map((nb: NotebookSummary) => (
-                    <NotebookCard key={nb.id} notebook={nb} />
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
-        </QueryState>
+        <div className="space-y-6">
+          {isMember && <TeamCreateAssetsPanel teamId={teamId} teamName={team.name} />}
+
+          <QueryState
+            isLoading={reposQuery.isLoading || notebooksQuery.isLoading}
+            isError={reposQuery.isError || notebooksQuery.isError}
+            error={reposQuery.error ?? notebooksQuery.error}
+            isEmpty={!(reposQuery.data?.length || notebooksQuery.data?.items.length)}
+            emptyTitle="Belum ada aset tim"
+            emptyDescription="Gunakan tombol di atas untuk membuat proyek, dataset, model, atau notebook bersama."
+            skeletonColumns={2}
+          >
+            <div className="space-y-8">
+              {(reposQuery.data?.length ?? 0) > 0 && (
+                <section>
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Repositori</h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {reposQuery.data!.map((r: RepoSummary) => (
+                      <RepoCard key={r.id} repo={r} />
+                    ))}
+                  </div>
+                </section>
+              )}
+              {(notebooksQuery.data?.items.length ?? 0) > 0 && (
+                <section>
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Notebook</h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {notebooksQuery.data!.items.map((nb: NotebookSummary) => (
+                      <NotebookCard key={nb.id} notebook={nb} />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          </QueryState>
+        </div>
       )}
     </DetailPageShell>
   )

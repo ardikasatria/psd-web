@@ -4382,7 +4382,7 @@ export const handlers = [
   http.get(`${API_ROOT}/api/hub/launch`, ({ request }) => {
     const user = resolveUserFromRequest(request)
     if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
-    return HttpResponse.redirect('https://hub.projeksainsdata.com/hub/spawn', 302)
+    return HttpResponse.redirect('http://localhost:3000/notebooks/workspace', 302)
   }),
 
   // Langkah 57 — Asisten & feed personal

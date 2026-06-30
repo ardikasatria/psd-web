@@ -23,6 +23,7 @@ import { QueryState } from '@/components/features/QueryState'
 import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import { createRepoDiscussion, getRepoDiscussions } from '@/lib/api/community'
 import { useAuth } from '@/lib/auth/useAuth'
+import { useAssetCollaboration } from '@/lib/teams/useAssetCollaboration'
 import { getRepo, provisionRepoGit } from '@/lib/api/repos'
 import { assetKindPath, getAssetBranches, getAssetVersions } from '@/lib/api/asset'
 import { profilePath } from '@/lib/routes/profile'
@@ -65,7 +66,7 @@ export function RepoDetailContent({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { user, isLoggedIn } = useAuth()
+  const { isLoggedIn } = useAuth()
   const qc = useQueryClient()
   const [tab, setTab] = useState<TabId>('readme')
   const [ref, setRef] = useState('main')
@@ -80,7 +81,7 @@ export function RepoDetailContent({
     queryFn: () => getRepo(kind, owner, name),
   })
 
-  const isOwner = !!user && user.username === data?.owner.username
+  const { canEdit } = useAssetCollaboration(data?.team, data?.owner.username)
 
   useTrackView(!!data, 'repo', data?.id, {
     category_slug: data?.category?.slug,
@@ -122,10 +123,10 @@ export function RepoDetailContent({
   const triedLink = useRef(false)
 
   useEffect(() => {
-    if (!isOwner || !data?.id || data.clone_url || triedLink.current) return
+    if (!canEdit || !data?.id || data.clone_url || triedLink.current) return
     triedLink.current = true
     linkGit.mutate()
-  }, [isOwner, data?.id, data?.clone_url, linkGit])
+  }, [canEdit, data?.id, data?.clone_url, linkGit])
 
   const kp = assetKindPath(kind)
 
@@ -159,11 +160,11 @@ export function RepoDetailContent({
       )
     }
     if (data?.clone_url) {
-      items.push({ id: 'pulls', label: isOwner ? 'Kontribusi' : 'Ajukan kontribusi' })
+      items.push({ id: 'pulls', label: canEdit ? 'Kontribusi' : 'Ajukan kontribusi' })
     }
     items.push({ id: 'discussions', label: 'Diskusi' })
     return items
-  }, [isOwner, data?.clone_url])
+  }, [canEdit, data?.clone_url])
 
   useEffect(() => {
     if (tab === 'pulls' && !data?.clone_url) setTab('readme')
@@ -202,13 +203,13 @@ export function RepoDetailContent({
               }
               actions={
                 <div className="flex flex-wrap gap-2">
-                  {data.kind === 'model' && <RepoMlRegistryLink repoId={data.id} isOwner={isOwner} />}
-                  {!isOwner && data.clone_url && (
+                  {data.kind === 'model' && <RepoMlRegistryLink repoId={data.id} isOwner={canEdit} />}
+                  {!canEdit && data.clone_url && (
                     <Button outline onClick={() => setTab('pulls')}>
                       Ajukan kontribusi
                     </Button>
                   )}
-                  {isOwner && (
+                  {canEdit && (
                     <Button outline onClick={() => setEditOpen(true)}>
                       <PencilSquareIcon className="size-4" data-slot="icon" aria-hidden />
                       Edit
@@ -241,8 +242,8 @@ export function RepoDetailContent({
 
             {data.clone_url && <RepoCloneBanner cloneUrl={data.clone_url} />}
 
-            {data.kind === 'model' && isOwner && (
-              <RepoRegisterModelVersion repoId={data.id} isOwner={isOwner} />
+            {data.kind === 'model' && canEdit && (
+              <RepoRegisterModelVersion repoId={data.id} isOwner={canEdit} />
             )}
 
             <div className="flex flex-wrap gap-2">
@@ -294,7 +295,7 @@ export function RepoDetailContent({
                   ref={ref}
                   synthetic={data.synthetic}
                   generationSpec={data.generation_spec}
-                  isOwner={isOwner}
+                  isOwner={canEdit}
                   onEdit={() => setEditOpen(true)}
                 />
               )}
@@ -310,7 +311,7 @@ export function RepoDetailContent({
                     <RepoFilesPanel
                       repoId={data.id}
                       files={data.files}
-                      isOwner={isOwner}
+                      isOwner={canEdit}
                       license={data.license}
                       cloneUrl={data.clone_url}
                       sourceOfTruth={data.source_of_truth}
@@ -339,7 +340,7 @@ export function RepoDetailContent({
               )}
 
               {tab === 'pulls' && data.clone_url && (
-                isOwner ? (
+                canEdit ? (
                   <RepoPullRequestsPanel
                     repoId={data.id}
                     cloneUrl={data.clone_url}

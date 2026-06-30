@@ -1,5 +1,6 @@
-import { NotebookOpenHubContent } from '@/components/features/notebooks/NotebookOpenHubContent'
+import { redirect } from 'next/navigation'
 
+/** Legacy — kernel server hanya lewat editor PSD, bukan UI JupyterHub. */
 export default function NotebookOpenHubPage() {
-  return <NotebookOpenHubContent />
+  redirect('/notebooks/workspace')
 }

@@ -7,10 +7,9 @@ import { AssetStatBar } from '@/components/features/engagement/AssetStatBar'
 import { QueryState } from '@/components/features/QueryState'
 import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import { OpenNotebookButton } from '@/components/features/notebooks/OpenNotebookButton'
-import { useMe } from '@/lib/api/dashboard'
 import { deleteNotebook, getNotebook } from '@/lib/api/notebooks'
 import { downloadNotebookFile } from '@/lib/notebooks/download'
-import { isStaff } from '@/lib/auth/roles'
+import { useAssetCollaboration } from '@/lib/teams/useAssetCollaboration'
 import { profilePath } from '@/lib/routes/profile'
 import { NotebookDetail } from '@/types/api'
 import { Badge } from '@/shared/Badge'
@@ -33,13 +32,14 @@ export function NotebookDetailContent({ id }: { id: string }) {
   const router = useRouter()
   const pathname = usePathname()
   const qc = useQueryClient()
-  const me = useMe()
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const { data, isLoading, isError, error } = useQuery<NotebookDetail>({
     queryKey: ['notebook', id],
     queryFn: () => getNotebook(id),
   })
+
+  const { canEdit } = useAssetCollaboration(data?.team, data?.owner.username)
 
   const remove = useMutation({
     mutationFn: () => deleteNotebook(id),
@@ -48,11 +48,6 @@ export function NotebookDetailContent({ id }: { id: string }) {
       router.push('/notebooks')
     },
   })
-
-  const canManage =
-    data &&
-    me.data?.user &&
-    (isStaff(me.data.user) || me.data.user.username === data.owner.username)
 
   const pageUrl = typeof window !== 'undefined' ? window.location.href : `https://projeksainsdata.com${pathname}`
 
@@ -101,7 +96,7 @@ export function NotebookDetailContent({ id }: { id: string }) {
                 <CategoryBadge category={data.category} subcategory={data.subcategory} />
               }
               actions={
-                canManage ? (
+                canEdit ? (
                   <div className="flex flex-wrap gap-2">
                     <Button href={`/notebooks/${id}/edit`} outline>
                       <PencilSquareIcon className="size-4" data-slot="icon" aria-hidden />

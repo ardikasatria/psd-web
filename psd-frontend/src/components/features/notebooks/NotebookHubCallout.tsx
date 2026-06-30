@@ -67,7 +67,7 @@ export function NotebookHubCallout({ compact }: { compact?: boolean }) {
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Kernel server (tier Ahli+)</h3>
           <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-            Compute berat di JupyterHub VM — UI tetap di workspace PSD. OAuth akun PSD terhubung otomatis.
+            Compute berat di server terisolasi — aktifkan dari tab <strong>Server</strong> di editor notebook.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <ButtonPrimary href="/notebooks/workspace">

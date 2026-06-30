@@ -1,6 +1,5 @@
 'use client'
 
-import { OpenHubButton } from '@/components/features/notebooks/OpenHubButton'
 import { NotebookQuotaPanel } from '@/components/features/notebooks/NotebookQuotaPanel'
 import { FeaturePageShell } from '@/components/features/layout'
 import { heroGradient } from '@/components/common/featureGradients'
@@ -173,24 +172,23 @@ export function NotebookWorkspaceContent() {
               <div className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
                 <CpuChipIcon className="size-5" aria-hidden />
               </div>
-              {canServer ? <Badge color="violet">Ahli+</Badge> : <Badge color="zinc">Terkunci</Badge>}
+              {canServer ? <Badge color="violet">Tersedia</Badge> : <Badge color="zinc">Terkunci</Badge>}
             </div>
             <h2 className="mt-4 text-lg font-semibold text-neutral-900 dark:text-neutral-100">Kernel server</h2>
             <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-              Kontainer terisolasi per pengguna — akses penuh SDK, idle-culling, login OAuth PSD otomatis.
+              Python penuh di server terisolasi — dihubungkan langsung dari editor PSD, tanpa membuka antarmuka terpisah.
             </p>
             {canServer ? (
-              <>
-                <div className="mt-4">
-                  <OpenHubButton className="[&_a]:w-full [&_button]:w-full" />
-                </div>
-                <p className="mt-2 text-xs text-neutral-500">
-                  Dari editor notebook, tombol &quot;Buka kernel server&quot; mengalihkan ke JupyterHub di belakang layar.
-                </p>
-              </>
+              <p className="mt-4 text-sm text-violet-800 dark:text-violet-200">
+                Buka notebook di bawah, lalu pilih tab <strong>Server</strong> di toolbar editor.
+              </p>
             ) : (
               <p className="mt-4 text-sm text-amber-800 dark:text-amber-300">
-                Kernel server tersedia dari tier Ahli. Kumpulkan reputasi di{' '}
+                Kernel server tersedia dari tier Ahli atau setelah pengajuan disetujui.{' '}
+                <Link href="/notebooks/kernel-request" className="font-medium underline">
+                  Ajukan akses
+                </Link>
+                {' '}atau kumpulkan reputasi di{' '}
                 <Link href="/leaderboard" className="font-medium underline">
                   leaderboard
                 </Link>

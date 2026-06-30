@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.db import get_db
 from app.core.deps import get_current_user
-from app.core.errors import ApiError
 from app.hub.auth import get_bearer_user
 from app.hub.resolve import resolve_dataset_file
 from app.modules.users.models import User
@@ -36,8 +35,6 @@ async def hub_config():
 
 @router.get("/hub/launch")
 async def hub_launch(user: User = Depends(get_current_user)):
-    """Alihkan ke JupyterHub setelah sesi PSD terkonfirmasi (OAuth otomatis di hub)."""
-    if not settings.PSD_HUB_ENABLED:
-        raise ApiError(503, "hub_disabled", "Jupyter Notebook belum aktif di lingkungan ini.")
-    target = f"{settings.PSD_OAUTH_HUB_BASE_URL.rstrip('/')}/hub/spawn"
+    """Legacy — alihkan ke workspace PSD (kernel dihubungkan lewat API, tanpa UI JupyterHub)."""
+    target = f"{settings.APP_BASE_URL.rstrip('/')}/notebooks/workspace"
     return RedirectResponse(target, status_code=302)

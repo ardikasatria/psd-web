@@ -112,6 +112,12 @@ async def launch_notebook(
     except hub_launch.HubAccessError as exc:
         raise ApiError(exc.status, exc.slug, exc.message) from exc
     except HubError as exc:
+        if exc.status in (502, 503, 504):
+            raise ApiError(
+                exc.status if exc.status in (502, 504) else 503,
+                "hub_unavailable",
+                "Kernel server sedang tidak tersedia. Coba lagi dalam 1–2 menit.",
+            ) from exc
         code = "hub_timeout" if exc.status == 504 else "hub_error"
         raise ApiError(exc.status if exc.status in (502, 504) else 502, code, str(exc)) from exc
 
