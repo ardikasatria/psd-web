@@ -8,6 +8,7 @@ import {
   CpuChipIcon,
   CubeIcon,
   HomeIcon,
+  LifebuoyIcon,
   ShieldCheckIcon,
   TrophyIcon,
   BoltIcon,
@@ -57,6 +58,7 @@ export const dashboardMenuSections: DashboardMenuSection[] = [
     items: [
       { name: 'Minat saya', href: '/me/interests', icon: SparklesIcon },
       { name: 'Streak belajar', href: '/me/streak', icon: BoltIcon },
+      { name: 'Bantuan & pengaduan', href: '/dashboard/support', icon: LifebuoyIcon },
       { name: 'Pengaturan', href: '/settings', icon: Cog6ToothIcon },
     ],
   },

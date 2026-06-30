@@ -35,7 +35,7 @@ Projek Sains Data (PSD) adalah platform kolaboratif untuk menemukan, membagikan,
 - **Feed & forum** — berbagi progres, diskusi, dan kolaborasi terbuka.
 - **Pabrik Data & analitik** — pipeline, dashboard, dan ruang ide kolaboratif.
 - **Git & notebook** — versioning nyata (Gitea) dan Jupyter Notebook terintegrasi login PSD.
-- **Bantuan & pengaduan** — laporkan masalah platform lewat tiket di [/support](/support).
+- **Bantuan & pengaduan** — laporkan masalah platform lewat tiket di [/dashboard/support](/dashboard/support).
 
 PSD dikurasi oleh tim resmi dan komunitas praktisi di seluruh nusantara.
 
@@ -101,7 +101,7 @@ Di [Pengaturan → Notifikasi](/settings/notifications) pilih email (segera / ri
 
 - [FAQ](/help/faq) — pertanyaan umum
 - [Pedoman komunitas](/help/pedoman-komunitas) — etika berinteraksi
-- [Bantuan & pengaduan](/support) — tiket masalah platform
+- [Bantuan & pengaduan](/dashboard/support) — tiket masalah platform
 - Forum — tanya praktisi lain di [/forum](/forum)`,
   },
   {
@@ -430,7 +430,7 @@ Gunakan [Lupa kata sandi](/forgot-password). Email reset berlaku ±30 menit. Res
 ## Bagaimana melaporkan konten atau masalah platform?
 
 - **Konten feed/forum** — menu **⋯ → Laporkan** pada postingan, komentar, atau balasan.
-- **Masalah teknis / akun** — buat tiket di [Bantuan & pengaduan](/support).
+- **Masalah teknis / akun** — buat tiket di [Bantuan & pengaduan](/dashboard/support).
 
 ## Siapa yang bisa menandai aset pilihan?
 
@@ -452,7 +452,7 @@ Atur di [Pengaturan → Notifikasi](/settings/notifications): email segera, ring
 - Jangan unggah data pribadi atau rahasia tanpa izin (PII, NIK, rekening, dll.).
 - Berikan konteks dan dokumentasi yang memadai pada dataset dan model.
 - Jangan commit kredensial (API key, password) ke repo Git — gunakan variabel lingkungan.
-- Laporkan konten yang melanggar lewat menu **Laporkan** di feed/forum, atau buat pengaduan di [/support](/support).
+- Laporkan konten yang melanggar lewat menu **Laporkan** di feed/forum, atau buat pengaduan di [/dashboard/support](/dashboard/support).
 - Pull Request: berikan deskripsi jelas; respon review dengan sopan.
 
 Bersama kita bangun ekosistem sains data yang inklusif dan bertanggung jawab.

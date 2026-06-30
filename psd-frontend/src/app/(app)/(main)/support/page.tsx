@@ -1,5 +1,6 @@
-import { SupportPageContent } from '@/components/features/support/SupportPageContent'
+import { redirect } from 'next/navigation'
 
-export default function SupportPage() {
-  return <SupportPageContent />
+/** Redirect lama `/support` → dasbor pengguna */
+export default function SupportRedirectPage() {
+  redirect('/dashboard/support')
 }

@@ -213,7 +213,7 @@ async def admin_resolve_report(
             "report_resolved",
             "Laporan Anda telah ditinjau",
             body=f"Keputusan: {decision}",
-            link="/support",
+            link="/dashboard/support",
             actor_id=user.id,
         )
     return {"status": r.status, "decision": r.decision}

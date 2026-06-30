@@ -44,7 +44,7 @@ export default function HelpIndexPage() {
           </a>
         </p>
         <Link
-          href="/support"
+          href="/dashboard/support"
           className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:underline dark:text-primary-400"
         >
           Ada masalah teknis atau keluhan akun? Buat pengaduan

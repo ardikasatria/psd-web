@@ -80,7 +80,7 @@ export function PostCard({
   const authorProfile: Profile = {
     id: post.author.username,
     username: post.author.username,
-    name: post.author.username,
+    name: post.author.name ?? post.author.username,
     avatar_url: post.author.avatar_url,
     banner_url: null,
     accent_color: null,
@@ -189,7 +189,7 @@ export function PostCard({
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <Link
               href={profilePath(post.author.username)}
-              className="font-semibold text-neutral-900 hover:underline dark:text-white"
+              className="text-sm font-semibold text-neutral-900 hover:underline dark:text-white"
             >
               @{post.author.username}
             </Link>
@@ -202,6 +202,11 @@ export function PostCard({
             )}
             <span className="text-xs text-neutral-400">· {timeAgo(post.created_at)}</span>
           </div>
+          {post.author.name && (
+            <p className="mt-0.5 text-sm leading-snug text-neutral-600 dark:text-neutral-400">
+              {post.author.name}
+            </p>
+          )}
         </div>
         {isOwner && !isEditing && (
           <ContentOwnerMenu

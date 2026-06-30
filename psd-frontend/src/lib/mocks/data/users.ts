@@ -1,12 +1,12 @@
 import type { OwnerRef, User } from '@/types/api'
 
 export const owners: Record<string, OwnerRef> = {
-  psd: { username: 'psd', type: 'org', avatar_url: null, is_official: true },
-  budi: { username: 'budi-santoso', type: 'user', avatar_url: null },
-  siti: { username: 'siti-rahayu', type: 'user', avatar_url: null },
-  itera: { username: 'itera-ds', type: 'org', avatar_url: null },
-  lampung: { username: 'umkm-lampung', type: 'org', avatar_url: null },
-  roomChallenged: { username: 'umkm-demand-challenged', type: 'org', avatar_url: null },
+  psd: { username: 'psd', name: 'Projek Sains Data', type: 'org', avatar_url: null, is_official: true },
+  budi: { username: 'budi-santoso', name: 'Budi Santoso', type: 'user', avatar_url: null },
+  siti: { username: 'siti-rahayu', name: 'Siti Rahayu', type: 'user', avatar_url: null },
+  itera: { username: 'itera-ds', name: 'ITERA Data Science', type: 'org', avatar_url: null },
+  lampung: { username: 'umkm-lampung', name: 'UMKM Lampung', type: 'org', avatar_url: null },
+  roomChallenged: { username: 'umkm-demand-challenged', name: 'UMKM Demand Challenged', type: 'org', avatar_url: null },
 }
 
 const profileDefaults = {

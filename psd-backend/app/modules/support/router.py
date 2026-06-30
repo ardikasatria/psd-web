@@ -158,7 +158,7 @@ async def reply_ticket(
             "support_reply",
             "Balasan baru pada tiket pengaduan",
             body=text[:200],
-            link=f"/support/{t.id}",
+            link=f"/dashboard/support/{t.id}",
             actor_id=user.id,
         )
     return {
@@ -237,7 +237,7 @@ async def _admin_ticket_action(
             "support_status",
             f"Status tiket: {status_labels[t.status]}",
             body=t.subject,
-            link=f"/support/{t.id}",
+            link=f"/dashboard/support/{t.id}",
             actor_id=staff.id,
         )
     return t

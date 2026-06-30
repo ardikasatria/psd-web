@@ -9,6 +9,7 @@ def is_staff(user) -> bool:
 def owner_ref_dict(user) -> dict:
     return {
         "username": user.username,
+        "name": user.name or None,
         "type": "org" if getattr(user, "account_type", "individual") == "organization" else "user",
         "avatar_url": user.avatar_url,
         "is_official": bool(getattr(user, "is_official", False)),

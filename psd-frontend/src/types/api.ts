@@ -17,6 +17,7 @@ export const Paginated = <T extends z.ZodTypeAny>(item: T) =>
 
 export const OwnerRefSchema = z.object({
   username: z.string(),
+  name: z.string().optional(),
   type: z.enum(['user', 'org']),
   avatar_url: z.string().nullable(),
   is_official: z.boolean().optional(),
@@ -211,6 +212,24 @@ export const UserProfileSchema = ProfileSchema.extend({
   is_following: z.boolean().optional(),
 })
 export type UserProfile = z.infer<typeof UserProfileSchema>
+
+export const ProfileSearchItemSchema = z.object({
+  kind: z.enum(['project', 'dataset', 'model', 'post', 'thread', 'notebook']),
+  id: z.string(),
+  title: z.string(),
+  preview: z.string(),
+  href: z.string(),
+  kind_label: z.string(),
+  created_at: z.string(),
+})
+export type ProfileSearchItem = z.infer<typeof ProfileSearchItemSchema>
+
+export const ProfileSearchResultSchema = z.object({
+  items: z.array(ProfileSearchItemSchema),
+  total: z.number(),
+  q: z.string(),
+})
+export type ProfileSearchResult = z.infer<typeof ProfileSearchResultSchema>
 
 export const SocialPostAssetSchema = z.object({
   kind: z.string(),

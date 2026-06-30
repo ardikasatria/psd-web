@@ -129,6 +129,6 @@ async def apply_moderation_effect(
             "moderation",
             titles.get(decision, "Moderasi"),
             body=f"Keputusan moderator: {decision}",
-            link="/support",
+            link="/dashboard/support",
             actor_id=moderator_id,
         )

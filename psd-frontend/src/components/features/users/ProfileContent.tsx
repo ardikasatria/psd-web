@@ -7,7 +7,7 @@ import { NotebookCard } from '@/components/features/NotebookCard'
 import { ThreadCard } from '@/components/features/ThreadCard'
 import { DetailPageShell } from '@/components/features/layout'
 import { ProfileEngagementStats } from '@/components/features/engagement/ProfileEngagementStats'
-import { ProfileLikedTab } from '@/components/features/users/ProfileLikedTab'
+import { ProfileUserSearch } from '@/components/features/users/ProfileUserSearch'
 import { ProfileCard } from '@/components/features/users/ProfileCard'
 import { ProfileCover } from '@/components/features/users/ProfileCover'
 import { ProfileRepoRow } from '@/components/features/users/ProfileRepoRow'
@@ -31,6 +31,7 @@ import {
   UserProfile,
 } from '@/types/api'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'next/navigation'
 import { LockClosedIcon } from '@heroicons/react/24/outline'
 
 type Tab = 'all' | RepoKind | 'notebooks' | 'discussions' | 'posts' | 'liked'
@@ -47,7 +48,21 @@ const TAB_LABELS: Record<Tab, string> = {
 }
 
 export function ProfileContent({ username }: { username: string }) {
-  const [tab, setTab] = useState<Tab>('all')
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const initialTab: Tab =
+    tabParam === 'posts' ||
+    tabParam === 'liked' ||
+    tabParam === 'all' ||
+    tabParam === 'project' ||
+    tabParam === 'dataset' ||
+    tabParam === 'model' ||
+    tabParam === 'notebooks' ||
+    tabParam === 'discussions'
+      ? tabParam
+      : 'all'
+  const [tab, setTab] = useState<Tab>(initialTab)
+  const [searching, setSearching] = useState(false)
 
   const profile = useQuery<UserProfile>({
     queryKey: ['user', username],
@@ -174,8 +189,14 @@ export function ProfileContent({ username }: { username: string }) {
                 {profile.data.engagement && (
                   <ProfileEngagementStats engagement={profile.data.engagement} className="mb-6" />
                 )}
+
+                <ProfileUserSearch username={username} onSearchingChange={setSearching} />
+
                 <nav
-                  className="-mx-1 mb-6 flex gap-1 overflow-x-auto border-b border-neutral-200 dark:border-neutral-700"
+                  className={clsx(
+                    '-mx-1 mb-6 flex gap-1 overflow-x-auto border-b border-neutral-200 dark:border-neutral-700',
+                    searching && 'opacity-50 pointer-events-none',
+                  )}
                   role="tablist"
                   aria-label="Aset profil"
                 >
@@ -223,7 +244,7 @@ export function ProfileContent({ username }: { username: string }) {
                   })}
                 </nav>
 
-                {isRepoTab && (
+                {!searching && isRepoTab && (
                   <QueryState
                     isLoading={portfolio.isLoading}
                     isError={portfolio.isError}
@@ -244,7 +265,7 @@ export function ProfileContent({ username }: { username: string }) {
                   </QueryState>
                 )}
 
-                {tab === 'notebooks' && (
+                {!searching && tab === 'notebooks' && (
                   <QueryState
                     isLoading={notebooks.isLoading}
                     isError={notebooks.isError}
@@ -261,7 +282,7 @@ export function ProfileContent({ username }: { username: string }) {
                   </QueryState>
                 )}
 
-                {tab === 'posts' && (
+                {!searching && tab === 'posts' && (
                   <QueryState
                     isLoading={userPosts.isLoading}
                     isError={userPosts.isError}
@@ -282,7 +303,7 @@ export function ProfileContent({ username }: { username: string }) {
                   </QueryState>
                 )}
 
-                {tab === 'discussions' && (
+                {!searching && tab === 'discussions' && (
                   <QueryState
                     isLoading={discussions.isLoading}
                     isError={discussions.isError}
@@ -299,7 +320,7 @@ export function ProfileContent({ username }: { username: string }) {
                   </QueryState>
                 )}
 
-                {tab === 'liked' && <ProfileLikedTab username={username} isOwner={isOwner} />}
+                {!searching && tab === 'liked' && <ProfileLikedTab username={username} isOwner={isOwner} />}
               </div>
             </div>
           </div>

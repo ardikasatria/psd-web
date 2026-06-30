@@ -14,6 +14,7 @@ from app.modules.social.models import Follow
 from app.modules.users.models import User
 from app.modules.users.schemas import ProfileOut
 from app.modules.users.settings import can_view_profile, is_searchable
+from app.modules.users.profile_search import search_user_profile
 
 router = APIRouter(tags=["users"])
 
@@ -116,3 +117,21 @@ async def portfolio(
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
     rows = (await db.execute(stmt.offset(p.offset).limit(p.page_size))).scalars().all()
     return paginated([to_summary(r) for r in rows], total, p)
+
+
+@router.get("/users/{username}/search")
+async def search_profile(
+    username: str,
+    q: str = "",
+    limit: int = 40,
+    db: AsyncSession = Depends(get_db),
+    viewer: User | None = Depends(get_current_user_optional),
+):
+    u = (await db.execute(select(User).where(User.username == username))).scalar_one_or_none()
+    if not u:
+        raise ApiError(404, "not_found", "Pengguna tidak ditemukan")
+    _check_profile_access(u, viewer)
+    if limit < 1 or limit > 50:
+        limit = 40
+    items = await search_user_profile(db, u, viewer, q, limit=limit)
+    return {"items": items, "total": len(items), "q": q.strip()}

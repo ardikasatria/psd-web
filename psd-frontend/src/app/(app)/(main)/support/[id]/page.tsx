@@ -1,6 +1,9 @@
-import { SupportTicketDetailContent } from '@/components/features/support/SupportTicketDetailContent'
+import { redirect } from 'next/navigation'
 
-export default async function SupportTicketPage({ params }: { params: Promise<{ id: string }> }) {
+type Props = { params: Promise<{ id: string }> }
+
+/** Redirect lama `/support/:id` → dasbor pengguna */
+export default async function SupportTicketRedirectPage({ params }: Props) {
   const { id } = await params
-  return <SupportTicketDetailContent id={id} />
+  redirect(`/dashboard/support/${id}`)
 }

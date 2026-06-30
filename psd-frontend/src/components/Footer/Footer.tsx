@@ -16,7 +16,6 @@ const widgetMenus: WidgetFooterMenu[] = [
     title: 'Bantuan',
     menus: [
       { href: '/help', label: 'Pusat bantuan' },
-      { href: '/support', label: 'Pengaduan & tiket' },
       { href: '/help/panduan-memulai', label: 'Panduan memulai' },
       { href: '/help/git-menyiapkan-akses', label: 'Git push' },
       { href: '/help/notebook-membuka', label: 'Jupyter Notebook' },

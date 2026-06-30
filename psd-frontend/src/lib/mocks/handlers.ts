@@ -21,6 +21,7 @@ import {
   mockStreak,
 } from './data/micro'
 import { detailOf as repoDetailOf, findRepo, repos } from './data/repos'
+import { mockSearchUserProfile } from './data/profile-search'
 import {
   mockAssetBranches,
   mockAssetContributors,
@@ -470,6 +471,20 @@ export const handlers = [
     let items = repos.filter((r) => r.owner.username === params.username)
     if (kind) items = items.filter((r) => r.kind === kind)
     return HttpResponse.json(paginate(items, page))
+  }),
+
+  http.get(`${API}/users/:username/search`, ({ params, request }) => {
+    const user = users.find((u) => u.username === params.username)
+    if (!user) return errorResponse(404, 'not_found', 'Pengguna tidak ditemukan.')
+    const viewer = resolveUserFromRequest(request)
+    if (!canViewMockProfile(user.id, viewer?.id ?? null, viewer?.role)) {
+      return errorResponse(403, 'private_profile', 'Profil ini privat')
+    }
+    const url = new URL(request.url)
+    const q = url.searchParams.get('q') ?? ''
+    const limit = Number(url.searchParams.get('limit') ?? 40)
+    const items = mockSearchUserProfile(String(params.username), q, limit)
+    return HttpResponse.json({ items, total: items.length, q: q.trim() })
   }),
 
   // Repos
@@ -2809,6 +2824,7 @@ export const handlers = [
       id: `sps_${Date.now()}`,
       author: {
         username: viewer.username,
+        name: viewer.name,
         type: (viewer.account_type === 'organization' ? 'org' : 'user') as 'user' | 'org',
         avatar_url: viewer.avatar_url,
         is_official: viewer.is_official,

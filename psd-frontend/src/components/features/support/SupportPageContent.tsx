@@ -1,6 +1,5 @@
 'use client'
 
-import { FeaturePageShell } from '@/components/features/layout'
 import { QueryState } from '@/components/features/QueryState'
 import { createTicket, myTickets, TICKET_CATEGORIES, TICKET_PRIORITIES } from '@/lib/api/support'
 import { TICKET_STATUS_LABELS } from '@/lib/api/reports'
@@ -25,7 +24,7 @@ const statusColor: Record<string, 'green' | 'yellow' | 'blue' | 'zinc'> = {
 }
 
 export function SupportPageContent() {
-  useAuthGuard('/login?next=/support')
+  useAuthGuard('/login?next=/dashboard/support')
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [category, setCategory] = useState('bug')
@@ -55,11 +54,10 @@ export function SupportPageContent() {
   }
 
   return (
-    <FeaturePageShell className="!pt-8">
-      <div className="mx-auto max-w-3xl">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">Bantuan & Pengaduan</h1>
+    <div className="mx-auto max-w-3xl space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">Bantuan & Pengaduan</h2>
             <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
               Laporkan masalah platform, bug, atau keluhan akun. Tim kami akan menindaklanjuti melalui tiket.
             </p>
@@ -136,7 +134,7 @@ export function SupportPageContent() {
                 (tickets.data ?? []).map((t: Ticket) => (
                   <Link
                     key={t.id}
-                    href={`/support/${t.id}`}
+                    href={`/dashboard/support/${t.id}`}
                     className={clsx(
                       'block rounded-2xl border border-neutral-200/80 bg-white p-4 transition-colors',
                       'hover:border-primary-300 hover:bg-primary-50/30 dark:border-neutral-700 dark:bg-neutral-900/50',
@@ -160,7 +158,6 @@ export function SupportPageContent() {
             </div>
           </QueryState>
         </section>
-      </div>
-    </FeaturePageShell>
+    </div>
   )
 }

@@ -1,6 +1,5 @@
 'use client'
 
-import { FeaturePageShell } from '@/components/features/layout'
 import { QueryState } from '@/components/features/QueryState'
 import { getTicket, replyTicket } from '@/lib/api/support'
 import { TICKET_STATUS_LABELS } from '@/lib/api/reports'
@@ -22,7 +21,7 @@ const statusColor: Record<string, 'green' | 'yellow' | 'blue' | 'zinc'> = {
 }
 
 export function SupportTicketDetailContent({ id }: { id: string }) {
-  useAuthGuard(`/login?next=/support/${id}`)
+  useAuthGuard(`/login?next=/dashboard/support/${id}`)
   const qc = useQueryClient()
   const [reply, setReply] = useState('')
 
@@ -40,10 +39,9 @@ export function SupportTicketDetailContent({ id }: { id: string }) {
   })
 
   return (
-    <FeaturePageShell className="!pt-8">
-      <div className="mx-auto max-w-3xl">
-        <Link
-          href="/support"
+    <div className="mx-auto max-w-3xl">
+      <Link
+        href="/dashboard/support"
           className="mb-6 inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-primary-600 dark:hover:text-primary-400"
         >
           <ChevronLeftIcon className="size-4" />
@@ -114,7 +112,6 @@ export function SupportTicketDetailContent({ id }: { id: string }) {
             </article>
           )}
         </QueryState>
-      </div>
-    </FeaturePageShell>
+    </div>
   )
 }

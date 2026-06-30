@@ -147,6 +147,9 @@ export function DashboardSidebar({ open, onClose }: Props) {
               <Link href="/help/panduan-memulai" className="text-primary-600 hover:underline dark:text-primary-400">
                 Panduan memulai →
               </Link>
+              <Link href="/dashboard/support" className="text-primary-600 hover:underline dark:text-primary-400">
+                Bantuan & pengaduan →
+              </Link>
               <Link href="/help" className="text-primary-600 hover:underline dark:text-primary-400">
                 Pusat bantuan →
               </Link>
