@@ -35,6 +35,7 @@ async def apply_tier_limits(spawner):
     app_base = os.environ.get("PSD_APP_BASE_URL", "").rstrip("/")
     if app_base:
         env["PSD_APP_BASE_URL"] = app_base
+    env["JUPYTER_ENABLE_LAB"] = "no"
     token = getattr(spawner, "_psd_access_token", None)
     if token:
         env["PSD_TOKEN"] = token

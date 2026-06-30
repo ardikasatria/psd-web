@@ -44,6 +44,7 @@ async def test_apply_tier_limits_sets_limits_and_env(monkeypatch):
     assert spawner.environment["PSD_TIER"] == "lanjut"
     assert spawner.environment["PSD_API_BASE"] == "http://psd.local"
     assert spawner.environment["PSD_APP_BASE_URL"] == "http://psd.local"
+    assert spawner.environment["JUPYTER_ENABLE_LAB"] == "no"
     assert spawner._psd_max_lifetime == 6 * 3600
     assert not hasattr(spawner, "gpu")
     assert lim.gpu == 0
@@ -59,6 +60,7 @@ async def test_apply_tier_limits_defaults_when_no_tier(monkeypatch):
     assert spawner.mem_limit == "2G"
     assert spawner.environment["PSD_TIER"] == "pemula"
     assert spawner.environment["PSD_APP_BASE_URL"] == "https://psd.example"
+    assert spawner.environment["JUPYTER_ENABLE_LAB"] == "no"
 
 
 def test_parse_uri():

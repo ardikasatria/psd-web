@@ -84,7 +84,19 @@ echo "6. Log JupyterHub terakhir (spawn error sering di sini)"
 compose logs jupyterhub --tail 25 2>/dev/null || true
 echo ""
 
-echo "7. Uji spawn single-user (butuh 1–3 menit pertama kali)"
+echo "7. Uji startup image single-user (tanpa Hub)"
+if docker run --rm --name psd-singleuser-smoke-test \
+  -e PSD_APP_BASE_URL="https://${DOMAIN}" \
+  -e JUPYTER_ENABLE_LAB=no \
+  psd-singleuser:latest \
+  bash -lc 'python -c "import jupyter_server; import pandas; print(\"OK singleuser imports\")"' 2>&1 | sed 's/^/  /'; then
+  echo "  OK  image bisa dijalankan"
+else
+  echo "  GAGAL image crash — rebuild: ./scripts/build-hub-images.sh"
+fi
+echo ""
+
+echo "8. Uji spawn single-user via Hub API (butuh 1–3 menit pertama kali)"
 if compose exec -T backend python -c "
 import os, sys
 from app.core.config import settings

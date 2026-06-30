@@ -1,12 +1,17 @@
-FROM quay.io/jupyter/scipy-notebook:latest
+# Image single-user PSD — ringan (minimal-notebook), bukan scipy-notebook yang berat.
+# scipy-notebook sering OOM / timeout pada VM 2GB saat cold start.
+FROM quay.io/jupyter/minimal-notebook:python-3.11
 
 USER root
+RUN mkdir -p /home/jovyan/.jupyter /opt/psd \
+    && chown -R "${NB_UID}:${NB_GID}" /home/jovyan/.jupyter /opt/psd
 USER ${NB_UID}
 
 RUN pip install --no-cache-dir \
     pandas numpy scikit-learn matplotlib seaborn duckdb pyarrow httpx
 
-COPY docker/jupyter_server_config.py /home/jovyan/.jupyter/jupyter_server_config.py
-
-COPY app/psd_sdk /opt/psd/psd
+COPY --chown=${NB_UID}:${NB_GID} docker/jupyter_server_config.py /home/jovyan/.jupyter/jupyter_server_config.py
+COPY --chown=${NB_UID}:${NB_GID} app/psd_sdk /opt/psd/psd
 ENV PYTHONPATH=/opt/psd:${PYTHONPATH}
+# Tanpa JupyterLab — editor PSD hanya butuh kernel API.
+ENV JUPYTER_ENABLE_LAB=no

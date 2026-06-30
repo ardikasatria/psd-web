@@ -28,9 +28,8 @@ c.DockerSpawner.remove = True
 c.DockerSpawner.pull_policy = "ifnotpresent"
 c.DockerSpawner.start_timeout = _spawn_timeout
 c.DockerSpawner.cmd = "start-singleuser.sh"
-# scipy-notebook butuh >30s pada VM kecil; default http_timeout=30 menyebabkan spawn gagal.
+c.DockerSpawner.debug = True
 c.Spawner.http_timeout = _http_timeout
-c.Spawner.slow_spawn_timeout = _spawn_timeout
 c.DockerSpawner.notebook_dir = "/home/jovyan/work"
 c.DockerSpawner.volumes = {
     "psd-notebook-{username}": "/home/jovyan/work",
