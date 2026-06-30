@@ -6,6 +6,7 @@ import { getCompetitionStats } from '@/lib/api/competitions'
 import { getForumStats } from '@/lib/api/community'
 import { getDiscover } from '@/lib/api/repos'
 import { getFeedStats } from '@/lib/api/social'
+import { feedPostPath } from '@/lib/routes/community'
 import { getEventStats } from '@/lib/api/events'
 import { getLearningPaths } from '@/lib/api/learn'
 import type { CompetitionHot, EventSummary, FeedHotPost, LearningPathSummary, ThreadSummary } from '@/types/api'
@@ -106,7 +107,7 @@ function ThreadTrendCard({ thread }: { thread: ThreadSummary }) {
 function PostTrendCard({ post }: { post: FeedHotPost }) {
   return (
     <Link
-      href="/community"
+      href={feedPostPath(post.id)}
       className="group block rounded-2xl border border-neutral-200/80 bg-white p-4 transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-800"
     >
       <p className="text-xs font-medium text-neutral-500">@{post.author.username}</p>

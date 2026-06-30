@@ -29,16 +29,23 @@ import { Suspense, useCallback, useEffect, useState } from 'react'
 const TABS = [
   { id: 'overview', label: 'Ikhtisar' },
   { id: 'assets', label: 'Aset' },
-  { id: 'discussion', label: 'Diskusi' },
-  { id: 'files', label: 'File' },
+  { id: 'discussion', label: 'Diskusi', memberOnly: true },
+  { id: 'files', label: 'File', memberOnly: true },
   { id: 'members', label: 'Anggota' },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
 
-function tabFromSearchParams(params: URLSearchParams): TabId {
+function visibleTabs(isMember: boolean) {
+  return TABS.filter((t) => isMember || !('memberOnly' in t && t.memberOnly))
+}
+
+function tabFromSearchParams(params: URLSearchParams, isMember: boolean): TabId {
   const raw = params.get('tab') as TabId | null
-  return raw && TABS.some((t) => t.id === raw) ? raw : 'overview'
+  if (!raw || !TABS.some((t) => t.id === raw)) return 'overview'
+  const tab = TABS.find((t) => t.id === raw)
+  if (!isMember && tab && 'memberOnly' in tab && tab.memberOnly) return 'overview'
+  return raw
 }
 
 function TeamDetailInner({ slug }: { slug: string }) {
@@ -47,13 +54,9 @@ function TeamDetailInner({ slug }: { slug: string }) {
   const router = useRouter()
   const { user, isLoggedIn } = useAuth()
   const qc = useQueryClient()
-  const [tab, setTab] = useState<TabId>(() => tabFromSearchParams(searchParams))
+  const [tab, setTab] = useState<TabId>('overview')
   const [error, setError] = useState<string | null>(null)
   const [leaveOpen, setLeaveOpen] = useState(false)
-
-  useEffect(() => {
-    setTab(tabFromSearchParams(searchParams))
-  }, [searchParams])
 
   const selectTab = useCallback(
     (id: TabId) => {
@@ -130,6 +133,20 @@ function TeamDetailInner({ slug }: { slug: string }) {
   const myRole = normalizeTeamRole(team?.my_role)
   const isMember = !!myRole
   const isOwner = myRole === 'owner'
+  const tabs = visibleTabs(isMember)
+
+  useEffect(() => {
+    if (!team) return
+    const next = tabFromSearchParams(searchParams, isMember)
+    setTab(next)
+    const raw = searchParams.get('tab') as TabId | null
+    if (raw && raw !== next) {
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete('tab')
+      const qs = params.toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    }
+  }, [team, searchParams, isMember, pathname, router])
 
   if (teamQuery.isLoading) {
     return (
@@ -221,7 +238,7 @@ function TeamDetailInner({ slug }: { slug: string }) {
       )}
 
       <div className="mb-6 flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-700">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             type="button"

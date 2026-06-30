@@ -379,6 +379,20 @@ async def user_posts(
     return paginated([_post(r, r.id in liked) for r in rows], total, p)
 
 
+@router.get("/posts/{post_id}")
+async def get_post(
+    post_id: str,
+    viewer=Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    await _get_viewable_post(db, post_id, viewer)
+    p = (
+        await db.execute(select(Post).options(selectinload(Post.author)).where(Post.id == post_id))
+    ).scalar_one()
+    liked = await _liked_ids(db, viewer, [post_id])
+    return _post(p, post_id in liked)
+
+
 @router.patch("/posts/{post_id}")
 async def update_post(post_id: str, body: dict, user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     p = await _get_owned_post(db, post_id, user)
@@ -434,7 +448,7 @@ async def like_post(post_id: str, user=Depends(get_current_user), db: AsyncSessi
                 p.author_id,
                 "post_like",
                 "Postingan Anda disukai",
-                link="/community",
+                link=f"/community/post/{post_id}",
                 actor_id=user.id,
             )
     return {"liked": True, "like_count": p.like_count}
@@ -501,7 +515,7 @@ async def add_comment(post_id: str, body: dict, user=Depends(get_current_user), 
         "comment",
         "Balasan baru di postingan Anda" if reply_to_author_id else "Komentar baru di postingan Anda",
         body=body.get("body_md", "")[:200],
-        link="/community",
+        link=f"/community/post/{post_id}",
         actor_id=user.id,
     )
     return _comment_dict(c)

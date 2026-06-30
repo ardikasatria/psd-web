@@ -2846,6 +2846,22 @@ export const handlers = [
     return HttpResponse.json(post, { status: 201 })
   }),
 
+  http.get(`${API}/posts/:id`, ({ params, request }) => {
+    const viewer = resolveUserFromRequest(request)
+    const post = mockPosts.find((p) => p.id === params.id)
+    if (!post) return errorResponse(404, 'not_found', 'Postingan tidak ditemukan')
+    if (
+      post.visibility === 'private' &&
+      (!viewer || post.author.username !== viewer.username)
+    ) {
+      return errorResponse(404, 'not_found', 'Postingan tidak ditemukan')
+    }
+    return HttpResponse.json({
+      ...post,
+      liked: viewer ? (mockPostLikes[post.id]?.has(viewer.id) ?? false) : false,
+    })
+  }),
+
   http.patch(`${API}/posts/:id`, async ({ params, request }) => {
     const viewer = resolveUserFromRequest(request)
     if (!viewer) return errorResponse(401, 'unauthorized', 'Belum masuk')

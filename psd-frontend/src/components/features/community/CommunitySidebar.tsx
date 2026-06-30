@@ -3,6 +3,7 @@
 import { getFeedStats } from '@/lib/api/social'
 import { getMyQuests } from '@/lib/api/quests'
 import { questStepHref } from '@/lib/quests/utils'
+import { feedPostPath } from '@/lib/routes/community'
 import { profilePath } from '@/lib/routes/profile'
 import { timeAgo } from '@/lib/utils/format'
 import type { FeedStats, Quest } from '@/types/api'
@@ -145,13 +146,18 @@ export function CommunitySidebar({ className }: Props) {
         <ul className="mt-3 space-y-3">
           {(data?.hot_posts ?? []).map((post) => (
             <li key={post.id} className="rounded-xl border border-neutral-100 p-2.5 dark:border-neutral-700">
-              <Link href={profilePath(post.author.username)} className="text-xs font-medium text-primary-600 hover:underline dark:text-primary-400">
-                @{post.author.username}
+              <Link
+                href={feedPostPath(post.id)}
+                className="block rounded-lg motion-safe:transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-700/40"
+              >
+                <span className="text-xs font-medium text-primary-600 dark:text-primary-400">
+                  @{post.author.username}
+                </span>
+                <p className="mt-1 line-clamp-2 text-sm text-neutral-700 dark:text-neutral-300">{post.preview}</p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  {post.like_count} suka · {post.comment_count} komentar · {timeAgo(post.created_at)}
+                </p>
               </Link>
-              <p className="mt-1 line-clamp-2 text-sm text-neutral-700 dark:text-neutral-300">{post.preview}</p>
-              <p className="mt-1 text-xs text-neutral-500">
-                {post.like_count} suka · {post.comment_count} komentar · {timeAgo(post.created_at)}
-              </p>
             </li>
           ))}
         </ul>

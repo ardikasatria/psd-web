@@ -8,6 +8,7 @@ import { ProfileAvatar } from '@/components/features/users/ProfileCover'
 import { FeedCommentThread } from '@/components/features/social/FeedCommentThread'
 import { addComment, deletePost, getComments, likePost, unlikePost, updatePost } from '@/lib/api/social'
 import { useAuth } from '@/lib/auth/useAuth'
+import { feedPostPath } from '@/lib/routes/community'
 import { profilePath } from '@/lib/routes/profile'
 import type { Profile, SocialPost } from '@/types/api'
 import { Button } from '@/shared/Button'
@@ -59,10 +60,13 @@ export function PostCard({
   post,
   onDeleted,
   showComments: initialShowComments = false,
+  detail = false,
 }: {
   post: SocialPost
   onDeleted?: () => void
   showComments?: boolean
+  /** Halaman penuh — komentar selalu tampil, tanpa toggle. */
+  detail?: boolean
 }) {
   const router = useRouter()
   const { user, isLoggedIn } = useAuth()
@@ -74,8 +78,9 @@ export function PostCard({
   const [bodyMd, setBodyMd] = useState(post.body_md)
   const [isEditing, setIsEditing] = useState(false)
   const [editText, setEditText] = useState(post.body_md)
-  const [showComments, setShowComments] = useState(initialShowComments)
+  const [showComments] = useState(detail || initialShowComments)
   const [likeBusy, setLikeBusy] = useState(false)
+  const postHref = feedPostPath(post.id)
 
   const authorProfile: Profile = {
     id: post.author.username,
@@ -105,7 +110,7 @@ export function PostCard({
 
   const comments = useQuery({
     queryKey: ['post-comments', post.id],
-    queryFn: () => getComments(post.id),
+    queryFn: () => getComments(post.id, 1, detail ? 100 : 20),
     enabled: showComments,
   })
 
@@ -114,6 +119,7 @@ export function PostCard({
     onSuccess: () => {
       setCommentCount((c) => c + 1)
       qc.invalidateQueries({ queryKey: ['post-comments', post.id] })
+      qc.invalidateQueries({ queryKey: ['post', post.id] })
       qc.invalidateQueries({ queryKey: ['feed-stats'] })
     },
   })
@@ -124,6 +130,7 @@ export function PostCard({
     onSuccess: () => {
       setCommentCount((c) => c + 1)
       qc.invalidateQueries({ queryKey: ['post-comments', post.id] })
+      qc.invalidateQueries({ queryKey: ['post', post.id] })
       qc.invalidateQueries({ queryKey: ['feed-stats'] })
     },
   })
@@ -133,6 +140,7 @@ export function PostCard({
     onSuccess: () => {
       onDeleted?.()
       qc.invalidateQueries({ queryKey: ['feed'] })
+      qc.invalidateQueries({ queryKey: ['post', post.id] })
       qc.invalidateQueries({ queryKey: ['feed-stats'] })
       qc.invalidateQueries({ queryKey: ['user-posts'] })
     },
@@ -147,6 +155,7 @@ export function PostCard({
       setIsEditing(false)
       qc.invalidateQueries({ queryKey: ['feed'] })
       qc.invalidateQueries({ queryKey: ['user-posts'] })
+      qc.invalidateQueries({ queryKey: ['post', post.id] })
     },
   })
 
@@ -200,7 +209,16 @@ export function PostCard({
                 Hanya saya
               </span>
             )}
-            <span className="text-xs text-neutral-400">· {timeAgo(post.created_at)}</span>
+            <span className="text-xs text-neutral-400">
+              ·{' '}
+              {detail ? (
+                timeAgo(post.created_at)
+              ) : (
+                <Link href={postHref} className="hover:text-primary-600 dark:hover:text-primary-400">
+                  {timeAgo(post.created_at)}
+                </Link>
+              )}
+            </span>
           </div>
           {post.author.name && (
             <p className="mt-0.5 text-sm leading-snug text-neutral-600 dark:text-neutral-400">
@@ -247,11 +265,16 @@ export function PostCard({
           </div>
         </div>
       ) : (
-        bodyMd && (
+        bodyMd &&
+        (detail ? (
           <div className="mt-3">
             <SimpleMarkdown content={bodyMd} />
           </div>
-        )
+        ) : (
+          <Link href={postHref} className="mt-3 block rounded-lg motion-safe:transition-opacity hover:opacity-90">
+            <SimpleMarkdown content={bodyMd} />
+          </Link>
+        ))
       )}
 
       {post.images.length > 0 && (
@@ -294,18 +317,29 @@ export function PostCard({
           {liked ? <HeartSolidIcon className="size-5" /> : <HeartIcon className="size-5" />}
           {likeCount}
         </button>
-        <button
-          type="button"
-          onClick={() => setShowComments((v) => !v)}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-500 hover:text-primary-600 dark:hover:text-primary-400"
-        >
-          <ChatBubbleLeftIcon className="size-5" />
-          {commentCount}
-        </button>
+        {detail ? (
+          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-500">
+            <ChatBubbleLeftIcon className="size-5" />
+            {commentCount} komentar
+          </span>
+        ) : (
+          <Link
+            href={postHref}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-500 hover:text-primary-600 dark:hover:text-primary-400"
+          >
+            <ChatBubbleLeftIcon className="size-5" />
+            {commentCount}
+          </Link>
+        )}
       </div>
 
-      {showComments && (
+      {(detail || showComments) && (
         <div className="mt-4 border-t border-neutral-100 pt-4 dark:border-neutral-800">
+          {detail && commentCount > 0 && (
+            <h2 className="mb-3 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+              Komentar ({commentCount})
+            </h2>
+          )}
           <FeedCommentThread
             comments={comments.data?.items ?? []}
             isLoggedIn={isLoggedIn}

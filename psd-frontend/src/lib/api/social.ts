@@ -43,6 +43,8 @@ export const getFeedStats = () => apiFetch<FeedStats>('/feed/stats', FeedStatsSc
 export const getFeed = (scope: 'following' | 'all' = 'following', page = 1) =>
   apiFetch<PaginatedSocialPost>(`/feed${buildQuery({ scope, page })}`, PaginatedSocialPostSchema)
 
+export const getPost = (id: string) => apiFetch<SocialPost>(`/posts/${id}`, SocialPostSchema)
+
 export const getUserPosts = (username: string, page = 1) =>
   apiFetch<PaginatedSocialPost>(
     `/users/${username}/posts${buildQuery({ page })}`,
@@ -76,9 +78,9 @@ export const likePost = (id: string) =>
 export const unlikePost = (id: string) =>
   apiFetch(`/posts/${id}/like`, LikePostResponseSchema, { method: 'DELETE' })
 
-export const getComments = (id: string, page = 1) =>
+export const getComments = (id: string, page = 1, page_size = 20) =>
   apiFetch<PaginatedSocialComment>(
-    `/posts/${id}/comments${buildQuery({ page })}`,
+    `/posts/${id}/comments${buildQuery({ page, page_size })}`,
     PaginatedSocialCommentSchema,
   )
 
