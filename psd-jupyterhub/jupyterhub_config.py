@@ -18,12 +18,19 @@ c.GenericOAuthenticator.scope = ["openid", "profile", "email"]
 c.GenericOAuthenticator.username_claim = "preferred_username"
 c.GenericOAuthenticator.enable_auth_state = True
 
+_spawn_timeout = int(os.environ.get("PSD_HUB_SPAWN_TIMEOUT", "300"))
+_http_timeout = int(os.environ.get("PSD_HUB_HTTP_TIMEOUT", "180"))
+
 c.JupyterHub.spawner_class = "docker"
 c.DockerSpawner.image = os.environ.get("PSD_SINGLEUSER_IMAGE", "psd-singleuser:latest")
 c.DockerSpawner.network_name = os.environ.get("PSD_HUB_NETWORK", "psd-net")
 c.DockerSpawner.remove = True
 c.DockerSpawner.pull_policy = "ifnotpresent"
-c.DockerSpawner.start_timeout = int(os.environ.get("PSD_HUB_SPAWN_TIMEOUT", "300"))
+c.DockerSpawner.start_timeout = _spawn_timeout
+c.DockerSpawner.cmd = "start-singleuser.sh"
+# scipy-notebook butuh >30s pada VM kecil; default http_timeout=30 menyebabkan spawn gagal.
+c.Spawner.http_timeout = _http_timeout
+c.Spawner.slow_spawn_timeout = _spawn_timeout
 c.DockerSpawner.notebook_dir = "/home/jovyan/work"
 c.DockerSpawner.volumes = {
     "psd-notebook-{username}": "/home/jovyan/work",

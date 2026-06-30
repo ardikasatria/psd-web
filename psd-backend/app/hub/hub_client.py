@@ -64,8 +64,19 @@ class JupyterHubClient:
         return self._req("POST", path, json={}).status_code
 
     def stop_server(self, name: str, server_name: str = "") -> None:
+        try:
+            self.get_user(name)
+        except HubError as exc:
+            if exc.status == 404:
+                return
+            raise
         path = f"/users/{name}/server" if not server_name else f"/users/{name}/servers/{server_name}"
-        self._req("DELETE", path)
+        try:
+            self._req("DELETE", path)
+        except HubError as exc:
+            if exc.status in (404, 500):
+                return
+            raise
 
     def create_user_token(
         self,

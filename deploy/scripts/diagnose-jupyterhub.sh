@@ -27,10 +27,13 @@ echo ""
 echo "2. Image single-user (wajib untuk spawn)"
 if docker image inspect psd-singleuser:latest >/dev/null 2>&1; then
   echo "  OK  psd-singleuser:latest ada"
+  docker image inspect psd-singleuser:latest --format '  built {{.Created}} size {{.Size}} bytes'
 else
   echo "  GAGAL psd-singleuser:latest tidak ada — jalankan: ./scripts/build-hub-images.sh"
 fi
 echo ""
+echo "2b. Timeout spawn Hub (http_timeout default 30s terlalu pendek untuk VM kecil)"
+echo "  PSD_HUB_SPAWN_TIMEOUT=${PSD_HUB_SPAWN_TIMEOUT:-300} PSD_HUB_HTTP_TIMEOUT=${PSD_HUB_HTTP_TIMEOUT:-180}"
 
 echo "3. Env token Hub (harus sama di backend & jupyterhub)"
 if [[ -z "${PSD_HUB_SERVICE_TOKEN:-}" ]]; then
