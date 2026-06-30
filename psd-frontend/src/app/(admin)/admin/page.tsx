@@ -21,7 +21,7 @@ export default function AdminHomePage() {
 
   if (stats.isLoading) return <AdminPageSkeleton />
 
-  const greeting = me.data?.user.name
+  const greeting = me.data?.user?.name
 
   return (
     <div className="space-y-8">

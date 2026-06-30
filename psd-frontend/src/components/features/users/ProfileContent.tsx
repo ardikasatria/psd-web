@@ -110,7 +110,7 @@ function ProfileContentInner({ username }: { username: string }) {
     enabled: !!profile.data && tab === 'posts',
   })
 
-  const isOwner = me.data?.user.username === username
+  const isOwner = me.data?.user?.username === username
   const stats = profile.data?.stats
   const accent = profile.data?.accent_color ?? '#4572b7'
 

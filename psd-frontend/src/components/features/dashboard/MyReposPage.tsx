@@ -49,8 +49,8 @@ export function MyReposPage({ kind }: { kind: RepoKind }) {
   const meta = kindMeta[kind]
 
   const query = useQuery<PaginatedRepoSummary>({
-    enabled: !!me.data?.user.username,
-    queryKey: ['my-repos', kind, me.data?.user.username],
+    enabled: !!me.data?.user?.username,
+    queryKey: ['my-repos', kind, me.data?.user?.username],
     queryFn: () => getPortfolio(me.data!.user.username, { kind, page_size: 50 }),
   })
 

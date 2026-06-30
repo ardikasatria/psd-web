@@ -45,7 +45,7 @@ import type {
 
 export function DashboardPageContent() {
   const me = useMe()
-  const username = me.data?.user.username
+  const username = me.data?.user?.username
 
   const comps = useActiveCompetitions()
   const events = useUpcomingEvents()
@@ -57,7 +57,7 @@ export function DashboardPageContent() {
   const datasets = useExploreDatasets()
   const assetCount = useMyAssetCount(username)
 
-  const greeting = me.data?.user.name
+  const greeting = me.data?.user?.name
 
   return (
     <div className="space-y-8">

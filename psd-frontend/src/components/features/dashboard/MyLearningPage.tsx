@@ -22,7 +22,7 @@ export function MyLearningPage() {
   })
 
   const authored = useQuery<CourseSummary[]>({
-    enabled: !!me.data?.user.is_instructor,
+    enabled: !!me.data?.user?.is_instructor,
     queryKey: ['authored-courses'],
     queryFn: getAuthoredCourses,
   })
@@ -38,7 +38,7 @@ export function MyLearningPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <ButtonPrimary href="/learn">Jelajahi kursus</ButtonPrimary>
-          {me.data?.user.is_instructor && (
+          {me.data?.user?.is_instructor && (
             <ButtonPrimary href="/studio" outline>
               Studio instruktur
             </ButtonPrimary>
@@ -67,7 +67,7 @@ export function MyLearningPage() {
         </QueryState>
       </section>
 
-      {me.data?.user.is_instructor && (
+      {me.data?.user?.is_instructor && (
         <section>
           <h3 className="mb-4 text-base font-semibold text-neutral-900 dark:text-neutral-100">Kursus saya ajar</h3>
           <QueryState isLoading={authored.isLoading} isError={authored.isError} error={authored.error}>
