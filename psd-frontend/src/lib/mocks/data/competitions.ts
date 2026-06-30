@@ -1,5 +1,32 @@
-import type { CompetitionDetail, CompetitionStats, CompetitionSummary, LeaderboardEntry } from '@/types/api'
+import type { CompDetailStats, CompNotebook, CompetitionDetail, CompetitionStats, CompetitionSummary, LeaderboardEntry, Submission } from '@/types/api'
 import { owners } from './users'
+
+function deadlineOf(c: CompetitionSummary) {
+  const now = Date.now()
+  const start = new Date(c.starts_at).getTime()
+  const end = new Date(c.ends_at).getTime()
+  if (now < start) {
+    const rem = Math.floor((start - now) / 1000)
+    const d = Math.floor(rem / 86400)
+    const h = Math.floor((rem % 86400) / 3600)
+    return { phase: 'upcoming' as const, progress: 0, remaining_seconds: rem, remaining_text: `${d} hari ${h} jam`, is_open: false }
+  }
+  if (now >= end) {
+    return { phase: 'ended' as const, progress: 1, remaining_seconds: 0, remaining_text: 'Selesai', is_open: false }
+  }
+  const total = end - start
+  const rem = Math.floor((end - now) / 1000)
+  const d = Math.floor(rem / 86400)
+  const h = Math.floor((rem % 86400) / 3600)
+  const m = Math.floor((rem % 3600) / 60)
+  const text = d > 0 ? `${d} hari ${h} jam` : h > 0 ? `${h} jam ${m} menit` : `${m} menit`
+  return { phase: 'active' as const, progress: (now - start) / total, remaining_seconds: rem, remaining_text: text, is_open: true }
+}
+
+function higherIsBetter(metric: string) {
+  const lower = ['RMSE', 'RMSLE', 'MAE', 'MAPE', 'Total Distance']
+  return !lower.some((m) => metric.toUpperCase().includes(m.toUpperCase()))
+}
 
 export const competitions: CompetitionSummary[] = [
   {
@@ -79,8 +106,13 @@ export const competitions: CompetitionSummary[] = [
 ]
 
 export function detailOf(c: CompetitionSummary): CompetitionDetail {
+  const hib = higherIsBetter(c.metric)
   const base = {
     daily_submission_limit: 5,
+    max_score: 1,
+    higher_is_better: hib,
+    metric_direction: hib ? 'makin tinggi makin baik' : 'makin rendah makin baik',
+    deadline: deadlineOf(c),
     tags: ['sains-data', 'indonesia'] as string[],
     prizes: [{ rank: 1, reward: 'Rp5.000.000' }],
     overview_md: `Kompetisi ${c.title}. ${c.sponsor ? `Diselenggarakan oleh ${c.sponsor}.` : ''}`,
@@ -91,12 +123,49 @@ export function detailOf(c: CompetitionSummary): CompetitionDetail {
     return {
       ...c,
       ...base,
-      overview_md:
-        'Bangun model peramalan permintaan mingguan untuk 200 UMKM binaan Dinas Koperasi & UMKM Lampung. Dataset berisi histori penjualan 18 bulan yang sudah dianonimkan.',
-      rules_md:
-        'Satu peserta maksimal 5 submission per hari. Tim maksimal 3 orang. Dilarang menggunakan data eksternal yang tidak tersedia di dataset resmi.',
-      dataset_info_md:
-        'Data penjualan historis 18 bulan, anonim per UMKM. Fitur: tanggal, kategori produk, jumlah terjual, harga, promosi.',
+      max_score: 100,
+      overview_md: `Bangun model peramalan permintaan mingguan untuk 200 UMKM binaan Dinas Koperasi & UMKM Lampung.
+
+## Baseline cepat
+
+Mulai dengan regresi linear sederhana:
+
+\`\`\`python
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+
+df = pd.read_csv("train.csv")
+X = df[["promo", "harga", "kategori_encoded"]]
+y = df["jumlah_terjual"]
+model = LinearRegression().fit(X, y)
+\`\`\`
+
+> **Tip:** Normalisasi fitur numerik sebelum training dapat meningkatkan stabilitas model.
+
+## Evaluasi
+
+Metrik utama kompetisi adalah **RMSLE** — makin rendah makin baik.`,
+      rules_md: `## Aturan utama
+
+- Satu peserta maksimal 5 submission per hari
+- Tim maksimal 3 orang
+- Dilarang menggunakan data eksternal yang tidak tersedia di dataset resmi
+- Submission dinilai oleh tim humas (bukan skor instan)`,
+      dataset_info_md: `## Berkas dataset
+
+| Berkas | Deskripsi |
+|--------|-----------|
+| train.csv | Data historis 18 bulan |
+| test.csv | Fitur tanpa target |
+| sample_submission.csv | Format pengiriman |
+
+\`\`\`python
+# Format submission
+import pandas as pd
+sub = pd.read_csv("sample_submission.csv")
+sub["prediksi"] = model.predict(X_test)
+sub.to_csv("submission.csv", index=False)
+\`\`\``,
       prizes: [{ rank: 1, reward: 'Rp8.000.000 + peluang rekrutmen' }, { rank: 2, reward: 'Rp4.000.000' }, { rank: 3, reward: 'Rp3.000.000' }],
       tags: ['forecasting', 'umkm', 'tabular'],
     }
@@ -124,6 +193,7 @@ export function leaderboardOf(slug: string, board: 'public' | 'private' = 'publi
   const items: LeaderboardEntry[] = leaderboardNames.map((username, i) => ({
     rank: i + 1,
     participant: { username, type: i % 3 === 0 ? 'org' : 'user', avatar_url: null },
+    entrant: { kind: 'user' as const, name: username, avatar_url: null },
     score: Math.round((board === 'private' ? 0.44 + i * 0.011 : 0.45 + i * 0.012) * 1000) / 1000,
     submitted_at: `2026-06-${String(20 - Math.min(i, 19)).padStart(2, '0')}T${String(8 + (i % 12)).padStart(2, '0')}:00:00Z`,
   }))
@@ -132,11 +202,29 @@ export function leaderboardOf(slug: string, board: 'public' | 'private' = 'publi
 
 const submissionDailyCount: Record<string, number> = {}
 
-export const submissions = [
-  { id: 'sub_01', created_at: '2026-06-22T10:00:00Z', status: 'scored' as const, public_score: 0.4521, filename: 'submission_v3.csv' },
-  { id: 'sub_02', created_at: '2026-06-21T15:30:00Z', status: 'scored' as const, public_score: 0.4688, filename: 'submission_v2.csv' },
-  { id: 'sub_03', created_at: '2026-06-20T09:00:00Z', status: 'failed' as const, public_score: null, filename: 'submission_v1.csv' },
+export const submissions: Submission[] = [
+  { id: 'sub_01', created_at: '2026-06-22T10:00:00Z', submitted_at: '2026-06-22T10:00:00Z', status: 'scored', public_score: 0.4521, score: 0.4521, filename: 'submission_v3.csv', review_note: 'Model solid, feature engineering baik.' },
+  { id: 'sub_02', created_at: '2026-06-21T15:30:00Z', submitted_at: '2026-06-21T15:30:00Z', status: 'under_review', public_score: null, score: null, filename: 'submission_v2.csv' },
+  { id: 'sub_03', created_at: '2026-06-20T09:00:00Z', submitted_at: '2026-06-20T09:00:00Z', status: 'submitted', public_score: null, score: null, filename: 'submission_v1.csv', note: 'Eksperimen ensemble' },
 ]
+
+export const compNotebooks: CompNotebook[] = [
+  { id: 'cnb_01', title: 'EDA Permintaan UMKM', owner: owners.budi, favorite_count: 24, favorited: false, updated_at: '2026-06-18T08:00:00Z', notebook_id: 'nb_mock_01' },
+  { id: 'cnb_02', title: 'Baseline LightGBM', owner: owners.siti, favorite_count: 31, favorited: true, updated_at: '2026-06-20T12:00:00Z', notebook_id: 'nb_mock_02' },
+  { id: 'cnb_03', title: 'Feature Engineering Promo', owner: owners.itera, favorite_count: 18, favorited: false, updated_at: '2026-06-19T16:00:00Z', notebook_id: 'nb_mock_03' },
+]
+
+export function compDetailStatsOf(slug: string): CompDetailStats {
+  const c = competitions.find((x) => x.slug === slug)
+  return {
+    participants: c?.participants ?? 0,
+    teams: slug === 'prediksi-permintaan-umkm' ? 12 : 0,
+    submissions: submissions.length + 40,
+    scored: submissions.filter((s) => s.status === 'scored').length + 35,
+    pending_review: submissions.filter((s) => s.status === 'submitted' || s.status === 'under_review').length + 3,
+    notebooks: compNotebooks.length,
+  }
+}
 
 export function getDailyLimit(slug: string) {
   const c = competitions.find((x) => x.slug === slug)

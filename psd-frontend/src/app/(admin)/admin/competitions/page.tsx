@@ -31,6 +31,7 @@ const emptyForm = {
   rules_md: '',
   dataset_info_md: '',
   daily_submission_limit: '5',
+  max_score: '',
   cover_url: null as string | null,
 }
 
@@ -76,6 +77,7 @@ export default function AdminCompetitionsPage() {
       const body = {
         ...form,
         daily_submission_limit: Number(form.daily_submission_limit) || 5,
+        max_score: form.max_score ? Number(form.max_score) : null,
         prizes: [],
         tags: [],
         participants: editing?.participants ?? 0,
@@ -135,6 +137,7 @@ export default function AdminCompetitionsPage() {
         rules_md: full.rules_md,
         dataset_info_md: full.dataset_info_md,
         daily_submission_limit: String(full.daily_submission_limit),
+        max_score: full.max_score != null ? String(full.max_score) : '',
         cover_url: c.cover_url ?? null,
       })
       setCategorySlug(c.category?.slug ?? null)
@@ -211,6 +214,9 @@ export default function AdminCompetitionsPage() {
                     <Button plain href={`/competitions/${c.slug}`} target="_blank">
                       Pratinjau
                     </Button>
+                    <Button outline href={`/admin/competitions/${c.slug}/review`}>
+                      Review
+                    </Button>
                     <ConfirmDialog
                       label="Hapus"
                       danger
@@ -253,6 +259,14 @@ export default function AdminCompetitionsPage() {
                 placeholder="Batas submission/hari"
                 value={form.daily_submission_limit}
                 onChange={(e) => setForm({ ...form, daily_submission_limit: e.target.value })}
+                className="!rounded-xl"
+              />
+              <Input
+                type="number"
+                step="any"
+                placeholder="Skor maksimal (review admin)"
+                value={form.max_score}
+                onChange={(e) => setForm({ ...form, max_score: e.target.value })}
                 className="!rounded-xl"
               />
             </div>

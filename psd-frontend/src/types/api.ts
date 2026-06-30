@@ -1165,6 +1165,15 @@ export const CompetitionPrizeSchema = z.object({
   reward: z.string(),
 })
 
+export const DeadlineProgressSchema = z.object({
+  phase: z.enum(['upcoming', 'active', 'ended']),
+  progress: z.number(),
+  remaining_seconds: z.number(),
+  remaining_text: z.string(),
+  is_open: z.boolean(),
+})
+export type DeadlineProgress = z.infer<typeof DeadlineProgressSchema>
+
 export const CompetitionDetailSchema = CompetitionSummarySchema.extend({
   overview_md: z.string(),
   rules_md: z.string(),
@@ -1172,8 +1181,22 @@ export const CompetitionDetailSchema = CompetitionSummarySchema.extend({
   prizes: z.array(CompetitionPrizeSchema),
   tags: z.array(z.string()),
   daily_submission_limit: z.number(),
+  max_score: z.number().nullable().optional(),
+  higher_is_better: z.boolean().optional(),
+  metric_direction: z.string().optional(),
+  deadline: DeadlineProgressSchema.optional(),
 })
 export type CompetitionDetail = z.infer<typeof CompetitionDetailSchema>
+
+export const CompDetailStatsSchema = z.object({
+  participants: z.number(),
+  teams: z.number(),
+  submissions: z.number(),
+  scored: z.number(),
+  pending_review: z.number(),
+  notebooks: z.number(),
+})
+export type CompDetailStats = z.infer<typeof CompDetailStatsSchema>
 
 export const CompetitionProposalStatusSchema = z.enum([
   'draft',
@@ -1248,9 +1271,16 @@ export const CompetitionStatsSchema = z.object({
 })
 export type CompetitionStats = z.infer<typeof CompetitionStatsSchema>
 
+export const LeaderboardEntrantSchema = z.object({
+  kind: z.enum(['team', 'user']),
+  name: z.string(),
+  avatar_url: z.string().nullable(),
+})
+
 export const LeaderboardEntrySchema = z.object({
   rank: z.number(),
-  participant: OwnerRefSchema,
+  participant: OwnerRefSchema.optional(),
+  entrant: LeaderboardEntrantSchema.optional(),
   score: z.number(),
   submitted_at: z.string(),
 })
@@ -1261,12 +1291,42 @@ export type PaginatedLeaderboard = PaginatedResult<LeaderboardEntry>
 
 export const SubmissionSchema = z.object({
   id: z.string(),
-  created_at: z.string(),
-  status: z.enum(['queued', 'scored', 'failed']),
-  public_score: z.number().nullable(),
-  filename: z.string(),
+  created_at: z.string().optional(),
+  submitted_at: z.string().optional(),
+  status: z.enum(['queued', 'scored', 'failed', 'submitted', 'under_review', 'rejected']),
+  public_score: z.number().nullable().optional(),
+  score: z.number().nullable().optional(),
+  note: z.string().nullable().optional(),
+  review_note: z.string().nullable().optional(),
+  filename: z.string().optional(),
 })
 export type Submission = z.infer<typeof SubmissionSchema>
+
+export const CompNotebookSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  owner: OwnerRefSchema,
+  favorite_count: z.number(),
+  favorited: z.boolean(),
+  updated_at: z.string(),
+  notebook_id: z.string().optional(),
+})
+export type CompNotebook = z.infer<typeof CompNotebookSchema>
+
+export const PaginatedCompNotebookSchema = Paginated(CompNotebookSchema)
+export type PaginatedCompNotebook = PaginatedResult<CompNotebook>
+
+export const AdminCompSubmissionSchema = SubmissionSchema.extend({
+  entrant: z.object({
+    kind: z.enum(['team', 'user']),
+    name: z.string(),
+    username: z.string(),
+  }).optional(),
+})
+export type AdminCompSubmission = z.infer<typeof AdminCompSubmissionSchema>
+
+export const PaginatedAdminCompSubmissionSchema = Paginated(AdminCompSubmissionSchema)
+export type PaginatedAdminCompSubmission = PaginatedResult<AdminCompSubmission>
 
 export const SubmitResultSchema = SubmissionSchema.extend({
   remaining_today: z.number(),

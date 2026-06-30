@@ -1,16 +1,26 @@
 import {
+  CompDetailStats,
+  CompDetailStatsSchema,
+  CompNotebook,
+  CompNotebookSchema,
   CompetitionDetail,
   CompetitionDetailSchema,
   CompetitionProposalSchema,
   CompetitionStats,
   CompetitionStatsSchema,
+  PaginatedAdminCompSubmission,
+  PaginatedAdminCompSubmissionSchema,
   PaginatedCompetitionProposalSchema,
   PaginatedCompetitionSummary,
   PaginatedCompetitionSummarySchema,
+  PaginatedCompNotebook,
+  PaginatedCompNotebookSchema,
   PaginatedLeaderboard,
   PaginatedLeaderboardSchema,
   PaginatedSubmission,
   PaginatedSubmissionSchema,
+  Submission,
+  SubmissionSchema,
   SubmitResult,
   SubmitResultSchema,
 } from '@/types/api'
@@ -41,6 +51,9 @@ export const getCompetitions = (q: CompetitionsQuery = {}) =>
 export const getCompetition = (slug: string) =>
   apiFetch<CompetitionDetail>(`/competitions/${slug}`, CompetitionDetailSchema)
 
+export const getCompDetailStats = (slug: string) =>
+  apiFetch<CompDetailStats>(`/competitions/${slug}/stats`, CompDetailStatsSchema)
+
 export const getLeaderboard = (
   slug: string,
   board: 'public' | 'private' = 'public',
@@ -50,9 +63,31 @@ export const getLeaderboard = (
 export const getSubmissions = (slug: string, page = 1) =>
   apiFetch<PaginatedSubmission>(`/competitions/${slug}/submissions${buildQuery({ page })}`, PaginatedSubmissionSchema)
 
-export const submitCompetition = (slug: string, file: File) => {
+export const getMySubmissions = (slug: string) =>
+  apiFetch<Submission[]>(`/competitions/${slug}/submissions/me`, z.array(SubmissionSchema))
+
+export const getCompNotebooks = (slug: string, page = 1) =>
+  apiFetch<PaginatedCompNotebook>(`/competitions/${slug}/notebooks${buildQuery({ page })}`, PaginatedCompNotebookSchema)
+
+export const createCompNotebook = (slug: string) =>
+  apiFetch<CompNotebook>(`/competitions/${slug}/notebooks`, CompNotebookSchema, { method: 'POST' })
+
+export const favoriteCompNotebook = (slug: string, id: string) =>
+  apiFetch(`/competitions/${slug}/notebooks/${id}/favorite`, z.object({ favorited: z.boolean(), favorite_count: z.number() }), {
+    method: 'POST',
+  })
+
+export const submitEntry = (slug: string, body: { team_id?: string; notebook_id?: string; note?: string }) =>
+  apiFetch<SubmitResult>(`/competitions/${slug}/submissions`, SubmitResultSchema, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+
+export const submitCompetition = (slug: string, file: File, extra?: { team_id?: string; note?: string }) => {
   const formData = new FormData()
   formData.append('file', file)
+  if (extra?.team_id) formData.append('team_id', extra.team_id)
+  if (extra?.note) formData.append('note', extra.note)
   return apiFetchForm<SubmitResult>(`/competitions/${slug}/submissions`, SubmitResultSchema, formData)
 }
 
@@ -82,6 +117,34 @@ export const updateCompetitionProposal = (id: string, body: Record<string, unkno
 
 export const submitCompetitionProposal = (id: string) =>
   apiFetch(`/me/competition-proposals/${id}/submit`, z.object({ id: z.string(), status: z.string() }), {
+    method: 'POST',
+  })
+
+export const adminListSubs = (slug: string, status = 'submitted', page = 1) =>
+  apiFetch<PaginatedAdminCompSubmission>(
+    `/admin/competitions/${slug}/submissions${buildQuery({ status, page })}`,
+    PaginatedAdminCompSubmissionSchema
+  )
+
+export const adminStartReview = (slug: string, id: string) =>
+  apiFetch(`/admin/competitions/${slug}/submissions/${id}/start-review`, z.object({ status: z.string() }), {
+    method: 'POST',
+  })
+
+export const adminScore = (slug: string, id: string, body: { score: number; note?: string }) =>
+  apiFetch(`/admin/competitions/${slug}/submissions/${id}/score`, z.object({ status: z.string(), score: z.number() }), {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+
+export const adminReject = (slug: string, id: string, note?: string) =>
+  apiFetch(`/admin/competitions/${slug}/submissions/${id}/reject`, z.object({ status: z.string() }), {
+    method: 'POST',
+    body: JSON.stringify({ note }),
+  })
+
+export const adminReopen = (slug: string, id: string) =>
+  apiFetch(`/admin/competitions/${slug}/submissions/${id}/reopen`, z.object({ status: z.string() }), {
     method: 'POST',
   })
 

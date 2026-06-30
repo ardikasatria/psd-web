@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -33,6 +33,8 @@ class Competition(Base):
     featured: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     daily_submission_limit: Mapped[int] = mapped_column(Integer, default=5)
     ground_truth_key: Mapped[str | None] = mapped_column(String, nullable=True)
+    max_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    higher_is_better: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     category_id: Mapped[str | None] = mapped_column(ForeignKey("categories.id"), nullable=True, index=True)
     subcategory_id: Mapped[str | None] = mapped_column(ForeignKey("categories.id"), nullable=True, index=True)
     room_id: Mapped[str | None] = mapped_column(ForeignKey("idea_rooms.id"), nullable=True, index=True)
@@ -87,9 +89,39 @@ class Submission(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_id("sub"))
     competition_id: Mapped[str] = mapped_column(ForeignKey("competitions.id"), index=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
-    filename: Mapped[str] = mapped_column(String)
-    status: Mapped[str] = mapped_column(String, default="queued")
+    team_id: Mapped[str | None] = mapped_column(ForeignKey("teams.id"), nullable=True, index=True)
+    notebook_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    filename: Mapped[str] = mapped_column(String, default="")
+    status: Mapped[str] = mapped_column(String, default="submitted", index=True)
     public_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     private_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     file_key: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CompetitionNotebook(Base):
+    __tablename__ = "competition_notebooks"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_id("cnb"))
+    competition_id: Mapped[str] = mapped_column(ForeignKey("competitions.id"), index=True)
+    notebook_id: Mapped[str] = mapped_column(String, index=True)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    favorite_count: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    is_public: Mapped[bool] = mapped_column(Boolean, default=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CompetitionNotebookFavorite(Base):
+    __tablename__ = "competition_notebook_favorites"
+
+    competition_notebook_id: Mapped[str] = mapped_column(
+        ForeignKey("competition_notebooks.id"), primary_key=True
+    )
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

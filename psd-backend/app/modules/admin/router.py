@@ -11,7 +11,10 @@ from app.core.deps import require_staff, require_superadmin
 from app.core.errors import ApiError
 from app.core.pagination import PageParams, page_params, paginated
 from app.modules.community.models import Thread
-from app.modules.competitions.models import Competition, CompetitionProposal
+from app.modules.competitions.models import Competition, CompetitionProposal, Submission
+from app.modules.competitions import submission_review
+from app.modules.competitions.service import submission_row_dict
+from app.modules.teams.models import Team
 from app.modules.competitions.proposals import proposal_dict, review_proposal
 from app.modules.events.models import Event, EventProposal, EventRegistration
 from app.modules.events.proposals import proposal_dict as event_proposal_dict
@@ -162,6 +165,142 @@ async def upload_ground_truth(
     c.ground_truth_key = key
     await db.commit()
     return {"ok": True}
+
+
+def _admin_submission_item(s: Submission, u: User, t: Team | None) -> dict:
+    entrant_name = t.name if t else u.username
+    return {
+        **submission_row_dict(s),
+        "entrant": {
+            "kind": "team" if s.team_id else "user",
+            "name": entrant_name,
+            "username": u.username,
+        },
+        "submitted_at": s.created_at,
+    }
+
+
+@router.get("/admin/competitions/{slug}/submissions")
+async def admin_list_submissions(
+    slug: str,
+    status: str = "submitted",
+    p: PageParams = Depends(page_params),
+    db: AsyncSession = Depends(get_db),
+):
+    c = (await db.execute(select(Competition).where(Competition.slug == slug))).scalar_one_or_none()
+    if not c:
+        raise ApiError(404, "not_found", "Kompetisi tidak ditemukan")
+    stmt = (
+        select(Submission, User, Team)
+        .join(User, Submission.user_id == User.id)
+        .outerjoin(Team, Submission.team_id == Team.id)
+        .where(Submission.competition_id == c.id, Submission.status == status)
+        .order_by(Submission.created_at.asc())
+    )
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
+    rows = (await db.execute(stmt.offset(p.offset).limit(p.page_size))).all()
+    items = [_admin_submission_item(s, u, t) for s, u, t in rows]
+    return paginated(items, total, p)
+
+
+async def _admin_get_submission(db: AsyncSession, slug: str, sub_id: str) -> tuple[Competition, Submission]:
+    c = (await db.execute(select(Competition).where(Competition.slug == slug))).scalar_one_or_none()
+    if not c:
+        raise ApiError(404, "not_found", "Kompetisi tidak ditemukan")
+    s = (
+        await db.execute(
+            select(Submission).where(Submission.id == sub_id, Submission.competition_id == c.id)
+        )
+    ).scalar_one_or_none()
+    if not s:
+        raise ApiError(404, "not_found", "Submission tidak ditemukan")
+    return c, s
+
+
+def _review_error(exc: submission_review.ReviewError):
+    raise ApiError(exc.status, exc.slug, exc.message)
+
+
+@router.post("/admin/competitions/{slug}/submissions/{sub_id}/start-review")
+async def admin_start_review(
+    slug: str,
+    sub_id: str,
+    staff: User = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    _, s = await _admin_get_submission(db, slug, sub_id)
+    try:
+        s.status = submission_review.apply_action(s.status, "start_review")
+    except submission_review.ReviewError as exc:
+        _review_error(exc)
+    await db.commit()
+    return {"status": s.status}
+
+
+@router.post("/admin/competitions/{slug}/submissions/{sub_id}/score")
+async def admin_score_submission(
+    slug: str,
+    sub_id: str,
+    body: dict,
+    staff: User = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    c, s = await _admin_get_submission(db, slug, sub_id)
+    try:
+        sc = submission_review.validate_score(
+            body.get("score"),
+            max_score=c.max_score,
+        )
+        s.status = submission_review.apply_action(s.status, "score")
+    except submission_review.ReviewError as exc:
+        _review_error(exc)
+    s.public_score = sc
+    s.private_score = sc
+    s.review_note = body.get("note")
+    s.reviewed_by = staff.id
+    s.reviewed_at = datetime.now(timezone.utc)
+    await db.commit()
+    u = (await db.execute(select(User).where(User.id == s.user_id))).scalar_one()
+    await award_reputation(db, u, "submission_scored")
+    return {"status": s.status, "score": sc}
+
+
+@router.post("/admin/competitions/{slug}/submissions/{sub_id}/reject")
+async def admin_reject_submission(
+    slug: str,
+    sub_id: str,
+    body: dict,
+    staff: User = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    _, s = await _admin_get_submission(db, slug, sub_id)
+    try:
+        s.status = submission_review.apply_action(s.status, "reject")
+    except submission_review.ReviewError as exc:
+        _review_error(exc)
+    s.review_note = body.get("note")
+    s.reviewed_by = staff.id
+    s.reviewed_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"status": s.status}
+
+
+@router.post("/admin/competitions/{slug}/submissions/{sub_id}/reopen")
+async def admin_reopen_submission(
+    slug: str,
+    sub_id: str,
+    staff: User = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    _, s = await _admin_get_submission(db, slug, sub_id)
+    try:
+        s.status = submission_review.apply_action(s.status, "reopen")
+    except submission_review.ReviewError as exc:
+        _review_error(exc)
+    s.public_score = None
+    s.private_score = None
+    await db.commit()
+    return {"status": s.status}
 
 
 @router.get("/admin/competition-proposals")

@@ -2,7 +2,7 @@ import { countPhases } from '@/lib/learning/pathItems'
 import type { PathItem } from '@/types/api'
 import { http, HttpResponse } from 'msw'
 import { mockCompetitionProposals, paginateProposals } from './data/competition-proposals'
-import { competitions, detailOf as competitionDetailOf, getRemainingToday, leaderboardOf, recordSubmission, submissions, buildCompetitionStats, filterCompetitions } from './data/competitions'
+import { competitions, detailOf as competitionDetailOf, getRemainingToday, leaderboardOf, recordSubmission, submissions, buildCompetitionStats, filterCompetitions, compNotebooks, compDetailStatsOf } from './data/competitions'
 import { mockEventProposals, paginateEventProposals } from './data/event-proposals'
 import { events, detailOf, eventRegistrations, buildMockIcs, buildEventStats, filterEvents } from './data/events'
 import { courseDetailOf, courses, authoredCourses, completedLessons, enrollments, instructorApplications, learningPaths, learnersOf, myLearningOf, pathDetailOf, pathSummaryOf, pathItemsOf, setPathItems, mockCourseExtras, activeEnrollment } from './data/learn'
@@ -1321,6 +1321,56 @@ export const handlers = [
     return HttpResponse.json(competitionDetailOf(c))
   }),
 
+  http.get(`${API}/competitions/:slug/stats`, ({ params }) => {
+    const c = competitions.find((c) => c.slug === params.slug)
+    if (!c) return errorResponse(404, 'not_found', 'Kompetisi tidak ditemukan.')
+    return HttpResponse.json(compDetailStatsOf(String(params.slug)))
+  }),
+
+  http.get(`${API}/competitions/:slug/notebooks`, ({ params, request }) => {
+    const c = competitions.find((c) => c.slug === params.slug)
+    if (!c) return errorResponse(404, 'not_found', 'Kompetisi tidak ditemukan.')
+    const page = Number(new URL(request.url).searchParams.get('page') ?? 1)
+    const sorted = [...compNotebooks].sort(
+      (a, b) => b.favorite_count - a.favorite_count || b.updated_at.localeCompare(a.updated_at)
+    )
+    return HttpResponse.json(paginate(sorted, page))
+  }),
+
+  http.post(`${API}/competitions/:slug/notebooks`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const c = competitions.find((x) => x.slug === params.slug)
+    if (!c) return errorResponse(404, 'not_found', 'Kompetisi tidak ditemukan.')
+    const nb = {
+      id: `cnb_${Date.now()}`,
+      title: `Notebook — ${c.title}`,
+      owner: { username: user.username, type: 'user' as const, avatar_url: null },
+      favorite_count: 0,
+      favorited: false,
+      updated_at: new Date().toISOString(),
+      notebook_id: `nb_${Date.now()}`,
+    }
+    compNotebooks.unshift(nb)
+    return HttpResponse.json(nb, { status: 201 })
+  }),
+
+  http.post(`${API}/competitions/:slug/notebooks/:id/favorite`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const nb = compNotebooks.find((n) => n.id === params.id)
+    if (!nb) return errorResponse(404, 'not_found', 'Notebook tidak ditemukan')
+    nb.favorited = !nb.favorited
+    nb.favorite_count += nb.favorited ? 1 : -1
+    compNotebooks.sort((a, b) => b.favorite_count - a.favorite_count || b.updated_at.localeCompare(a.updated_at))
+    return HttpResponse.json({ favorited: nb.favorited, favorite_count: nb.favorite_count })
+  }),
+
+  http.get(`${API}/competitions/:slug/submissions/me`, ({ request }) => {
+    if (!resolveUserFromRequest(request)) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    return HttpResponse.json(submissions)
+  }),
+
   http.get(`${API}/competitions/:slug/leaderboard`, ({ params, request }) => {
     const board = (new URL(request.url).searchParams.get('board') ?? 'public') as 'public' | 'private'
     const comp = competitions.find((c) => c.slug === params.slug)
@@ -1345,8 +1395,9 @@ export const handlers = [
     if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk untuk mengirim submission.')
     const slug = String(params.slug)
     const comp = competitions.find((c) => c.slug === slug)
-    if (!comp || comp.status !== 'active') {
-      return errorResponse(400, 'closed', 'Kompetisi tidak menerima submission saat ini')
+    const dl = comp ? competitionDetailOf(comp).deadline : null
+    if (!comp || !dl?.is_open) {
+      return errorResponse(400, 'closed', 'Pendaftaran/Submission ditutup')
     }
     const remainingBefore = getRemainingToday(slug, user.id)
     if (remainingBefore <= 0) {
@@ -1357,16 +1408,20 @@ export const handlers = [
     const entry = {
       id: `sub_${Date.now()}`,
       created_at: new Date().toISOString(),
-      status: 'scored' as const,
-      public_score: 0.42 + Math.random() * 0.05,
+      submitted_at: new Date().toISOString(),
+      status: 'submitted' as const,
+      public_score: null,
+      score: null,
       filename: 'submission.csv',
       remaining_today: remaining,
     }
     submissions.unshift({
       id: entry.id,
       created_at: entry.created_at,
+      submitted_at: entry.submitted_at,
       status: entry.status,
       public_score: entry.public_score,
+      score: entry.score,
       filename: entry.filename,
     })
     return HttpResponse.json(entry)
@@ -1862,6 +1917,66 @@ export const handlers = [
     if (typeof body.metric === 'string') comp.metric = body.metric
     if (typeof body.prize_pool === 'string') comp.prize_pool = body.prize_pool
     return HttpResponse.json({ slug: comp.slug })
+  }),
+
+  http.get(`${API}/admin/competitions/:slug/submissions`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || !isStaff(user)) return errorResponse(403, 'forbidden', 'Akses khusus admin')
+    const status = new URL(request.url).searchParams.get('status') ?? 'submitted'
+    const page = Number(new URL(request.url).searchParams.get('page') ?? 1)
+    const items = submissions
+      .filter((s) => s.status === status)
+      .map((s) => ({
+        ...s,
+        entrant: { kind: 'user' as const, name: 'demo-user', username: 'demo-user' },
+      }))
+    return HttpResponse.json(paginate(items, page))
+  }),
+
+  http.post(`${API}/admin/competitions/:slug/submissions/:id/start-review`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || !isStaff(user)) return errorResponse(403, 'forbidden', 'Akses khusus admin')
+    const s = submissions.find((x) => x.id === params.id)
+    if (!s) return errorResponse(404, 'not_found', 'Tidak ditemukan')
+    if (s.status !== 'submitted') return errorResponse(409, 'invalid_transition', 'Status tidak valid')
+    s.status = 'under_review'
+    return HttpResponse.json({ status: s.status })
+  }),
+
+  http.post(`${API}/admin/competitions/:slug/submissions/:id/score`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || !isStaff(user)) return errorResponse(403, 'forbidden', 'Akses khusus admin')
+    const s = submissions.find((x) => x.id === params.id)
+    if (!s) return errorResponse(404, 'not_found', 'Tidak ditemukan')
+    const body = (await request.json()) as { score: number; note?: string }
+    if (typeof body.score !== 'number') return errorResponse(422, 'bad_score', 'Skor harus angka')
+    s.status = 'scored'
+    s.public_score = body.score
+    s.score = body.score
+    s.review_note = body.note ?? null
+    return HttpResponse.json({ status: s.status, score: body.score })
+  }),
+
+  http.post(`${API}/admin/competitions/:slug/submissions/:id/reject`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || !isStaff(user)) return errorResponse(403, 'forbidden', 'Akses khusus admin')
+    const s = submissions.find((x) => x.id === params.id)
+    if (!s) return errorResponse(404, 'not_found', 'Tidak ditemukan')
+    const body = (await request.json()) as { note?: string }
+    s.status = 'rejected'
+    s.review_note = body.note ?? null
+    return HttpResponse.json({ status: s.status })
+  }),
+
+  http.post(`${API}/admin/competitions/:slug/submissions/:id/reopen`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || !isStaff(user)) return errorResponse(403, 'forbidden', 'Akses khusus admin')
+    const s = submissions.find((x) => x.id === params.id)
+    if (!s) return errorResponse(404, 'not_found', 'Tidak ditemukan')
+    s.status = 'under_review'
+    s.public_score = null
+    s.score = null
+    return HttpResponse.json({ status: s.status })
   }),
 
   http.get(`${API}/admin/competition-proposals`, ({ request }) => {
