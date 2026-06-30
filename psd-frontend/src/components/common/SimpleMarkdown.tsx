@@ -28,9 +28,9 @@ export function SimpleMarkdown({ content, className }: { content: string; classN
           .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
           .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-primary-600 hover:underline dark:text-primary-400">$1</a>')
         return (
-          <p
+          <div
             key={i}
-            className="text-neutral-600 dark:text-neutral-400"
+            className="break-words text-neutral-600 [overflow-wrap:anywhere] dark:text-neutral-400"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         )

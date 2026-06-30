@@ -17,6 +17,7 @@ class Thread(Base):
     body_md: Mapped[str] = mapped_column(String, default="")
     tags: Mapped[list] = mapped_column(JSON, default=list)
     repo_id: Mapped[str | None] = mapped_column(ForeignKey("repos.id"), nullable=True, index=True)
+    visibility: Mapped[str] = mapped_column(String, default="public", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     author: Mapped[User] = relationship(lazy="selectin")
@@ -28,9 +29,13 @@ class Post(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: f"pst_{uuid.uuid4().hex[:12]}")
     thread_id: Mapped[str] = mapped_column(ForeignKey("threads.id"), index=True)
     author_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    parent_id: Mapped[str | None] = mapped_column(ForeignKey("posts.id"), nullable=True, index=True)
+    reply_to_author_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     body_md: Mapped[str] = mapped_column(String)
+    visibility: Mapped[str] = mapped_column(String, default="public", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    author: Mapped[User] = relationship(lazy="selectin")
+    author: Mapped[User] = relationship(foreign_keys=[author_id], lazy="selectin")
+    reply_to_author: Mapped[User | None] = relationship(foreign_keys=[reply_to_author_id], lazy="selectin")
 
 
 class ForumVote(Base):

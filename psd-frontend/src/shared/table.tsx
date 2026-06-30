@@ -5,11 +5,12 @@ import type React from 'react'
 import { createContext, useContext, useState } from 'react'
 import { Link } from './link'
 
-const TableContext = createContext<{ bleed: boolean; dense: boolean; grid: boolean; striped: boolean }>({
+const TableContext = createContext<{ bleed: boolean; dense: boolean; grid: boolean; striped: boolean; nowrap: boolean }>({
   bleed: false,
   dense: false,
   grid: false,
   striped: false,
+  nowrap: false,
 })
 
 export function Table({
@@ -17,16 +18,25 @@ export function Table({
   dense = false,
   grid = false,
   striped = false,
+  nowrap = false,
   className,
   children,
   ...props
-}: { bleed?: boolean; dense?: boolean; grid?: boolean; striped?: boolean } & React.ComponentPropsWithoutRef<'div'>) {
+}: { bleed?: boolean; dense?: boolean; grid?: boolean; striped?: boolean; nowrap?: boolean } & React.ComponentPropsWithoutRef<'div'>) {
   return (
-    <TableContext.Provider value={{ bleed, dense, grid, striped } as React.ContextType<typeof TableContext>}>
+    <TableContext.Provider value={{ bleed, dense, grid, striped, nowrap } as React.ContextType<typeof TableContext>}>
       <div className="flow-root">
-        <div {...props} className={clsx(className, '-mx-(--gutter) overflow-x-auto whitespace-nowrap')}>
-          <div className={clsx('inline-block min-w-full align-middle', !bleed && 'sm:px-(--gutter)')}>
-            <table className="min-w-full text-left text-base/6 text-neutral-950 rtl:text-right dark:text-white">
+        <div
+          {...props}
+          className={clsx(className, '-mx-(--gutter) overflow-x-auto', nowrap && 'whitespace-nowrap')}
+        >
+          <div className={clsx('align-middle', !bleed && 'sm:px-(--gutter)', nowrap ? 'inline-block min-w-full' : 'w-full')}>
+            <table
+              className={clsx(
+                'text-left text-base/6 text-neutral-950 rtl:text-right dark:text-white',
+                nowrap ? 'min-w-full' : 'w-full table-fixed',
+              )}
+            >
               {children}
             </table>
           </div>
@@ -76,8 +86,12 @@ export function TableRow({
   )
 }
 
-export function TableHeader({ className, ...props }: React.ComponentPropsWithoutRef<'th'>) {
-  let { bleed, grid } = useContext(TableContext)
+export function TableHeader({
+  className,
+  nowrap: headerNowrap = false,
+  ...props
+}: { nowrap?: boolean } & React.ComponentPropsWithoutRef<'th'>) {
+  let { bleed, grid, nowrap: tableNowrap } = useContext(TableContext)
 
   return (
     <th
@@ -86,14 +100,21 @@ export function TableHeader({ className, ...props }: React.ComponentPropsWithout
         className,
         'border-b border-b-neutral-950/10 px-4 py-2 font-medium first:pl-(--gutter,--spacing(2)) last:pr-(--gutter,--spacing(2)) dark:border-b-white/10',
         grid && 'border-l border-l-neutral-950/5 first:border-l-0 dark:border-l-white/5',
-        !bleed && 'sm:first:pl-1 sm:last:pr-1'
+        !bleed && 'sm:first:pl-1 sm:last:pr-1',
+        !tableNowrap && 'align-top',
+        (headerNowrap || tableNowrap) && 'whitespace-nowrap',
       )}
     />
   )
 }
 
-export function TableCell({ className, children, ...props }: React.ComponentPropsWithoutRef<'td'>) {
-  let { bleed, dense, grid, striped } = useContext(TableContext)
+export function TableCell({
+  className,
+  children,
+  nowrap: cellNowrap = false,
+  ...props
+}: { nowrap?: boolean } & React.ComponentPropsWithoutRef<'td'>) {
+  let { bleed, dense, grid, striped, nowrap: tableNowrap } = useContext(TableContext)
   let { href, target, title } = useContext(TableRowContext)
   let [cellRef, setCellRef] = useState<HTMLElement | null>(null)
 
@@ -107,7 +128,9 @@ export function TableCell({ className, children, ...props }: React.ComponentProp
         !striped && 'border-b border-neutral-950/5 dark:border-white/5',
         grid && 'border-l border-l-neutral-950/5 first:border-l-0 dark:border-l-white/5',
         dense ? 'py-2.5' : 'py-4',
-        !bleed && 'sm:first:pl-1 sm:last:pr-1'
+        !bleed && 'sm:first:pl-1 sm:last:pr-1',
+        (cellNowrap || tableNowrap) && 'whitespace-nowrap',
+        !cellNowrap && !tableNowrap && 'align-top break-words whitespace-normal [overflow-wrap:anywhere]',
       )}
     >
       {href && (

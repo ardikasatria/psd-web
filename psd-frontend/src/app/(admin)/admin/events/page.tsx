@@ -177,7 +177,7 @@ export default function AdminEventsPage() {
                   <TableCell>
                     <Switch checked={!!e.featured} onChange={(v) => toggleFeatured.mutate({ slug: e.slug, featured: v })} color="green" />
                   </TableCell>
-                  <TableCell className="space-x-2">
+                  <TableCell nowrap className="space-x-2">
                     <Button outline href={`/admin/events/${e.slug}`}>Peserta</Button>
                     <Button outline onClick={() => openEdit(e)} disabled={loadingEdit === e.slug}>
                       {loadingEdit === e.slug ? 'Memuat...' : 'Edit'}

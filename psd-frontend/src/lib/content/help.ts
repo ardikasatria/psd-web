@@ -32,8 +32,10 @@ Projek Sains Data (PSD) adalah platform kolaboratif untuk menemukan, membagikan,
 - **Dataset lokal** — data UMKM, pertanian, dan pemerintah yang relevan.
 - **Model siap pakai** — contoh implementasi untuk bahasa Indonesia.
 - **Kompetisi & komunitas** — belajar sambil berkontribusi pada masalah nyata.
+- **Feed & forum** — berbagi progres, diskusi, dan kolaborasi terbuka.
 - **Pabrik Data & analitik** — pipeline, dashboard, dan ruang ide kolaboratif.
 - **Git & notebook** — versioning nyata (Gitea) dan Jupyter Notebook terintegrasi login PSD.
+- **Bantuan & pengaduan** — laporkan masalah platform lewat tiket di [/support](/support).
 
 PSD dikurasi oleh tim resmi dan komunitas praktisi di seluruh nusantara.
 
@@ -75,7 +77,8 @@ Ikuti urutan ini agar pengalaman pertama Anda di PSD lancar.
 - **Model ML** — [/ml](/ml) registry model
 - **Kompetisi** — [/competitions](/competitions) latihan & lomba
 - **Belajar** — [/learn](/learn) kursus & materi
-- **Forum** — [/forum](/community) diskusi komunitas
+- **Feed** — [/feed](/feed) postingan komunitas
+- **Forum** — [/forum](/forum) diskusi bertopik
 
 ## 4. Buat atau ikuti proyek
 
@@ -98,7 +101,8 @@ Di [Pengaturan → Notifikasi](/settings/notifications) pilih email (segera / ri
 
 - [FAQ](/help/faq) — pertanyaan umum
 - [Pedoman komunitas](/help/pedoman-komunitas) — etika berinteraksi
-- Forum komunitas — tanya praktisi lain`,
+- [Bantuan & pengaduan](/support) — tiket masalah platform
+- Forum — tanya praktisi lain di [/forum](/forum)`,
   },
   {
     slug: 'git-menyiapkan-akses',
@@ -107,9 +111,9 @@ Di [Pengaturan → Notifikasi](/settings/notifications) pilih email (segera / ri
     description: 'SSH key atau token untuk push ke repository Gitea PSD.',
     content: `# Menyiapkan akses Git
 
-Anda masuk ke PSD (dan Gitea) dengan **satu akun** lewat login PSD. Untuk **mendorong (push)** kode dari komputer, siapkan autentikasi Git — bukan kata sandi login web.
+Anda masuk ke PSD (dan Git PSD) dengan **satu akun** lewat login PSD. Untuk **mendorong (push)** kode dari komputer, siapkan autentikasi Git — bukan kata sandi login web.
 
-> **Catatan:** Login PSD memakai OAuth/OIDC. Akun Gitea Anda **tidak punya kata sandi biasa** untuk push — gunakan SSH key atau Personal Access Token (PAT).
+> **Catatan:** Login PSD memakai OAuth/OIDC. Akun Git PSD Anda **tidak punya kata sandi biasa** untuk push — gunakan SSH key atau Personal Access Token (PAT).
 
 ## Opsi A — SSH key (disarankan)
 
@@ -125,15 +129,17 @@ ssh-keygen -t ed25519 -C "email-anda@domain.ac.id"
 cat ~/.ssh/id_ed25519.pub
 \`\`\`
 
-3. Buka [Pengaturan → Git & SSH](/settings/git) di PSD — tempel isi kunci publik. Halaman itu menampilkan **perintah uji** dan **contoh clone** yang sesuai port SSH server (salin dari sana, jangan tebak port).
+3. Buka [Pengaturan → Git & SSH](/settings/git) di PSD — tempel isi kunci publik.
 
-4. Uji koneksi — **salin perintah persis** dari Pengaturan → Git & SSH. Contoh bila port Git = 2222:
+4. Uji koneksi — salin perintah dari halaman Pengaturan, atau gunakan format standar:
 
 \`\`\`bash
-ssh -p 2222 -T git@git.projeksainsdata.com
+ssh -T git@git.projeksainsdata.com
 \`\`\`
 
-> **Keamanan:** \`ssh -T git@git.<domain>\` **tanpa** \`-p\` memakai port 22 default — di server PSD itu SSH **admin VM**, bukan Git. Jangan masukkan password di sana. Bila port Git sudah 22 (gaya GitHub), perintah tanpa \`-p\` benar — tetap ikuti yang ditampilkan di Pengaturan.
+Respon sukses menampilkan sapaan dengan username Git Anda. Jika gagal, pastikan kunci publik sudah terdaftar dan Anda memakai host yang sama dengan contoh clone di halaman repo.
+
+> **Tip:** URL clone SSH mengikuti pola \`git@host:pemilik/nama-repo.git\` — sama seperti GitHub. Salin URL **persis** dari banner clone repo atau Pengaturan → Git & SSH.
 
 ## Opsi B — Personal Access Token (HTTPS)
 
@@ -174,17 +180,14 @@ Lanjut: [Clone, commit & push](/help/git-clone-push) · [LFS & Pull Request](/he
 Salin URL **SSH** dari banner clone repo atau dari [Pengaturan → Git & SSH](/settings/git).
 
 \`\`\`bash
-# Contoh port non-22 (interim) — ganti dengan URL persis dari UI Anda
-git clone ssh://git@git.projeksainsdata.com:2222/username/nama-repo.git
-
-# Contoh gaya GitHub (setelah migrasi port 22 → Gitea)
-# git clone git@git.projeksainsdata.com:username/nama-repo.git
+# SSH (format standar — ganti dengan URL persis dari UI Anda)
+git clone git@git.projeksainsdata.com:username/nama-repo.git
 
 # HTTPS (pakai token sebagai password)
 git clone https://git.projeksainsdata.com/username/nama-repo.git
 \`\`\`
 
-> **Tip:** Ganti host dan path dengan URL **persis** dari banner clone repo Anda.
+> **Tip:** Ganti \`username/nama-repo\` dengan path **persis** dari banner clone repo Anda.
 
 ## Commit & push
 
@@ -205,7 +208,7 @@ Branch default biasanya \`main\`. Jika repo memakai branch lain, ganti \`main\` 
 - **Authentication failed (HTTPS):** gunakan **token** sebagai password, bukan password login web.
 - **Push rejected:** repo mungkin hanya menerima kontribusi via **Pull Request** — lihat [LFS & Pull Request](/help/git-lfs-kontribusi).
 
-Belum punya akses Git? Pastikan fitur Git (Gitea) aktif di instalasi PSD Anda.`,
+Belum punya akses Git? Pastikan kunci SSH sudah ditambahkan di [Pengaturan → Git & SSH](/settings/git).`,
   },
   {
     slug: 'git-lfs-kontribusi',
@@ -238,7 +241,7 @@ Alur kolaborasi ala GitHub/Hugging Face:
 
 \`\`\`bash
 # Salin URL SSH persis dari banner clone / Pengaturan → Git & SSH
-git clone <url-ssh-dari-ui> fork-repo
+git clone git@git.projeksainsdata.com:username/fork-repo.git
 cd fork-repo
 git checkout -b fitur-baru
 # ... ubah, commit ...
@@ -263,11 +266,11 @@ git push origin fitur-baru
 
 ## Notebook terintegrasi (bukan Colab)
 
-PSD menyediakan **notebook langsung di platform** — pengalaman mirip Kaggle. Anda **tidak perlu** membuka UI JupyterHub secara manual.
+PSD menyediakan **notebook langsung di platform** — pengalaman mirip Kaggle. Anda **tidak perlu** membuka panel Jupyter terpisah atau mengatur server sendiri.
 
 1. Buka **Notebook** → **Mulai notebook** (workspace).
-2. **Tier pemula** — runtime **browser** (JupyterLite + Pyodide), biaya server ~nol.
-3. **Tier menengah/lanjut** — boleh memakai **kernel server** terisolasi (OAuth PSD otomatis).
+2. **Tier pemula** — runtime **browser** (JupyterLite + Pyodide), tanpa menunggu server.
+3. **Tier menengah/lanjut** — dapat memakai **kernel server** terisolasi; login PSD otomatis mengurus autentikasi.
 
 ## Kuota per tier
 
@@ -277,11 +280,19 @@ PSD menyediakan **notebook langsung di platform** — pengalaman mirip Kaggle. A
 | Menengah | 10 | 2 | Browser + server |
 | Lanjut | 50 | 4 | Browser + server |
 
-Tier naik seiring **poin gamifikasi**. CPU-only — tanpa GPU.
+Tier naik seiring **poin gamifikasi**. Runtime saat ini **CPU-only** (tanpa GPU).
 
 ## Kernel server (tier menengah+)
 
-Tombol **Buka kernel server** menyiapkan kontainer pribadi via OAuth — folder kerja persisten di \`~/work\`, idle-culling ~1 jam.
+Tombol **Buka kernel server** menyiapkan lingkungan kerja pribadi Anda. Folder kerja tersimpan di workspace notebook; sesi idle otomatis dihentikan setelah periode tidak aktif (~1 jam).
+
+Bila akses kernel server belum tersedia di tier Anda, ajukan permohonan lewat formulir di halaman notebook — tim PSD meninjau permohonan tersebut.
+
+## Fitur terkait
+
+- **SDK psd://** — muat dataset langsung dari platform tanpa mengunduh manual ke repo Git.
+- **Simpan & push** — commit notebook ke Git dari terminal workspace.
+- **Asisten PSD** — bantuan kontekstual saat Anda bekerja di berbagai halaman.
 
 Lanjut: [Dataset psd://](/help/notebook-dataset-sdk) · [Simpan & push notebook](/help/notebook-simpan-push)`,
   },
@@ -292,7 +303,7 @@ Lanjut: [Dataset psd://](/help/notebook-dataset-sdk) · [Simpan & push notebook]
     description: 'SDK psd.load dan psd.download di Jupyter Notebook.',
     content: `# Mengakses dataset dengan psd://
 
-Image notebook PSD sudah memuat library **psd**. Kredensial API (\`PSD_API_BASE\`, token) **diinjeksikan otomatis** saat server dijalankan — jangan hard-code secret di notebook.
+Image notebook PSD sudah memuat library **psd**. Kredensial API diinjeksikan otomatis saat kernel berjalan — **jangan** hard-code secret di notebook.
 
 ## Format URI
 
@@ -320,7 +331,7 @@ path = psd.download("psd://pemilik/dataset/berkas.csv")
 print("Tersimpan di:", path)
 \`\`\`
 
-Akses lewat **presigned URL** berumur pendek — tidak ada kredensial MinIO yang disimpan permanen di notebook.
+Akses lewat **presigned URL** berumur pendek — kredensial penyimpanan tidak disimpan permanen di notebook.
 
 > **Tip:** Untuk data besar, prefer \`psd.load\` / streaming daripada menyalin seluruh bucket ke repo Git.
 
@@ -352,8 +363,7 @@ Output notebook (grafik, log) membuat diff Git besar dan sulit direview.
 2. Clone repo (jika belum) — gunakan URL dari banner clone PSD:
 
 \`\`\`bash
-# Salin URL SSH persis dari banner clone / Pengaturan → Git & SSH
-git clone <url-ssh-dari-ui> ~/work/proyek-saya
+git clone git@git.projeksainsdata.com:username/nama-repo.git ~/work/proyek-saya
 cd ~/work/proyek-saya
 \`\`\`
 
@@ -413,9 +423,14 @@ Gunakan [Lupa kata sandi](/forgot-password). Email reset berlaku ±30 menit. Res
 
 ## Notebook tidak bisa dibuka?
 
-- Jupyter Notebook mungkin belum diaktifkan admin.
-- Server sedang spawn — tunggu 1–2 menit.
-- Tier/RAM penuh — coba lagi setelah server idle di-stop otomatis.
+- Tunggu 1–2 menit bila kernel server sedang disiapkan.
+- Tier atau kuota kernel penuh — tutup sesi lama atau gunakan runtime browser.
+- Ajukan akses kernel server jika tombol belum tersedia di tier Anda.
+
+## Bagaimana melaporkan konten atau masalah platform?
+
+- **Konten feed/forum** — menu **⋯ → Laporkan** pada postingan, komentar, atau balasan.
+- **Masalah teknis / akun** — buat tiket di [Bantuan & pengaduan](/support).
 
 ## Siapa yang bisa menandai aset pilihan?
 
@@ -437,7 +452,7 @@ Atur di [Pengaturan → Notifikasi](/settings/notifications): email segera, ring
 - Jangan unggah data pribadi atau rahasia tanpa izin (PII, NIK, rekening, dll.).
 - Berikan konteks dan dokumentasi yang memadai pada dataset dan model.
 - Jangan commit kredensial (API key, password) ke repo Git — gunakan variabel lingkungan.
-- Laporkan konten yang melanggar kepada tim PSD melalui forum atau email resmi.
+- Laporkan konten yang melanggar lewat menu **Laporkan** di feed/forum, atau buat pengaduan di [/support](/support).
 - Pull Request: berikan deskripsi jelas; respon review dengan sopan.
 
 Bersama kita bangun ekosistem sains data yang inklusif dan bertanggung jawab.

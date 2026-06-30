@@ -2,8 +2,9 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.db import get_db
 from app.core.deps import get_current_user, get_current_user_optional
@@ -22,6 +23,8 @@ from app.modules.users.models import User
 
 router = APIRouter(tags=["community"])
 
+VISIBILITY = frozenset({"public", "private"})
+
 
 async def _replies(db, tid):
     return (
@@ -36,6 +39,7 @@ def _summary(t, replies, engagement: dict | None = None):
         "author": owner_ref(t.author),
         "tags": t.tags,
         "replies": replies,
+        "visibility": getattr(t, "visibility", None) or "public",
         "created_at": t.created_at,
         "last_activity_at": t.last_activity_at,
     }
@@ -46,6 +50,74 @@ def _summary(t, replies, engagement: dict | None = None):
 
 def _forum_base():
     return Thread.repo_id.is_(None)
+
+
+def _visible_threads_filter(viewer):
+    if viewer:
+        return or_(Thread.visibility == "public", Thread.author_id == viewer.id)
+    return Thread.visibility == "public"
+
+
+def _reply_visible(p: Post, viewer) -> bool:
+    vis = getattr(p, "visibility", None) or "public"
+    if vis == "public":
+        return True
+    return viewer is not None and p.author_id == viewer.id
+
+
+async def _assert_thread_viewable(t: Thread, viewer) -> None:
+    vis = getattr(t, "visibility", None) or "public"
+    if vis == "private" and (not viewer or viewer.id != t.author_id):
+        raise ApiError(404, "not_found", "Utas tidak ditemukan")
+
+
+async def _get_owned_thread(db, thread_id: str, user: User) -> Thread:
+    t = (await db.execute(select(Thread).where(Thread.id == thread_id))).scalar_one_or_none()
+    if not t:
+        raise ApiError(404, "not_found", "Utas tidak ditemukan")
+    if t.author_id != user.id:
+        raise ApiError(403, "forbidden", "Hanya pemilik yang dapat mengubah utas")
+    return t
+
+
+async def _get_owned_reply(db, post_id: str, user: User) -> Post:
+    p = (await db.execute(select(Post).where(Post.id == post_id))).scalar_one_or_none()
+    if not p:
+        raise ApiError(404, "not_found", "Balasan tidak ditemukan")
+    if p.author_id != user.id:
+        raise ApiError(403, "forbidden", "Hanya pemilik yang dapat mengubah balasan")
+    return p
+
+
+async def _resolve_reply_parent(db, thread_id: str, parent_id: str | None) -> tuple[str | None, str | None]:
+    if not parent_id:
+        return None, None
+    parent = (
+        await db.execute(
+            select(Post).where(Post.id == parent_id, Post.thread_id == thread_id)
+        )
+    ).scalar_one_or_none()
+    if not parent:
+        raise ApiError(404, "not_found", "Balasan induk tidak ditemukan")
+    if parent.parent_id:
+        return parent.parent_id, parent.author_id
+    return parent_id, None
+
+
+def _post_dict(p, engagement: dict | None = None):
+    d = {
+        "id": p.id,
+        "author": owner_ref(p.author),
+        "body_md": p.body_md,
+        "parent_id": p.parent_id,
+        "visibility": getattr(p, "visibility", None) or "public",
+        "created_at": p.created_at,
+    }
+    if getattr(p, "reply_to_author", None):
+        d["reply_to"] = owner_ref(p.reply_to_author)
+    if engagement:
+        d.update(engagement)
+    return d
 
 
 async def _set_vote(db, user: User, target_type: str, target_id: str, value: int) -> dict:
@@ -175,7 +247,7 @@ async def list_threads(
     viewer: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(Thread).where(_forum_base())
+    stmt = select(Thread).where(_forum_base(), _visible_threads_filter(viewer))
     if q:
         stmt = stmt.where(Thread.title.ilike(f"%{q}%"))
     if tags:
@@ -213,27 +285,23 @@ async def get_thread(
     t = (await db.execute(select(Thread).where(Thread.id == thread_id))).scalar_one_or_none()
     if not t:
         raise ApiError(404, "not_found", "Utas tidak ditemukan")
+    await _assert_thread_viewable(t, viewer)
     posts = (
         await db.execute(
-            select(Post).where(Post.thread_id == t.id).order_by(Post.created_at.asc())
+            select(Post)
+            .options(selectinload(Post.author), selectinload(Post.reply_to_author))
+            .where(Post.thread_id == t.id)
+            .order_by(Post.created_at.asc())
         )
     ).scalars().all()
+    posts = [p for p in posts if _reply_visible(p, viewer)]
     post_ids = [p.id for p in posts]
     thread_eng = await engagement_for_targets(db, "thread", [t.id], viewer.id if viewer else None)
     post_eng = await engagement_for_targets(db, "post", post_ids, viewer.id if viewer else None)
     return {
         **_summary(t, len(posts), thread_eng.get(t.id)),
         "body_md": t.body_md,
-        "posts": [
-            {
-                "id": p.id,
-                "author": owner_ref(p.author),
-                "body_md": p.body_md,
-                "created_at": p.created_at,
-                **post_eng.get(p.id, {}),
-            }
-            for p in posts
-        ],
+        "posts": [_post_dict(p, post_eng.get(p.id)) for p in posts],
     }
 
 
@@ -315,6 +383,9 @@ async def create_thread(
         author_id=user.id,
         body_md=body.get("body_md", ""),
         tags=body.get("tags", []),
+        visibility=body.get("visibility", "public")
+        if body.get("visibility", "public") in VISIBILITY
+        else "public",
     )
     db.add(t)
     await db.commit()
@@ -336,20 +407,109 @@ async def create_reply(
     text = (body.get("body_md") or "").strip()
     if not text:
         raise ApiError(400, "bad_request", "Balasan tidak boleh kosong")
-    p = Post(thread_id=t.id, author_id=user.id, body_md=text)
+    parent_id, reply_to_author_id = await _resolve_reply_parent(db, t.id, body.get("parent_id"))
+    p = Post(
+        thread_id=t.id,
+        author_id=user.id,
+        body_md=text,
+        parent_id=parent_id,
+        reply_to_author_id=reply_to_author_id,
+        visibility=body.get("visibility", "public")
+        if body.get("visibility", "public") in VISIBILITY
+        else "public",
+    )
     t.last_activity_at = datetime.now(timezone.utc)
     db.add(p)
     await db.commit()
     await db.refresh(p, ["author"])
+    if reply_to_author_id:
+        p.reply_to_author = (
+            await db.execute(select(User).where(User.id == reply_to_author_id))
+        ).scalar_one_or_none()
     await after_forum_post(db, user)
     eng = await engagement_for_one(db, "post", p.id, user.id)
-    return {
-        "id": p.id,
-        "author": owner_ref(p.author),
-        "body_md": p.body_md,
-        "created_at": p.created_at,
-        **eng,
-    }
+    return _post_dict(p, eng)
+
+
+@router.patch("/forum/threads/{thread_id}")
+async def update_thread(
+    thread_id: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await _get_owned_thread(db, thread_id, user)
+    if "title" in body:
+        title = (body["title"] or "").strip()
+        if not title:
+            raise ApiError(400, "bad_request", "Judul wajib diisi")
+        t.title = title
+    if "body_md" in body:
+        t.body_md = body["body_md"]
+    if "tags" in body:
+        t.tags = body["tags"]
+    if "visibility" in body:
+        v = body["visibility"]
+        if v not in VISIBILITY:
+            raise ApiError(422, "invalid_visibility", "Visibilitas harus public atau private")
+        t.visibility = v
+    await db.commit()
+    return await get_thread(t.id, user, db)
+
+
+@router.delete("/forum/threads/{thread_id}", status_code=204)
+async def delete_thread(
+    thread_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    t = await _get_owned_thread(db, thread_id, user)
+    replies = (await db.execute(select(Post).where(Post.thread_id == t.id))).scalars().all()
+    for p in replies:
+        await db.delete(p)
+    await db.delete(t)
+    await db.commit()
+
+
+@router.patch("/forum/posts/{post_id}")
+async def update_reply(
+    post_id: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    p = await _get_owned_reply(db, post_id, user)
+    if "body_md" in body:
+        text = (body["body_md"] or "").strip()
+        if not text:
+            raise ApiError(400, "bad_request", "Balasan tidak boleh kosong")
+        p.body_md = text
+    if "visibility" in body:
+        v = body["visibility"]
+        if v not in VISIBILITY:
+            raise ApiError(422, "invalid_visibility", "Visibilitas harus public atau private")
+        p.visibility = v
+    await db.commit()
+    await db.refresh(p, ["author"])
+    eng = await engagement_for_one(db, "post", p.id, user.id)
+    return _post_dict(p, eng)
+
+
+@router.delete("/forum/posts/{post_id}", status_code=204)
+async def delete_reply(
+    post_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    p = await _get_owned_reply(db, post_id, user)
+    children = (await db.execute(select(Post).where(Post.parent_id == p.id))).scalars().all()
+    for child in children:
+        await db.delete(child)
+    t = (await db.execute(select(Thread).where(Thread.id == p.thread_id))).scalar_one_or_none()
+    await db.delete(p)
+    if t:
+        t.last_activity_at = datetime.now(timezone.utc)
+    await db.commit()
 
 
 @router.get("/repos/{repo_id}/discussions")
@@ -361,7 +521,11 @@ async def repo_discussions(
 ):
     if not (await db.execute(select(Repo).where(Repo.id == repo_id))).scalar_one_or_none():
         raise ApiError(404, "not_found", "Aset tidak ditemukan")
-    stmt = select(Thread).where(Thread.repo_id == repo_id).order_by(Thread.last_activity_at.desc())
+    stmt = (
+        select(Thread)
+        .where(Thread.repo_id == repo_id, _visible_threads_filter(viewer))
+        .order_by(Thread.last_activity_at.desc())
+    )
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
     rows = (await db.execute(stmt.offset(p.offset).limit(p.page_size))).scalars().all()
     ids = [t.id for t in rows]
@@ -387,6 +551,9 @@ async def create_repo_discussion(
         body_md=body.get("body_md", ""),
         tags=body.get("tags", []),
         repo_id=repo_id,
+        visibility=body.get("visibility", "public")
+        if body.get("visibility", "public") in VISIBILITY
+        else "public",
     )
     db.add(t)
     await db.commit()

@@ -112,6 +112,7 @@ export function AdminTable({ children, className, ...props }: ComponentProps<typ
         bleed
         className={clsx(
           '[&_th]:text-xs [&_th]:font-semibold [&_th]:tracking-wide [&_th]:text-neutral-500 [&_th]:uppercase dark:[&_th]:text-neutral-400',
+          '[&_th]:align-top [&_td]:align-top',
           className,
         )}
         {...props}

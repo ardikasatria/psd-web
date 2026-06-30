@@ -23,6 +23,8 @@ from app.modules.users.refs import is_staff, owner_ref_dict
 
 router = APIRouter(tags=["social"])
 
+VISIBILITY = frozenset({"public", "private"})
+
 IMG = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
 HASHTAG_RE = re.compile(r"#(\w+)", re.UNICODE)
 
@@ -46,6 +48,7 @@ def _post(p, liked=False):
         "images": p.images,
         "like_count": p.like_count,
         "comment_count": p.comment_count,
+        "visibility": getattr(p, "visibility", None) or "public",
         "created_at": p.created_at,
         "liked": liked,
         "asset": None,
@@ -64,6 +67,62 @@ async def _liked_ids(db, user, post_ids):
         )
     ).scalars().all()
     return set(rows)
+
+
+def _visible_posts_filter(viewer):
+    if viewer:
+        return or_(Post.visibility == "public", Post.author_id == viewer.id)
+    return Post.visibility == "public"
+
+
+async def _get_owned_post(db, post_id: str, user: User) -> Post:
+    p = (
+        await db.execute(select(Post).options(selectinload(Post.author)).where(Post.id == post_id))
+    ).scalar_one_or_none()
+    if not p:
+        raise ApiError(404, "not_found", "Postingan tidak ditemukan")
+    if p.author_id != user.id:
+        raise ApiError(403, "forbidden", "Hanya pemilik yang dapat mengubah postingan")
+    return p
+
+
+async def _get_viewable_post(db, post_id: str, viewer) -> Post:
+    p = (await db.execute(select(Post).where(Post.id == post_id))).scalar_one_or_none()
+    if not p:
+        raise ApiError(404, "not_found", "Postingan tidak ditemukan")
+    vis = getattr(p, "visibility", None) or "public"
+    if vis == "private" and (not viewer or viewer.id != p.author_id):
+        raise ApiError(404, "not_found", "Postingan tidak ditemukan")
+    return p
+
+
+async def _resolve_comment_parent(db, post_id: str, parent_id: str | None) -> tuple[str | None, str | None]:
+    """Max depth 2: replies attach to top-level comment; reply-to-reply mentions author."""
+    if not parent_id:
+        return None, None
+    parent = (
+        await db.execute(
+            select(PostComment).where(PostComment.id == parent_id, PostComment.post_id == post_id)
+        )
+    ).scalar_one_or_none()
+    if not parent:
+        raise ApiError(404, "not_found", "Komentar induk tidak ditemukan")
+    if parent.parent_id:
+        return parent.parent_id, parent.author_id
+    return parent_id, None
+
+
+def _comment_dict(c):
+    d = {
+        "id": c.id,
+        "author": _owner(c.author),
+        "body_md": c.body_md,
+        "parent_id": c.parent_id,
+        "created_at": c.created_at,
+    }
+    if getattr(c, "reply_to_author", None):
+        d["reply_to"] = _owner(c.reply_to_author)
+    return d
 
 
 @router.get("/feed/stats")
@@ -93,6 +152,7 @@ async def feed_stats(
         await db.execute(
             select(Post)
             .options(selectinload(Post.author))
+            .where(_visible_posts_filter(viewer))
             .order_by(Post.like_count.desc(), Post.created_at.desc())
             .limit(5)
         )
@@ -266,6 +326,9 @@ async def create_post(body: dict, user=Depends(get_current_user), db: AsyncSessi
         images=images,
         asset_kind=(body.get("asset") or {}).get("kind"),
         asset_slug=(body.get("asset") or {}).get("slug"),
+        visibility=body.get("visibility", "public")
+        if body.get("visibility", "public") in VISIBILITY
+        else "public",
     )
     db.add(p)
     await db.commit()
@@ -283,7 +346,7 @@ async def feed(
 ):
     if scope == "following" and not user:
         raise ApiError(401, "unauthorized", "Belum masuk")
-    stmt = select(Post).options(selectinload(Post.author))
+    stmt = select(Post).options(selectinload(Post.author)).where(_visible_posts_filter(user))
     if scope == "following":
         sub = select(Follow.following_id).where(Follow.follower_id == user.id)
         stmt = stmt.where(or_(Post.author_id.in_(sub), Post.author_id == user.id))
@@ -302,11 +365,40 @@ async def user_posts(
     db: AsyncSession = Depends(get_db),
 ):
     t = await _user_by_name(db, username)
-    stmt = select(Post).where(Post.author_id == t.id).order_by(Post.created_at.desc())
+    stmt = (
+        select(Post)
+        .options(selectinload(Post.author))
+        .where(Post.author_id == t.id)
+        .order_by(Post.created_at.desc())
+    )
+    if not viewer or viewer.id != t.id:
+        stmt = stmt.where(Post.visibility == "public")
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
     rows = (await db.execute(stmt.offset(p.offset).limit(p.page_size))).scalars().all()
     liked = await _liked_ids(db, viewer, [r.id for r in rows])
     return paginated([_post(r, r.id in liked) for r in rows], total, p)
+
+
+@router.patch("/posts/{post_id}")
+async def update_post(post_id: str, body: dict, user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    p = await _get_owned_post(db, post_id, user)
+    if "body_md" in body:
+        p.body_md = body["body_md"]
+    if "visibility" in body:
+        v = body["visibility"]
+        if v not in VISIBILITY:
+            raise ApiError(422, "invalid_visibility", "Visibilitas harus public atau private")
+        p.visibility = v
+    if "images" in body:
+        images = body["images"]
+        perks = perks_for(user.reputation or 0)
+        if len(images) > perks["post_image_max"]:
+            raise ApiError(422, "too_many_images", f"Maksimal {perks['post_image_max']} gambar")
+        p.images = images
+    await db.commit()
+    await db.refresh(p)
+    liked = await _liked_ids(db, user, [p.id])
+    return _post(p, p.id in liked)
 
 
 @router.delete("/posts/{post_id}", status_code=204)
@@ -319,9 +411,7 @@ async def delete_post(post_id: str, user=Depends(get_current_user), db: AsyncSes
 
 @router.post("/posts/{post_id}/like")
 async def like_post(post_id: str, user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    p = (await db.execute(select(Post).where(Post.id == post_id))).scalar_one_or_none()
-    if not p:
-        raise ApiError(404, "not_found", "Postingan tidak ditemukan")
+    p = await _get_viewable_post(db, post_id, user)
     if not (
         await db.execute(
             select(PostLike).where(PostLike.user_id == user.id, PostLike.post_id == post_id)
@@ -374,39 +464,44 @@ async def unlike_post(post_id: str, user=Depends(get_current_user), db: AsyncSes
 async def comments(post_id: str, p: PageParams = Depends(page_params), db: AsyncSession = Depends(get_db)):
     stmt = (
         select(PostComment)
+        .options(selectinload(PostComment.author), selectinload(PostComment.reply_to_author))
         .where(PostComment.post_id == post_id)
         .order_by(PostComment.created_at.asc())
     )
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
     rows = (await db.execute(stmt.offset(p.offset).limit(p.page_size))).scalars().all()
-    return paginated(
-        [
-            {"id": c.id, "author": _owner(c.author), "body_md": c.body_md, "created_at": c.created_at}
-            for c in rows
-        ],
-        total,
-        p,
-    )
+    return paginated([_comment_dict(c) for c in rows], total, p)
 
 
 @router.post("/posts/{post_id}/comments", status_code=201, dependencies=[rate_limit("comment", 30, 60)])
 async def add_comment(post_id: str, body: dict, user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    p = (await db.execute(select(Post).where(Post.id == post_id))).scalar_one_or_none()
-    if not p:
-        raise ApiError(404, "not_found", "Postingan tidak ditemukan")
-    c = PostComment(post_id=post_id, author_id=user.id, body_md=body["body_md"])
+    p = await _get_viewable_post(db, post_id, user)
+    parent_id, reply_to_author_id = await _resolve_comment_parent(db, post_id, body.get("parent_id"))
+    c = PostComment(
+        post_id=post_id,
+        author_id=user.id,
+        body_md=body["body_md"],
+        parent_id=parent_id,
+        reply_to_author_id=reply_to_author_id,
+    )
     db.add(c)
     p.comment_count += 1
     await db.commit()
     await db.refresh(c)
+    c.author = user
+    if reply_to_author_id:
+        c.reply_to_author = (
+            await db.execute(select(User).where(User.id == reply_to_author_id))
+        ).scalar_one_or_none()
     await after_comment(db, user)
+    notify_target = reply_to_author_id or p.author_id
     await notify(
         db,
-        p.author_id,
+        notify_target,
         "comment",
-        "Komentar baru di postingan Anda",
+        "Balasan baru di postingan Anda" if reply_to_author_id else "Komentar baru di postingan Anda",
         body=body.get("body_md", "")[:200],
         link="/community",
         actor_id=user.id,
     )
-    return {"id": c.id, "author": _owner(user), "body_md": c.body_md, "created_at": c.created_at}
+    return _comment_dict(c)

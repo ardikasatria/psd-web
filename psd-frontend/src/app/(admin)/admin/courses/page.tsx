@@ -49,7 +49,7 @@ export default function AdminCoursesPage() {
                   <TableCell>{c.status ?? 'published'}</TableCell>
                   <TableCell>{c.author?.username ?? '—'}</TableCell>
                   <TableCell>{c.lessons_count}</TableCell>
-                  <TableCell className="space-x-2">
+                  <TableCell nowrap className="space-x-2">
                     <Button outline onClick={() => { setEditing(c); setForm({ slug: c.slug, title: c.title, level: c.level, description: '' }); setOpen(true) }}>Edit</Button>
                     <ConfirmDialog label="Hapus" danger confirm={`Hapus kursus "${c.title}"?`} onConfirm={() => remove.mutate(c.slug)} />
                   </TableCell>

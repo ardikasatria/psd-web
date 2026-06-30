@@ -31,6 +31,7 @@ class Post(Base):
     asset_slug: Mapped[str | None] = mapped_column(String, nullable=True)
     like_count: Mapped[int] = mapped_column(Integer, default=0)
     comment_count: Mapped[int] = mapped_column(Integer, default=0)
+    visibility: Mapped[str] = mapped_column(String, default="public", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     author: Mapped[User] = relationship(lazy="selectin")
 
@@ -48,6 +49,9 @@ class PostComment(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_id("spc"))
     post_id: Mapped[str] = mapped_column(ForeignKey("social_posts.id"), index=True)
     author_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    parent_id: Mapped[str | None] = mapped_column(ForeignKey("social_post_comments.id"), nullable=True, index=True)
+    reply_to_author_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     body_md: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    author: Mapped[User] = relationship(lazy="selectin")
+    author: Mapped[User] = relationship(foreign_keys=[author_id], lazy="selectin")
+    reply_to_author: Mapped[User | None] = relationship(foreign_keys=[reply_to_author_id], lazy="selectin")

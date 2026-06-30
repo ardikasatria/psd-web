@@ -100,7 +100,7 @@ export default function AdminAnnouncementsPage() {
                   <TableCell className="font-medium">{a.title}</TableCell>
                   <TableCell>{a.level}</TableCell>
                   <TableCell>{a.active ? 'Ya' : 'Tidak'}</TableCell>
-                  <TableCell className="space-x-2">
+                  <TableCell nowrap className="space-x-2">
                     <Button plain onClick={() => openEdit(a)}>
                       Edit
                     </Button>

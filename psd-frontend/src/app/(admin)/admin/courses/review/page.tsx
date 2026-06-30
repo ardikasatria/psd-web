@@ -86,7 +86,7 @@ export default function AdminCourseReviewPage() {
                   </TableCell>
                   <TableCell>{c.author?.username ?? '—'}</TableCell>
                   <TableCell>{levelLabel[c.level as keyof typeof levelLabel] ?? c.level}</TableCell>
-                  <TableCell className="space-x-2">
+                  <TableCell nowrap className="space-x-2">
                     <ConfirmDialog
                       label="Terbitkan"
                       confirm={`Terbitkan course "${c.title}" sebagai publikasi resmi PSD?`}

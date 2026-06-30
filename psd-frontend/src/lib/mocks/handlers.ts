@@ -7,7 +7,7 @@ import { mockEventProposals, paginateEventProposals } from './data/event-proposa
 import { events, detailOf, eventRegistrations, buildMockIcs, buildEventStats, filterEvents } from './data/events'
 import { courseDetailOf, courses, authoredCourses, completedLessons, enrollments, instructorApplications, learningPaths, learnersOf, myLearningOf, pathDetailOf, pathSummaryOf, pathItemsOf, setPathItems, mockCourseExtras, activeEnrollment } from './data/learn'
 import { notebookDetailOf, findNotebook, notebookRecords, notebooks } from './data/notebooks'
-import { addReply, addThread, buildForumStats, mockForumReaction, mockForumVote, threadDetailOf, threadSummaryOf, threads } from './data/forum'
+import { addReply, addThread, buildForumStats, deleteReplyRecord, deleteThreadRecord, findReply, findThread, mockForumReaction, mockForumVote, repliesForThread, resolveMockReplyParent, threadDetailOf, threadSummaryOf, threads, updateReplyRecord, updateThreadRecord, visibleThreadsForViewer } from './data/forum'
 import { mockCategoryDetail, mockCategories, slugifyCategoryName } from './data/categories'
 import { mockJourneyNext, mockQuestCatalog, mockQuestStore } from './data/quests'
 import { mockActivitySummary } from './data/activity'
@@ -47,6 +47,7 @@ import {
   mockPostLikes,
   mockPosts,
   postsByUsername,
+  resolveMockCommentParent,
 } from './data/social'
 import { buildDiscoveryPanels, discoveryListForKind } from './data/discovery'
 import { mockContributors, mockGamificationFor } from './data/gamification'
@@ -66,6 +67,22 @@ import {
   syncMockLikedOnLove,
 } from './data/liked'
 import { getMockArticle, listMockBlog, mockBlogPosts } from './data/blog'
+import {
+  mockAdminListReports,
+  mockAdminReopenReport,
+  mockAdminResolveReport,
+  mockAdminStartReview,
+  mockMyReports,
+  mockReportContent,
+} from './data/reports'
+import {
+  mockAdminListTickets,
+  mockAdminTicketAction,
+  mockCreateTicket,
+  mockGetTicket,
+  mockMyTickets,
+  mockReplyTicket,
+} from './data/support'
 import { mockNotifications, notificationsForUser, unreadCountForUser } from './data/notifications'
 import {
   findTeam,
@@ -1185,15 +1202,14 @@ export const handlers = [
       git_base_url: 'https://git.projeksainsdata.com',
       ssh_user: 'git',
       gitea_username: user.username,
-      ssh_port: 2222,
-      github_like: false,
-      ssh_clone_example: `ssh://git@git.projeksainsdata.com:2222/${user.username}/nama-repo.git`,
-      ssh_clone_prefix: `ssh://git@git.projeksainsdata.com:2222/${user.username}/`,
-      ssh_test_command: 'ssh -p 2222 -T git@git.projeksainsdata.com',
+      ssh_port: 22,
+      github_like: true,
+      ssh_clone_example: `git@git.projeksainsdata.com:${user.username}/nama-repo.git`,
+      ssh_clone_prefix: `git@git.projeksainsdata.com:${user.username}/`,
+      ssh_test_command: 'ssh -T git@git.projeksainsdata.com',
       ssh_config_snippet: `Host git.projeksainsdata.com
   HostName git.projeksainsdata.com
   User git
-  Port 2222
   IdentityFile ~/.ssh/id_ed25519`,
     })
   }),
@@ -1250,7 +1266,7 @@ export const handlers = [
     const tags = url.searchParams.get('tags')?.split(',').filter(Boolean) ?? []
     const sort = url.searchParams.get('sort')
     const page = Number(url.searchParams.get('page') ?? 1)
-    let items = threads.map((t) => threadSummaryOf(t, user?.id))
+    let items = visibleThreadsForViewer(user?.username).map((t) => threadSummaryOf(t, user?.id))
     if (q) items = items.filter((t) => t.title.toLowerCase().includes(q))
     if (tags.length) items = items.filter((t) => tags.some((tag) => t.tags.includes(tag)))
     if (sort === 'top') items = [...items].sort((a, b) => b.score - a.score || b.last_activity_at.localeCompare(a.last_activity_at))
@@ -1261,7 +1277,11 @@ export const handlers = [
     const user = resolveUserFromRequest(request)
     const thread = threads.find((t) => t.id === params.id)
     if (!thread) return errorResponse(404, 'not_found', 'Utas tidak ditemukan.')
-    return HttpResponse.json(threadDetailOf(thread, user?.id))
+    try {
+      return HttpResponse.json(threadDetailOf(thread, user?.id, user?.username))
+    } catch {
+      return errorResponse(404, 'not_found', 'Utas tidak ditemukan.')
+    }
   }),
 
   http.post(`${API}/forum/threads`, async ({ request }) => {
@@ -1333,8 +1353,17 @@ export const handlers = [
     if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk untuk membalas.')
     const thread = threads.find((t) => t.id === params.id)
     if (!thread) return errorResponse(404, 'not_found', 'Utas tidak ditemukan.')
-    const body = (await request.json()) as { body_md: string }
+    const body = (await request.json()) as { body_md: string; parent_id?: string | null }
     const now = new Date().toISOString()
+    let parent_id: string | null = null
+    let reply_to: SocialComment['reply_to']
+    try {
+      const resolved = resolveMockReplyParent(repliesForThread(String(params.id)), body.parent_id)
+      parent_id = resolved.parent_id
+      reply_to = resolved.reply_to
+    } catch {
+      return errorResponse(404, 'not_found', 'Balasan induk tidak ditemukan')
+    }
     const reply = {
       id: `post_${Date.now()}`,
       thread_id: String(params.id),
@@ -1345,6 +1374,8 @@ export const handlers = [
         is_official: user.is_official,
       },
       body_md: body.body_md,
+      parent_id,
+      reply_to,
       created_at: now,
     }
     addReply(String(params.id), reply)
@@ -1353,6 +1384,9 @@ export const handlers = [
         id: reply.id,
         author: reply.author,
         body_md: reply.body_md,
+        parent_id: reply.parent_id ?? null,
+        reply_to: reply.reply_to ?? null,
+        visibility: reply.visibility ?? 'public',
         created_at: reply.created_at,
         score: 0,
         upvotes: 0,
@@ -1362,6 +1396,78 @@ export const handlers = [
       },
       { status: 201 },
     )
+  }),
+
+  http.patch(`${API}/forum/threads/:id`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    const thread = findThread(String(params.id))
+    if (!thread) return errorResponse(404, 'not_found', 'Utas tidak ditemukan.')
+    if (thread.author.username !== user.username) {
+      return errorResponse(403, 'forbidden', 'Hanya pemilik yang dapat mengubah utas')
+    }
+    const body = (await request.json()) as {
+      title?: string
+      body_md?: string
+      tags?: string[]
+      visibility?: 'public' | 'private'
+    }
+    updateThreadRecord(String(params.id), body)
+    const summary = threads.find((t) => t.id === params.id)
+    if (!summary) return errorResponse(404, 'not_found', 'Utas tidak ditemukan.')
+    try {
+      return HttpResponse.json(threadDetailOf(summary, user.id, user.username))
+    } catch {
+      return errorResponse(404, 'not_found', 'Utas tidak ditemukan.')
+    }
+  }),
+
+  http.delete(`${API}/forum/threads/:id`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    const thread = findThread(String(params.id))
+    if (!thread) return new HttpResponse(null, { status: 204 })
+    if (thread.author.username !== user.username) {
+      return errorResponse(403, 'forbidden', 'Hanya pemilik yang dapat menghapus utas')
+    }
+    deleteThreadRecord(String(params.id))
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.patch(`${API}/forum/posts/:postId`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    const reply = findReply(String(params.postId))
+    if (!reply) return errorResponse(404, 'not_found', 'Balasan tidak ditemukan')
+    if (reply.author.username !== user.username) {
+      return errorResponse(403, 'forbidden', 'Hanya pemilik yang dapat mengubah balasan')
+    }
+    const body = (await request.json()) as { body_md?: string; visibility?: 'public' | 'private' }
+    updateReplyRecord(String(params.postId), body)
+    return HttpResponse.json({
+      id: reply.id,
+      author: reply.author,
+      body_md: reply.body_md,
+      visibility: reply.visibility ?? 'public',
+      created_at: reply.created_at,
+      score: 0,
+      upvotes: 0,
+      downvotes: 0,
+      user_vote: null,
+      reactions: [],
+    })
+  }),
+
+  http.delete(`${API}/forum/posts/:postId`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    const reply = findReply(String(params.postId))
+    if (!reply) return new HttpResponse(null, { status: 204 })
+    if (reply.author.username !== user.username) {
+      return errorResponse(403, 'forbidden', 'Hanya pemilik yang dapat menghapus balasan')
+    }
+    deleteReplyRecord(String(params.postId))
+    return new HttpResponse(null, { status: 204 })
   }),
 
   // Competitions
@@ -2670,7 +2776,7 @@ export const handlers = [
     if (!viewer && scope === 'following') {
       return errorResponse(401, 'unauthorized', 'Belum masuk')
     }
-    const items = feedForUser(viewer?.id ?? '', scope).map((p) => ({
+    const items = feedForUser(viewer?.id ?? '', scope, viewer?.username).map((p) => ({
       ...p,
       liked: viewer ? (mockPostLikes[p.id]?.has(viewer.id) ?? p.liked) : false,
     }))
@@ -2683,7 +2789,7 @@ export const handlers = [
     const viewer = resolveUserFromRequest(request)
     const url = new URL(request.url)
     const page = Number(url.searchParams.get('page') ?? 1)
-    const items = postsByUsername(params.username as string).map((p) => ({
+    const items = postsByUsername(params.username as string, viewer?.username).map((p) => ({
       ...p,
       liked: viewer ? (mockPostLikes[p.id]?.has(viewer.id) ?? false) : false,
     }))
@@ -2697,6 +2803,7 @@ export const handlers = [
       body_md?: string
       images?: string[]
       asset?: { kind: string; slug: string }
+      visibility?: 'public' | 'private'
     }
     const post: SocialPost = {
       id: `sps_${Date.now()}`,
@@ -2712,10 +2819,34 @@ export const handlers = [
       like_count: 0,
       comment_count: 0,
       liked: false,
+      visibility: body.visibility ?? 'public',
       created_at: new Date().toISOString(),
     }
     mockPosts.unshift(post)
     return HttpResponse.json(post, { status: 201 })
+  }),
+
+  http.patch(`${API}/posts/:id`, async ({ params, request }) => {
+    const viewer = resolveUserFromRequest(request)
+    if (!viewer) return errorResponse(401, 'unauthorized', 'Belum masuk')
+    const idx = mockPosts.findIndex((p) => p.id === params.id)
+    if (idx < 0) return errorResponse(404, 'not_found', 'Postingan tidak ditemukan')
+    const post = mockPosts[idx]
+    if (post.author.username !== viewer.username) {
+      return errorResponse(403, 'forbidden', 'Hanya pemilik yang dapat mengubah postingan')
+    }
+    const body = (await request.json()) as {
+      body_md?: string
+      visibility?: 'public' | 'private'
+      images?: string[]
+    }
+    if (body.body_md !== undefined) post.body_md = body.body_md
+    if (body.visibility !== undefined) post.visibility = body.visibility
+    if (body.images !== undefined) post.images = body.images
+    return HttpResponse.json({
+      ...post,
+      liked: mockPostLikes[post.id]?.has(viewer.id) ?? post.liked,
+    })
   }),
 
   http.delete(`${API}/posts/:id`, ({ params, request }) => {
@@ -2768,7 +2899,17 @@ export const handlers = [
     if (!viewer) return errorResponse(401, 'unauthorized', 'Belum masuk')
     const post = mockPosts.find((p) => p.id === params.id)
     if (!post) return errorResponse(404, 'not_found', 'Postingan tidak ditemukan')
-    const body = (await request.json()) as { body_md: string }
+    const body = (await request.json()) as { body_md: string; parent_id?: string | null }
+    const list = mockComments[post.id] ?? []
+    let parent_id: string | null = null
+    let reply_to: SocialComment['reply_to']
+    try {
+      const resolved = resolveMockCommentParent(list, body.parent_id)
+      parent_id = resolved.parent_id
+      reply_to = resolved.reply_to
+    } catch {
+      return errorResponse(404, 'not_found', 'Komentar induk tidak ditemukan')
+    }
     const comment: SocialComment = {
       id: `spc_${Date.now()}`,
       author: {
@@ -2778,6 +2919,8 @@ export const handlers = [
         is_official: viewer.is_official,
       },
       body_md: body.body_md,
+      parent_id,
+      reply_to,
       created_at: new Date().toISOString(),
     }
     if (!mockComments[post.id]) mockComments[post.id] = []
@@ -4311,5 +4454,133 @@ export const handlers = [
       return new HttpResponse(null, { status: 400 })
     }
     return new HttpResponse(null, { status: 200 })
+  }),
+
+  // Pengaduan platform & laporan konten
+  http.post(`${API}/support/tickets`, async ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    const body = (await request.json()) as Record<string, string>
+    const result = mockCreateTicket(user.id, body)
+    if (result.error) return errorResponse(result.error.status, result.error.code, result.error.message)
+    return HttpResponse.json(result.data, { status: 201 })
+  }),
+
+  http.get(`${API}/support/tickets/me`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    return HttpResponse.json(mockMyTickets(user.id))
+  }),
+
+  http.get(`${API}/support/tickets/:id`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    const isStaff = user.role === 'superadmin' || user.role === 'moderator'
+    const result = mockGetTicket(String(params.id), user.id, isStaff)
+    if (result.error) return errorResponse(result.error.status, result.error.code, result.error.message)
+    return HttpResponse.json(result.data)
+  }),
+
+  http.post(`${API}/support/tickets/:id/messages`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    const body = (await request.json()) as { body?: string }
+    const isStaff = user.role === 'superadmin' || user.role === 'moderator'
+    const result = mockReplyTicket(String(params.id), user.id, user.username, body.body ?? '', isStaff)
+    if (result.error) return errorResponse(result.error.status, result.error.code, result.error.message)
+    return HttpResponse.json(result.data, { status: 201 })
+  }),
+
+  http.get(`${API}/admin/support/tickets`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || (user.role !== 'superadmin' && user.role !== 'moderator')) {
+      return errorResponse(403, 'forbidden', 'Hanya staf.')
+    }
+    const url = new URL(request.url)
+    const page = Number(url.searchParams.get('page') ?? 1)
+    const page_size = Number(url.searchParams.get('page_size') ?? 20)
+    const status = url.searchParams.get('status')
+    const priority = url.searchParams.get('priority')
+    let items = mockAdminListTickets()
+    if (status) items = items.filter((t) => t.status === status)
+    if (priority) items = items.filter((t) => t.priority === priority)
+    return HttpResponse.json(paginate(items, page, page_size))
+  }),
+
+  http.post(`${API}/admin/support/tickets/:id/:action`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || (user.role !== 'superadmin' && user.role !== 'moderator')) {
+      return errorResponse(403, 'forbidden', 'Hanya staf.')
+    }
+    const action = String(params.action)
+    if (!['assign', 'resolve', 'close', 'reopen'].includes(action)) {
+      return errorResponse(404, 'not_found', 'Aksi tidak dikenal')
+    }
+    const result = mockAdminTicketAction(String(params.id), action)
+    if (result.error) return errorResponse(result.error.status, result.error.code, result.error.message)
+    return HttpResponse.json(result.data)
+  }),
+
+  http.post(`${API}/reports`, async ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    const body = (await request.json()) as Record<string, string>
+    const result = mockReportContent(user.id, body)
+    if (result.error) return errorResponse(result.error.status, result.error.code, result.error.message)
+    return HttpResponse.json(result.data)
+  }),
+
+  http.get(`${API}/reports/me`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Anda harus masuk.')
+    return HttpResponse.json(mockMyReports(user.id))
+  }),
+
+  http.get(`${API}/admin/reports`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || (user.role !== 'superadmin' && user.role !== 'moderator')) {
+      return errorResponse(403, 'forbidden', 'Hanya staf.')
+    }
+    const url = new URL(request.url)
+    const page = Number(url.searchParams.get('page') ?? 1)
+    const page_size = Number(url.searchParams.get('page_size') ?? 50)
+    const flagged = url.searchParams.get('flagged')
+    const status = url.searchParams.get('status')
+    let items = mockAdminListReports({
+      ...(flagged === 'true' ? { flagged: true } : {}),
+      ...(status ? { status } : {}),
+    })
+    return HttpResponse.json(paginate(items, page, page_size))
+  }),
+
+  http.post(`${API}/admin/reports/:id/start-review`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || (user.role !== 'superadmin' && user.role !== 'moderator')) {
+      return errorResponse(403, 'forbidden', 'Hanya staf.')
+    }
+    const result = mockAdminStartReview(String(params.id))
+    if (result.error) return errorResponse(result.error.status, result.error.code, result.error.message)
+    return HttpResponse.json(result.data)
+  }),
+
+  http.post(`${API}/admin/reports/:id/resolve`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || (user.role !== 'superadmin' && user.role !== 'moderator')) {
+      return errorResponse(403, 'forbidden', 'Hanya staf.')
+    }
+    const body = (await request.json()) as { decision?: string }
+    const result = mockAdminResolveReport(String(params.id), body.decision ?? '')
+    if (result.error) return errorResponse(result.error.status, result.error.code, result.error.message)
+    return HttpResponse.json(result.data)
+  }),
+
+  http.post(`${API}/admin/reports/:id/reopen`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || (user.role !== 'superadmin' && user.role !== 'moderator')) {
+      return errorResponse(403, 'forbidden', 'Hanya staf.')
+    }
+    const result = mockAdminReopenReport(String(params.id))
+    if (result.error) return errorResponse(result.error.status, result.error.code, result.error.message)
+    return HttpResponse.json(result.data)
   }),
 ]

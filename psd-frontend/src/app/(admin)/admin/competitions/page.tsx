@@ -207,7 +207,7 @@ export default function AdminCompetitionsPage() {
                       color="green"
                     />
                   </TableCell>
-                  <TableCell className="space-x-2">
+                  <TableCell nowrap className="space-x-2">
                     <Button outline onClick={() => openEdit(c)} disabled={loadingEdit === c.slug}>
                       {loadingEdit === c.slug ? 'Memuat...' : 'Edit'}
                     </Button>

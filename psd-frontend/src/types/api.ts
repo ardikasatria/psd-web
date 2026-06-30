@@ -226,6 +226,7 @@ export const SocialPostSchema = z.object({
   like_count: z.number(),
   comment_count: z.number(),
   liked: z.boolean(),
+  visibility: z.enum(['public', 'private']).default('public'),
   created_at: z.string(),
 })
 export type SocialPost = z.infer<typeof SocialPostSchema>
@@ -234,6 +235,8 @@ export const SocialCommentSchema = z.object({
   id: z.string(),
   author: OwnerRefSchema,
   body_md: z.string(),
+  parent_id: z.string().nullable().default(null),
+  reply_to: OwnerRefSchema.nullable().optional(),
   created_at: z.string(),
 })
 export type SocialComment = z.infer<typeof SocialCommentSchema>
@@ -1092,6 +1095,7 @@ export const ThreadSummarySchema = z.object({
   author: OwnerRefSchema,
   tags: z.array(z.string()),
   replies: z.number(),
+  visibility: z.enum(['public', 'private']).default('public'),
   created_at: z.string(),
   last_activity_at: z.string(),
   score: z.number().default(0),
@@ -1106,6 +1110,9 @@ export const PostSchema = z.object({
   id: z.string(),
   author: OwnerRefSchema,
   body_md: z.string(),
+  parent_id: z.string().nullable().default(null),
+  reply_to: OwnerRefSchema.nullable().optional(),
+  visibility: z.enum(['public', 'private']).default('public'),
   created_at: z.string(),
   score: z.number().default(0),
   upvotes: z.number().default(0),
@@ -1141,6 +1148,7 @@ export type ForumStats = z.infer<typeof ForumStatsSchema>
 
 export const CreateReplyBodySchema = z.object({
   body_md: z.string().min(1),
+  parent_id: z.string().nullable().optional(),
 })
 
 export const CompetitionSummarySchema = z.object({
@@ -1982,3 +1990,98 @@ export type Dashboard = z.infer<typeof DashboardSchema>
 
 export const WidgetDataSchema = z.record(z.unknown())
 export type WidgetData = z.infer<typeof WidgetDataSchema>
+
+// ——— Support tickets (pengaduan platform) ———
+export const TicketStatusSchema = z.enum(['open', 'in_progress', 'resolved', 'closed'])
+export type TicketStatus = z.infer<typeof TicketStatusSchema>
+
+export const TicketSchema = z.object({
+  id: z.string(),
+  category: z.string(),
+  priority: z.string(),
+  subject: z.string(),
+  status: TicketStatusSchema,
+  created_at: z.string(),
+  updated_at: z.string().optional(),
+})
+export type Ticket = z.infer<typeof TicketSchema>
+
+export const TicketMessageSchema = z.object({
+  id: z.number(),
+  author: OwnerRefSchema,
+  body: z.string(),
+  is_staff: z.boolean(),
+  created_at: z.string(),
+})
+export type TicketMessage = z.infer<typeof TicketMessageSchema>
+
+export const TicketDetailSchema = TicketSchema.extend({
+  body: z.string(),
+  assignee: OwnerRefSchema.nullable().optional(),
+  messages: z.array(TicketMessageSchema).default([]),
+})
+export type TicketDetail = z.infer<typeof TicketDetailSchema>
+
+export const AdminTicketSchema = TicketSchema.extend({
+  user: OwnerRefSchema,
+  assignee: OwnerRefSchema.nullable().optional(),
+})
+export type AdminTicket = z.infer<typeof AdminTicketSchema>
+
+export const PaginatedAdminTicketSchema = Paginated(AdminTicketSchema)
+export type PaginatedAdminTicket = PaginatedResult<AdminTicket>
+
+// ——— Content reports (moderasi) ———
+export const REPORT_REASONS = [
+  'spam',
+  'pelecehan',
+  'kebencian',
+  'seksual',
+  'kekerasan',
+  'misinformasi',
+  'menyesatkan',
+  'ilegal',
+  'lainnya',
+] as const
+export type ReportReason = (typeof REPORT_REASONS)[number]
+
+export const ReportableKindSchema = z.enum(['post', 'feed', 'comment', 'thread', 'reply'])
+export type ReportableKind = z.infer<typeof ReportableKindSchema>
+
+export const ReportResponseSchema = z.object({
+  status: z.string(),
+  already_reported: z.boolean().optional(),
+  id: z.string().optional(),
+})
+export type ReportResponse = z.infer<typeof ReportResponseSchema>
+
+export const MyReportSchema = z.object({
+  id: z.string(),
+  kind: z.string(),
+  target_id: z.string(),
+  reason: z.string(),
+  status: z.string(),
+  created_at: z.string(),
+})
+export type MyReport = z.infer<typeof MyReportSchema>
+
+export const AdminContentReportSchema = z.object({
+  id: z.string(),
+  kind: z.string(),
+  target_id: z.string(),
+  target_key: z.string(),
+  report_count: z.number(),
+  flagged: z.boolean(),
+  status: z.string(),
+  decision: z.string().nullable().optional(),
+  top_reason: z.string().nullable().optional(),
+  preview: z.string().nullable().optional(),
+  created_at: z.string(),
+})
+export type AdminContentReport = z.infer<typeof AdminContentReportSchema>
+
+export const PaginatedAdminContentReportSchema = Paginated(AdminContentReportSchema)
+export type PaginatedAdminContentReport = PaginatedResult<AdminContentReport>
+
+export const REPORT_DECISIONS = ['dismiss', 'remove', 'warn', 'ban', 'lock'] as const
+export type ReportDecision = (typeof REPORT_DECISIONS)[number]

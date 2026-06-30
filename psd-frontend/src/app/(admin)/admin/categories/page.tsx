@@ -85,7 +85,7 @@ export default function AdminCategoriesPage() {
                   <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell className="font-mono text-sm text-neutral-500">{c.slug}</TableCell>
                   <TableCell>{c.subcategory_count ?? 0}</TableCell>
-                  <TableCell className="space-x-2">
+                  <TableCell nowrap className="space-x-2">
                     <Button plain onClick={() => openEdit(c)}>
                       Edit
                     </Button>

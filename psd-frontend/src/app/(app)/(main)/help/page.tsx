@@ -43,6 +43,13 @@ export default function HelpIndexPage() {
             mulai-cepat-psd.ipynb
           </a>
         </p>
+        <Link
+          href="/support"
+          className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:underline dark:text-primary-400"
+        >
+          Ada masalah teknis atau keluhan akun? Buat pengaduan
+          <ChevronRightIcon className="size-4" />
+        </Link>
       </section>
 
       {helpCategories.map((cat) => {

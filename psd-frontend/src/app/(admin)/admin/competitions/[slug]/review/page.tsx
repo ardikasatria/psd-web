@@ -120,8 +120,8 @@ export default function AdminCompetitionReviewPage({ params }: { params: { slug:
                   <TableHeader>Peserta</TableHeader>
                   <TableHeader>Waktu</TableHeader>
                   <TableHeader>Status</TableHeader>
-                  <TableHeader>Catatan</TableHeader>
-                  <TableHeader>Aksi</TableHeader>
+                  <TableHeader className="w-[28%]">Catatan</TableHeader>
+                  <TableHeader className="w-[18%]" nowrap>Aksi</TableHeader>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -144,10 +144,10 @@ export default function AdminCompetitionReviewPage({ params }: { params: { slug:
                         <span className="ms-2 text-sm font-medium">{(s.score ?? s.public_score)?.toFixed(4)}</span>
                       )}
                     </TableCell>
-                    <TableCell className="max-w-xs truncate text-sm text-neutral-500">
+                    <TableCell className="text-sm text-neutral-500">
                       {s.note || s.review_note || '—'}
                     </TableCell>
-                    <TableCell className="space-x-1">
+                    <TableCell nowrap className="space-x-1">
                       {tab === 'submitted' && (
                         <Button outline onClick={() => action.mutate({ type: 'start', id: s.id })}>
                           Mulai review

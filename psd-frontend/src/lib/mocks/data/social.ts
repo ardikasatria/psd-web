@@ -17,6 +17,7 @@ export const mockPosts: SocialPost[] = [
     like_count: 24,
     comment_count: 2,
     liked: false,
+    visibility: 'public',
     created_at: '2026-06-25T08:00:00Z',
   },
   {
@@ -28,6 +29,7 @@ export const mockPosts: SocialPost[] = [
     like_count: 12,
     comment_count: 1,
     liked: true,
+    visibility: 'public',
     created_at: '2026-06-24T14:30:00Z',
   },
   {
@@ -42,9 +44,23 @@ export const mockPosts: SocialPost[] = [
     like_count: 8,
     comment_count: 0,
     liked: false,
+    visibility: 'public',
     created_at: '2026-06-23T10:15:00Z',
   },
 ]
+
+export function resolveMockCommentParent(
+  items: SocialComment[],
+  parentId?: string | null,
+): { parent_id: string | null; reply_to?: SocialComment['author'] } {
+  if (!parentId) return { parent_id: null }
+  const parent = items.find((c) => c.id === parentId)
+  if (!parent) throw new Error('not_found')
+  if (parent.parent_id) {
+    return { parent_id: parent.parent_id, reply_to: parent.author }
+  }
+  return { parent_id: parentId }
+}
 
 export const mockComments: Record<string, SocialComment[]> = {
   sps_01: [
@@ -52,12 +68,21 @@ export const mockComments: Record<string, SocialComment[]> = {
       id: 'spc_01',
       author: owners.budi,
       body_md: 'Terima kasih PSD! Langsung saya coba untuk pipeline preprocessing.',
+      parent_id: null,
       created_at: '2026-06-25T09:00:00Z',
+    },
+    {
+      id: 'spc_01_r1',
+      author: owners.psd,
+      body_md: 'Senang mendengarnya! Jangan ragu share hasilnya.',
+      parent_id: 'spc_01',
+      created_at: '2026-06-25T09:30:00Z',
     },
     {
       id: 'spc_02',
       author: owners.siti,
       body_md: 'Dataset ini berguna banget untuk tugas akhir saya.',
+      parent_id: null,
       created_at: '2026-06-25T10:30:00Z',
     },
   ],
@@ -66,6 +91,7 @@ export const mockComments: Record<string, SocialComment[]> = {
       id: 'spc_03',
       author: owners.psd,
       body_md: 'Keren! Jangan lupa dokumentasikan hasil evaluasinya.',
+      parent_id: null,
       created_at: '2026-06-24T16:00:00Z',
     },
   ],
@@ -106,24 +132,33 @@ export function followingOf(userId: string): OwnerRef[] {
     }))
 }
 
-export function feedForUser(userId: string, scope: 'following' | 'all'): SocialPost[] {
+export function isPostVisible(post: SocialPost, viewerUsername?: string): boolean {
+  if ((post.visibility ?? 'public') === 'public') return true
+  return Boolean(viewerUsername && post.author.username === viewerUsername)
+}
+
+export function feedForUser(userId: string, scope: 'following' | 'all', viewerUsername?: string): SocialPost[] {
+  const visible = (posts: SocialPost[]) =>
+    posts.filter((p) => isPostVisible(p, viewerUsername))
   if (scope === 'all') {
-    return [...mockPosts].sort((a, b) => b.created_at.localeCompare(a.created_at))
+    return visible([...mockPosts]).sort((a, b) => b.created_at.localeCompare(a.created_at))
   }
   const following = mockFollows[userId] ?? new Set()
   const authorIds = new Set([...following, userId])
-  return mockPosts
-    .filter((p) => {
+  return visible(
+    mockPosts.filter((p) => {
       const author = users.find((u) => u.username === p.author.username)
       return author && authorIds.has(author.id)
-    })
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    }),
+  ).sort((a, b) => b.created_at.localeCompare(a.created_at))
 }
 
-export function postsByUsername(username: string): SocialPost[] {
-  return mockPosts
+export function postsByUsername(username: string, viewerUsername?: string): SocialPost[] {
+  const items = mockPosts
     .filter((p) => p.author.username === username)
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
+  if (viewerUsername === username) return items
+  return items.filter((p) => isPostVisible(p, viewerUsername))
 }
 
 export function findRepoBySlug(slug: string) {

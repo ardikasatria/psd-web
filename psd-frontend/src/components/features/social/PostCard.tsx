@@ -1,26 +1,28 @@
 'use client'
 
+import { ContentOwnerMenu } from '@/components/common/ContentOwnerMenu'
+import { ContentReportMenu } from '@/components/common/ContentReportMenu'
 import { SimpleMarkdown } from '@/components/common/SimpleMarkdown'
 import { OfficialBadge } from '@/components/common/OfficialBadge'
 import { ProfileAvatar } from '@/components/features/users/ProfileCover'
-import { addComment, deletePost, getComments, likePost, unlikePost } from '@/lib/api/social'
+import { FeedCommentThread } from '@/components/features/social/FeedCommentThread'
+import { addComment, deletePost, getComments, likePost, unlikePost, updatePost } from '@/lib/api/social'
 import { useAuth } from '@/lib/auth/useAuth'
-import { isStaff } from '@/lib/auth/roles'
 import { profilePath } from '@/lib/routes/profile'
-import type { Profile, SocialComment, SocialPost } from '@/types/api'
+import type { Profile, SocialPost } from '@/types/api'
 import { Button } from '@/shared/Button'
 import Textarea from '@/shared/Textarea'
 import {
   ChatBubbleLeftIcon,
+  EyeSlashIcon,
   HeartIcon,
-  TrashIcon,
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
 import clsx from 'clsx'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { FormEvent, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 const kindPath: Record<string, string> = {
@@ -68,8 +70,11 @@ export function PostCard({
   const [liked, setLiked] = useState(post.liked)
   const [likeCount, setLikeCount] = useState(post.like_count)
   const [commentCount, setCommentCount] = useState(post.comment_count)
+  const [visibility, setVisibility] = useState(post.visibility ?? 'public')
+  const [bodyMd, setBodyMd] = useState(post.body_md)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editText, setEditText] = useState(post.body_md)
   const [showComments, setShowComments] = useState(initialShowComments)
-  const [commentText, setCommentText] = useState('')
   const [likeBusy, setLikeBusy] = useState(false)
 
   const authorProfile: Profile = {
@@ -96,9 +101,7 @@ export function PostCard({
     created_at: post.created_at,
   }
 
-  const canDelete =
-    isLoggedIn &&
-    (user?.username === post.author.username || isStaff(user))
+  const isOwner = isLoggedIn && user?.username === post.author.username
 
   const comments = useQuery({
     queryKey: ['post-comments', post.id],
@@ -107,9 +110,18 @@ export function PostCard({
   })
 
   const commentMutation = useMutation({
-    mutationFn: () => addComment(post.id, commentText.trim()),
+    mutationFn: (body_md: string) => addComment(post.id, body_md),
     onSuccess: () => {
-      setCommentText('')
+      setCommentCount((c) => c + 1)
+      qc.invalidateQueries({ queryKey: ['post-comments', post.id] })
+      qc.invalidateQueries({ queryKey: ['feed-stats'] })
+    },
+  })
+
+  const replyMutation = useMutation({
+    mutationFn: ({ parentId, body }: { parentId: string; body: string }) =>
+      addComment(post.id, body, parentId),
+    onSuccess: () => {
       setCommentCount((c) => c + 1)
       qc.invalidateQueries({ queryKey: ['post-comments', post.id] })
       qc.invalidateQueries({ queryKey: ['feed-stats'] })
@@ -122,6 +134,18 @@ export function PostCard({
       onDeleted?.()
       qc.invalidateQueries({ queryKey: ['feed'] })
       qc.invalidateQueries({ queryKey: ['feed-stats'] })
+      qc.invalidateQueries({ queryKey: ['user-posts'] })
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: (patch: { body_md?: string; visibility?: 'public' | 'private' }) =>
+      updatePost(post.id, patch),
+    onSuccess: (updated) => {
+      setBodyMd(updated.body_md)
+      setVisibility(updated.visibility ?? 'public')
+      setIsEditing(false)
+      qc.invalidateQueries({ queryKey: ['feed'] })
       qc.invalidateQueries({ queryKey: ['user-posts'] })
     },
   })
@@ -149,14 +173,10 @@ export function PostCard({
     }
   }
 
-  function handleComment(e: FormEvent) {
-    e.preventDefault()
-    if (!isLoggedIn) {
-      router.push(`/login?next=${window.location.pathname}`)
-      return
-    }
-    if (!commentText.trim()) return
-    commentMutation.mutate()
+  function saveEdit() {
+    const text = editText.trim()
+    if (!text) return
+    updateMutation.mutate({ body_md: text })
   }
 
   return (
@@ -174,26 +194,59 @@ export function PostCard({
               @{post.author.username}
             </Link>
             {post.author.is_official && <OfficialBadge className="!text-[10px]" />}
+            {visibility === 'private' && (
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
+                <EyeSlashIcon className="size-3" />
+                Hanya saya
+              </span>
+            )}
             <span className="text-xs text-neutral-400">· {timeAgo(post.created_at)}</span>
           </div>
         </div>
-        {canDelete && (
-          <Button
-            plain
-            onClick={() => deleteMutation.mutate()}
-            disabled={deleteMutation.isPending}
-            className="!text-neutral-400 hover:!text-red-500"
-            aria-label="Hapus postingan"
-          >
-            <TrashIcon className="size-4" />
-          </Button>
+        {isOwner && !isEditing && (
+          <ContentOwnerMenu
+            visibility={visibility}
+            onEdit={() => {
+              setEditText(bodyMd)
+              setIsEditing(true)
+            }}
+            onDelete={() => deleteMutation.mutate()}
+            onVisibilityChange={(v) => updateMutation.mutate({ visibility: v })}
+            deletePending={deleteMutation.isPending}
+            visibilityPending={updateMutation.isPending}
+          />
+        )}
+        {isLoggedIn && !isOwner && (
+          <ContentReportMenu kind="post" targetId={post.id} />
         )}
       </header>
 
-      {post.body_md && (
-        <div className="mt-3">
-          <SimpleMarkdown content={post.body_md} />
+      {isEditing ? (
+        <div className="mt-3 space-y-2">
+          <Textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            rows={4}
+            className="!rounded-xl !text-sm"
+          />
+          <div className="flex gap-2">
+            <Button
+              onClick={saveEdit}
+              disabled={updateMutation.isPending || !editText.trim()}
+            >
+              {updateMutation.isPending ? 'Menyimpan...' : 'Simpan'}
+            </Button>
+            <Button plain onClick={() => setIsEditing(false)} disabled={updateMutation.isPending}>
+              Batal
+            </Button>
+          </div>
         </div>
+      ) : (
+        bodyMd && (
+          <div className="mt-3">
+            <SimpleMarkdown content={bodyMd} />
+          </div>
+        )
       )}
 
       {post.images.length > 0 && (
@@ -247,27 +300,28 @@ export function PostCard({
       </div>
 
       {showComments && (
-        <div className="mt-4 space-y-3 border-t border-neutral-100 pt-4 dark:border-neutral-800">
-          {(comments.data?.items ?? []).map((c: SocialComment) => (
-            <div key={c.id} className="flex gap-2 text-sm">
-              <Link href={profilePath(c.author.username)} className="font-medium text-primary-600 hover:underline dark:text-primary-400">
-                @{c.author.username}
-              </Link>
-              <span className="text-neutral-600 dark:text-neutral-400">{c.body_md}</span>
-            </div>
-          ))}
-          <form onSubmit={handleComment} className="flex gap-2">
-            <Textarea
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Tulis komentar..."
-              rows={2}
-              className="min-w-0 flex-1 !rounded-xl !text-sm"
-            />
-            <Button type="submit" disabled={commentMutation.isPending || !commentText.trim()}>
-              Kirim
-            </Button>
-          </form>
+        <div className="mt-4 border-t border-neutral-100 pt-4 dark:border-neutral-800">
+          <FeedCommentThread
+            comments={comments.data?.items ?? []}
+            isLoggedIn={isLoggedIn}
+            topLevelPending={commentMutation.isPending}
+            replyPending={replyMutation.isPending}
+            onAddComment={(body) => {
+              if (!isLoggedIn) {
+                router.push(`/login?next=${window.location.pathname}`)
+                return
+              }
+              commentMutation.mutate(body)
+            }}
+            onAddReply={(parentId, body) => {
+              if (!isLoggedIn) {
+                router.push(`/login?next=${window.location.pathname}`)
+                return
+              }
+              replyMutation.mutate({ parentId, body })
+            }}
+            currentUsername={user?.username}
+          />
         </div>
       )}
     </article>

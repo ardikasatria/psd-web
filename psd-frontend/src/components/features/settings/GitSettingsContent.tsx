@@ -107,17 +107,9 @@ export function GitSettingsContent() {
                   <CommandLineIcon className="size-5 text-primary-600" aria-hidden />
                   Koneksi Git Anda
                 </h2>
-                {!git.github_like && (
-                  <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
-                    <p className="font-medium">Penting — jangan pakai port 22 untuk Git</p>
-                    <p className="mt-1 text-amber-900/90 dark:text-amber-200/90">
-                      Perintah <code className="text-xs">ssh -T git@{git.git_host}</code> tanpa{' '}
-                      <code className="text-xs">-p {git.ssh_port}</code> mengarah ke SSH admin server
-                      (bukan Git). Selalu pakai perintah uji di bawah atau salin blok{' '}
-                      <code className="text-xs">~/.ssh/config</code>.
-                    </p>
-                  </div>
-                )}
+                <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+                  Salin URL clone atau perintah uji dari sini — format sama seperti GitHub, tanpa pengaturan port khusus.
+                </p>
                 <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                   <div>
                     <dt className="text-neutral-500">Host Git</dt>
@@ -132,16 +124,12 @@ export function GitSettingsContent() {
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-neutral-500">Port SSH Git</dt>
+                    <dt className="text-neutral-500">Port SSH</dt>
                     <dd className="mt-0.5 font-mono font-medium text-neutral-900 dark:text-neutral-100">
                       {git.ssh_port}
-                      {git.github_like ? (
+                      {git.github_like && (
                         <span className="ml-2 font-sans text-xs font-normal text-emerald-600 dark:text-emerald-400">
-                          (gaya GitHub)
-                        </span>
-                      ) : (
-                        <span className="ml-2 font-sans text-xs font-normal text-neutral-500">
-                          (admin server di port 22)
+                          (standar)
                         </span>
                       )}
                     </dd>
@@ -172,7 +160,7 @@ export function GitSettingsContent() {
                       {git.github_like ? 'Opsional — ~/.ssh/config' : 'Disarankan — ~/.ssh/config'}
                     </dt>
                     <dd className="mt-1 space-y-2">
-                      <pre className="overflow-x-auto rounded-xl bg-neutral-900 p-4 text-xs text-neutral-100">
+                      <pre className="overflow-x-auto rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-xs text-neutral-800 dark:border-neutral-600 dark:bg-neutral-800/80 dark:text-neutral-100">
                         {git.ssh_config_snippet}
                       </pre>
                       <CopyButton text={git.ssh_config_snippet} label="Salin config" />
@@ -233,7 +221,7 @@ export function GitSettingsContent() {
                   <summary className="cursor-pointer font-medium text-primary-800 dark:text-primary-200">
                     Belum punya kunci? Buat di terminal
                   </summary>
-                  <pre className="mt-3 overflow-x-auto rounded-xl bg-neutral-900 p-4 text-xs text-neutral-100">
+                  <pre className="mt-3 overflow-x-auto rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-xs text-neutral-800 dark:border-neutral-600 dark:bg-neutral-800/80 dark:text-neutral-100">
 {`ssh-keygen -t ed25519 -C "email-anda@domain.ac.id"
 cat ~/.ssh/id_ed25519.pub`}
                   </pre>

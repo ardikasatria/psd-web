@@ -124,7 +124,7 @@ export function LeaderboardPageContent() {
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Peringkat berdasarkan reputasi kumulatif.</p>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[32rem] text-left text-sm">
+                  <table className="w-full table-fixed text-left text-sm">
                     <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800/95 dark:text-neutral-400">
                       <tr>
                         <th className="px-4 py-3">#</th>

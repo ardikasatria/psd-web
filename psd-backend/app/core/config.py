@@ -103,6 +103,8 @@ class Settings(BaseSettings):
     PSD_HUB_TOKEN_TTL: int = 3600
     PSD_HUB_SPAWN_TIMEOUT: int = 90
 
+    REPORT_AUTO_FLAG_THRESHOLD: int = 3
+
     # Superset (Langkah 53)
     PSD_SUPERSET_ENABLED: bool = False
     PSD_SUPERSET_API_URL: str = "http://superset:8088"

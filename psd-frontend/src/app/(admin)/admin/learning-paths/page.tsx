@@ -72,7 +72,7 @@ export default function AdminLearningPathsPage() {
                     </div>
                   </TableCell>
                   <TableCell>{p.items_count ?? p.courses_count}</TableCell>
-                  <TableCell className="space-x-2">
+                  <TableCell nowrap className="space-x-2">
                     <Button outline href={`/admin/learning-paths/${p.slug}`}>
                       Kurasi
                     </Button>

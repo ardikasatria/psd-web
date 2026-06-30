@@ -41,11 +41,11 @@ export default function AdminInstructorsPage() {
           <AdminTable>
             <TableHead>
               <TableRow>
-                <TableHeader>Pemohon</TableHeader>
-                <TableHeader>Keahlian</TableHeader>
-                <TableHeader>Motivasi</TableHeader>
-                <TableHeader>Status</TableHeader>
-                <TableHeader>Aksi</TableHeader>
+                <TableHeader className="w-[18%]">Pemohon</TableHeader>
+                <TableHeader className="w-[14%]">Keahlian</TableHeader>
+                <TableHeader className="w-[38%]">Motivasi</TableHeader>
+                <TableHeader className="w-[12%]" nowrap>Status</TableHeader>
+                <TableHeader className="w-[18%]" nowrap>Aksi</TableHeader>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -56,13 +56,13 @@ export default function AdminInstructorsPage() {
                     <div className="text-xs text-neutral-500">@{app.user.username}</div>
                   </TableCell>
                   <TableCell>{app.expertise}</TableCell>
-                  <TableCell className="max-w-xs">
+                  <TableCell>
                     <SimpleMarkdown content={app.motivation_md.slice(0, 200) + (app.motivation_md.length > 200 ? '…' : '')} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell nowrap>
                     <Badge color={statusColor[app.status] ?? 'zinc'}>{app.status}</Badge>
                   </TableCell>
-                  <TableCell className="space-x-2">
+                  <TableCell nowrap className="space-x-2">
                     {app.status === 'pending' && (
                       <>
                         <Button onClick={() => review.mutate({ id: app.id, status: 'approved' })}>

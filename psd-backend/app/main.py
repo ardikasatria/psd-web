@@ -35,11 +35,13 @@ from app.modules.quests.router import router as quests_router
 from app.modules.activity.router import router as activity_router
 from app.modules.micro.router import router as micro_router
 from app.modules.repos.router import router as repos_router
+from app.modules.reports.router import router as reports_router
 from app.modules.rooms.router import router as rooms_router
 from app.modules.collections.router import router as collections_router
 from app.modules.factory.router import router as factory_router
 from app.modules.search.router import router as search_router
 from app.modules.social.router import router as social_router
+from app.modules.support.router import router as support_router
 from app.modules.synthesis.router import router as synthesis_router
 from app.modules.teams.router import router as teams_router
 from app.modules.users.router import router as users_router
@@ -144,6 +146,8 @@ app.include_router(notebook_kernel_router, prefix=settings.API_PREFIX)
 app.include_router(instructors_router, prefix=settings.API_PREFIX)
 app.include_router(users_router, prefix=settings.API_PREFIX)
 app.include_router(social_router, prefix=settings.API_PREFIX)
+app.include_router(support_router, prefix=settings.API_PREFIX)
+app.include_router(reports_router, prefix=settings.API_PREFIX)
 app.include_router(gamification_router, prefix=settings.API_PREFIX)
 app.include_router(git_router, prefix=settings.API_PREFIX)
 app.include_router(discovery_router, prefix=settings.API_PREFIX)

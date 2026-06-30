@@ -44,10 +44,10 @@ export function AdminPerfPageContent() {
             ) : (
               <AdminContentCard>
                 <div className="overflow-x-auto p-4 sm:p-6">
-                  <table className="min-w-full text-left text-sm">
+                  <table className="w-full table-fixed text-left text-sm">
                   <thead>
                     <tr className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500 dark:border-neutral-700">
-                      <th className="px-4 py-3 font-semibold">Metrik</th>
+                      <th className="w-[40%] px-4 py-3 font-semibold">Metrik</th>
                       <th className="px-4 py-3 font-semibold">n</th>
                       <th className="px-4 py-3 font-semibold">p50</th>
                       <th className="px-4 py-3 font-semibold">p95</th>
@@ -58,7 +58,7 @@ export function AdminPerfPageContent() {
                   <tbody>
                     {metrics.map(([name, stats]: [string, MetricStats]) => (
                       <tr key={name} className="border-b border-neutral-100 dark:border-neutral-800">
-                        <td className="px-4 py-3 font-mono text-xs">{name}</td>
+                        <td className="break-words px-4 py-3 font-mono text-xs [overflow-wrap:anywhere]">{name}</td>
                         <td className="px-4 py-3">{stats.count}</td>
                         <td className="px-4 py-3">{stats.p50.toFixed(1)} ms</td>
                         <td className="px-4 py-3">{stats.p95.toFixed(1)} ms</td>

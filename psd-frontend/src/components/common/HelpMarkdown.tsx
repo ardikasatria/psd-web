@@ -15,7 +15,7 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={copy}
-      className="absolute top-2 right-2 rounded-md bg-neutral-700/80 px-2 py-1 text-xs text-white hover:bg-neutral-600"
+      className="absolute top-2 right-2 rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-600 shadow-sm hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
     >
       {copied ? 'Tersalin' : 'Salin'}
     </button>
@@ -37,6 +37,7 @@ type Block =
   | { type: 'p'; text: string }
   | { type: 'ul' | 'ol'; items: string[] }
   | { type: 'code'; lang: string; code: string }
+  | { type: 'table'; headers: string[]; rows: string[][] }
   | { type: 'callout'; variant: 'info' | 'tip' | 'warning'; text: string }
 
 function parseBlocks(content: string): Block[] {
@@ -51,6 +52,26 @@ function parseBlocks(content: string): Block[] {
     if (!trimmed) {
       i++
       continue
+    }
+
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      const parseRow = (row: string) =>
+        row
+          .slice(1, -1)
+          .split('|')
+          .map((c) => c.trim())
+      const headers = parseRow(trimmed)
+      const sep = lines[i + 1]?.trim() ?? ''
+      if (/^\|[-:|\s]+\|$/.test(sep)) {
+        i += 2
+        const rows: string[][] = []
+        while (i < lines.length && lines[i].trim().startsWith('|')) {
+          rows.push(parseRow(lines[i].trim()))
+          i++
+        }
+        blocks.push({ type: 'table', headers, rows })
+        continue
+      }
     }
 
     if (trimmed.startsWith('```')) {
@@ -190,10 +211,37 @@ export function HelpMarkdown({ content, className }: { content: string; classNam
           case 'code':
             return (
               <div key={i} className="relative">
-                <pre className="overflow-x-auto rounded-xl bg-neutral-900 p-4 text-xs leading-relaxed text-neutral-100">
+                <pre className="overflow-x-auto rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-xs leading-relaxed text-neutral-800 dark:border-neutral-600 dark:bg-neutral-800/80 dark:text-neutral-100">
                   <code>{block.code}</code>
                 </pre>
                 <CopyButton text={block.code} />
+              </div>
+            )
+          case 'table':
+            return (
+              <div key={i} className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-700">
+                <table className="w-full min-w-[280px] text-left text-sm">
+                  <thead className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800/80">
+                    <tr>
+                      {block.headers.map((h, j) => (
+                        <th key={j} className="px-3 py-2 font-semibold text-neutral-900 dark:text-neutral-100">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                    {block.rows.map((row, j) => (
+                      <tr key={j} className="bg-white dark:bg-neutral-900/40">
+                        {row.map((cell, k) => (
+                          <td key={k} className="px-3 py-2 text-neutral-600 dark:text-neutral-400">
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )
           case 'callout':

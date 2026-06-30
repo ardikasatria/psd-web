@@ -433,7 +433,7 @@ function CompetitionDetailInner({ slug }: { slug: string }) {
                               <TableHeader>Waktu</TableHeader>
                               <TableHeader>Status</TableHeader>
                               <TableHeader>Skor</TableHeader>
-                              <TableHeader>Catatan review</TableHeader>
+                              <TableHeader className="w-[36%]">Catatan review</TableHeader>
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -442,7 +442,7 @@ function CompetitionDetailInner({ slug }: { slug: string }) {
                                 <TableCell className="text-sm text-neutral-500 dark:text-neutral-400">
                                   {new Date(s.submitted_at ?? s.created_at ?? '').toLocaleString('id-ID')}
                                 </TableCell>
-                                <TableCell>
+                                <TableCell nowrap>
                                   <Badge color={submissionStatusColor[s.status] ?? 'zinc'}>
                                     {submissionStatusLabel[s.status] ?? s.status}
                                   </Badge>

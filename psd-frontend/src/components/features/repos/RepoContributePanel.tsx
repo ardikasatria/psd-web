@@ -180,7 +180,7 @@ export function RepoContributePanel({
 
       <p className="text-xs text-neutral-500">
         Workflow lanjutan via Git:{' '}
-        <Link href="/help/git-push" className="text-primary-600 hover:underline dark:text-primary-400">
+        <Link href="/help/git-clone-push" className="text-primary-600 hover:underline dark:text-primary-400">
           panduan Git push
         </Link>
         .

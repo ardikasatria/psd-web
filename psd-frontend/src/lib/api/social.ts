@@ -61,6 +61,15 @@ export const createPost = (body: {
 
 export const deletePost = (id: string) => apiDelete(`/posts/${id}`)
 
+export const updatePost = (
+  id: string,
+  body: { body_md?: string; visibility?: 'public' | 'private'; images?: string[] },
+) =>
+  apiFetch<SocialPost>(`/posts/${id}`, SocialPostSchema, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+
 export const likePost = (id: string) =>
   apiFetch(`/posts/${id}/like`, LikePostResponseSchema, { method: 'POST' })
 
@@ -73,10 +82,10 @@ export const getComments = (id: string, page = 1) =>
     PaginatedSocialCommentSchema,
   )
 
-export const addComment = (id: string, body_md: string) =>
+export const addComment = (id: string, body_md: string, parent_id?: string | null) =>
   apiFetch<SocialComment>(`/posts/${id}/comments`, SocialCommentSchema, {
     method: 'POST',
-    body: JSON.stringify({ body_md }),
+    body: JSON.stringify(parent_id ? { body_md, parent_id } : { body_md }),
   })
 
 export const uploadPostImage = (file: File) => {

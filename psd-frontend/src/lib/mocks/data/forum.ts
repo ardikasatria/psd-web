@@ -1,5 +1,5 @@
 import type { ForumEngagement, ForumReactionSummary, ForumStats, ThreadDetail, ThreadSummary } from '@/types/api'
-import { owners } from './users'
+import { owners, users } from './users'
 
 type ThreadRecord = ThreadSummary & {
   body_md: string
@@ -12,6 +12,9 @@ type ReplyRecord = {
   author: ThreadSummary['author']
   body_md: string
   created_at: string
+  parent_id?: string | null
+  reply_to?: ThreadSummary['author'] | null
+  visibility?: 'public' | 'private'
 }
 
 const emptyEngagement = (): ForumEngagement => ({
@@ -151,6 +154,16 @@ const replyRecords: ReplyRecord[] = [
     author: owners.budi,
     body_md: 'Setuju — plus hapus emoji berlebihan sebelum masuk model.',
     created_at: '2026-06-07T09:00:00Z',
+    parent_id: 'post_01',
+  },
+  {
+    id: 'post_01_r1',
+    thread_id: 'thr_01',
+    author: owners.psd,
+    body_md: 'Kamus slang-nya bisa dishare di sini?',
+    created_at: '2026-06-07T10:00:00Z',
+    parent_id: 'post_01',
+    reply_to: owners.budi,
   },
 ]
 
@@ -208,16 +221,33 @@ export const threads: ThreadSummary[] = publicThreads().map(
   }),
 )
 
-export function threadDetailOf(thread: ThreadSummary & { body_md?: string }, userId?: string): ThreadDetail {
+export function threadDetailOf(thread: ThreadSummary & { body_md?: string }, userId?: string, viewerUsername?: string): ThreadDetail {
   const record = threadRecords.find((t) => t.id === thread.id)
   const body_md = thread.body_md ?? record?.body_md ?? ''
+  const visibility = thread.visibility ?? record?.visibility ?? 'public'
+  if (visibility === 'private') {
+    const authorName = thread.author.username
+    const viewer = users.find((u) => u.id === userId)
+    if (!viewer || viewer.username !== authorName) {
+      throw new Error('not_found')
+    }
+  }
   const posts = replyRecords
     .filter((r) => r.thread_id === thread.id)
+    .filter((r) => {
+      const vis = r.visibility ?? 'public'
+      if (vis === 'public') return true
+      const viewer = users.find((u) => u.id === userId)
+      return viewer?.username === r.author.username
+    })
     .map((r) =>
       withEngagement('post', {
         id: r.id,
         author: r.author,
         body_md: r.body_md,
+        parent_id: r.parent_id ?? null,
+        reply_to: r.reply_to ?? null,
+        visibility: r.visibility ?? 'public',
         created_at: r.created_at,
       }, userId),
     )
@@ -229,6 +259,7 @@ export function threadDetailOf(thread: ThreadSummary & { body_md?: string }, use
       author: thread.author,
       tags: thread.tags,
       replies: posts.length,
+      visibility,
       created_at: thread.created_at,
       last_activity_at: thread.last_activity_at,
       body_md,
@@ -246,6 +277,91 @@ export function findThread(id: string): ThreadRecord | undefined {
   return threadRecords.find((t) => t.id === id)
 }
 
+export function resolveMockReplyParent(
+  items: ReplyRecord[],
+  parentId?: string | null,
+): { parent_id: string | null; reply_to?: ReplyRecord['author'] } {
+  if (!parentId) return { parent_id: null }
+  const parent = items.find((r) => r.id === parentId)
+  if (!parent) throw new Error('not_found')
+  if (parent.parent_id) {
+    return { parent_id: parent.parent_id, reply_to: parent.author }
+  }
+  return { parent_id: parentId }
+}
+
+export function visibleThreadsForViewer(viewerUsername?: string): ThreadSummary[] {
+  return threads.filter((t) => {
+    if ((t.visibility ?? 'public') === 'public') return true
+    return viewerUsername === t.author.username
+  })
+}
+
+export function updateThreadRecord(
+  threadId: string,
+  patch: { title?: string; body_md?: string; tags?: string[]; visibility?: 'public' | 'private' },
+) {
+  const record = threadRecords.find((t) => t.id === threadId)
+  const summary = threads.find((t) => t.id === threadId)
+  if (!record) return null
+  if (patch.title !== undefined) {
+    record.title = patch.title
+    if (summary) summary.title = patch.title
+  }
+  if (patch.body_md !== undefined) record.body_md = patch.body_md
+  if (patch.tags !== undefined) {
+    record.tags = patch.tags
+    if (summary) summary.tags = patch.tags
+  }
+  if (patch.visibility !== undefined) {
+    record.visibility = patch.visibility
+    if (summary) summary.visibility = patch.visibility
+  }
+  return record
+}
+
+export function deleteThreadRecord(threadId: string) {
+  const tIdx = threadRecords.findIndex((t) => t.id === threadId)
+  const sIdx = threads.findIndex((t) => t.id === threadId)
+  if (tIdx >= 0) threadRecords.splice(tIdx, 1)
+  if (sIdx >= 0) threads.splice(sIdx, 1)
+  for (let i = replyRecords.length - 1; i >= 0; i--) {
+    if (replyRecords[i].thread_id === threadId) replyRecords.splice(i, 1)
+  }
+}
+
+export function findReply(postId: string) {
+  return replyRecords.find((r) => r.id === postId)
+}
+
+export function repliesForThread(threadId: string): ReplyRecord[] {
+  return replyRecords.filter((r) => r.thread_id === threadId)
+}
+
+export function updateReplyRecord(
+  postId: string,
+  patch: { body_md?: string; visibility?: 'public' | 'private' },
+) {
+  const reply = replyRecords.find((r) => r.id === postId)
+  if (!reply) return null
+  if (patch.body_md !== undefined) reply.body_md = patch.body_md
+  if (patch.visibility !== undefined) reply.visibility = patch.visibility
+  return reply
+}
+
+export function deleteReplyRecord(postId: string) {
+  const reply = replyRecords.find((r) => r.id === postId)
+  if (!reply) return
+  const idx = replyRecords.findIndex((r) => r.id === postId)
+  if (idx >= 0) replyRecords.splice(idx, 1)
+  const t = threadRecords.find((x) => x.id === reply.thread_id)
+  if (t) {
+    t.replies = Math.max(0, t.replies - 1)
+    const summary = threads.find((x) => x.id === reply.thread_id)
+    if (summary) summary.replies = t.replies
+  }
+}
+
 export function addThread(record: ThreadRecord) {
   threadRecords.unshift(record)
   threads.unshift({
@@ -254,6 +370,7 @@ export function addThread(record: ThreadRecord) {
     author: record.author,
     tags: record.tags,
     replies: 0,
+    visibility: record.visibility ?? 'public',
     created_at: record.created_at,
     last_activity_at: record.last_activity_at,
     ...emptyEngagement(),

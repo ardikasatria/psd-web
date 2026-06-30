@@ -98,13 +98,13 @@ export default function AdminNotebookKernelRequestsPage() {
             <AdminTable>
               <TableHead>
                 <TableRow>
-                  <TableHeader>Pemohon</TableHeader>
-                  <TableHeader>Tipe</TableHeader>
-                  <TableHeader>NIM / Institusi</TableHeader>
-                  <TableHeader>Alasan</TableHeader>
-                  <TableHeader>KTM</TableHeader>
-                  <TableHeader>Status</TableHeader>
-                  <TableHeader>Aksi</TableHeader>
+                  <TableHeader className="w-[14%]">Pemohon</TableHeader>
+                  <TableHeader className="w-[8%]">Tipe</TableHeader>
+                  <TableHeader className="w-[14%]">NIM / Institusi</TableHeader>
+                  <TableHeader className="w-[32%]">Alasan</TableHeader>
+                  <TableHeader className="w-[10%]">KTM</TableHeader>
+                  <TableHeader className="w-[10%]" nowrap>Status</TableHeader>
+                  <TableHeader className="w-[12%]" nowrap>Aksi</TableHeader>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -125,14 +125,14 @@ export default function AdminNotebookKernelRequestsPage() {
                       {app.institution && <div className="text-neutral-500">{app.institution}</div>}
                       {!app.nim && !app.institution && '—'}
                     </TableCell>
-                    <TableCell className="max-w-xs">
+                    <TableCell>
                       <SimpleMarkdown
                         content={
                           app.reason_md.slice(0, 200) + (app.reason_md.length > 200 ? '…' : '')
                         }
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell nowrap>
                       {app.has_ktm ? (
                         <Button type="button" onClick={() => void openKtm(app.id)}>
                           Lihat KTM
@@ -141,10 +141,10 @@ export default function AdminNotebookKernelRequestsPage() {
                         <span className="text-xs text-neutral-400">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell nowrap>
                       <Badge color={statusColor[app.status] ?? 'zinc'}>{app.status}</Badge>
                     </TableCell>
-                    <TableCell className="space-x-2">
+                    <TableCell nowrap className="space-x-2">
                       {app.status === 'pending' && (
                         <>
                           <Button onClick={() => review.mutate({ id: app.id, status: 'approved' })}>

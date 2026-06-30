@@ -11,7 +11,7 @@ import {
   ThreadDetail,
   ThreadDetailSchema,
 } from '@/types/api'
-import { apiFetch, buildQuery } from './client'
+import { apiFetch, apiDelete, buildQuery } from './client'
 
 export const FORUM_REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '🤔', '👏', '🔥', '💡'] as const
 
@@ -30,10 +30,12 @@ export const createThread = (body: { title: string; body_md: string; tags: strin
     body: JSON.stringify(CreateThreadBodySchema.parse(body)),
   })
 
-export const replyToThread = (threadId: string, body_md: string) =>
+export const replyToThread = (threadId: string, body_md: string, parent_id?: string | null) =>
   apiFetch<Post>(`/forum/threads/${threadId}/posts`, PostSchema, {
     method: 'POST',
-    body: JSON.stringify(CreateReplyBodySchema.parse({ body_md })),
+    body: JSON.stringify(
+      CreateReplyBodySchema.parse(parent_id ? { body_md, parent_id } : { body_md }),
+    ),
   })
 
 export const getRepoDiscussions = (
@@ -74,3 +76,25 @@ export const reactForumPost = (postId: string, emoji: string) =>
     method: 'PUT',
     body: JSON.stringify({ emoji }),
   })
+
+export const updateForumThread = (
+  threadId: string,
+  body: { title?: string; body_md?: string; tags?: string[]; visibility?: 'public' | 'private' },
+) =>
+  apiFetch<ThreadDetail>(`/forum/threads/${threadId}`, ThreadDetailSchema, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+
+export const deleteForumThread = (threadId: string) => apiDelete(`/forum/threads/${threadId}`)
+
+export const updateForumPost = (
+  postId: string,
+  body: { body_md?: string; visibility?: 'public' | 'private' },
+) =>
+  apiFetch<Post>(`/forum/posts/${postId}`, PostSchema, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+
+export const deleteForumPost = (postId: string) => apiDelete(`/forum/posts/${postId}`)
