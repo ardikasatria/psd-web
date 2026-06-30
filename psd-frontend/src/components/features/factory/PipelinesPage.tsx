@@ -20,13 +20,20 @@ import {
 } from '@heroicons/react/24/outline'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { Suspense, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 
 function PipelinesPageInner() {
+  const searchParams = useSearchParams()
+  const presetTeamId = searchParams.get('team_id')
   const { isLoggedIn } = useAuth()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
-  const [createOpen, setCreateOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(searchParams.get('create') === '1')
+
+  useEffect(() => {
+    if (searchParams.get('create') === '1') setCreateOpen(true)
+  }, [searchParams])
 
   const { data, isLoading, isError, error } = useQuery<PaginatedPipelineSummary>({
     queryKey: ['factory-pipelines', page],
@@ -163,7 +170,11 @@ function PipelinesPageInner() {
         </div>
       </div>
 
-      <CreatePipelineDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      <CreatePipelineDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        teamId={presetTeamId}
+      />
     </FeaturePageShell>
   )
 }

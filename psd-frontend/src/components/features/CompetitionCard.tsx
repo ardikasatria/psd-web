@@ -19,10 +19,19 @@ const statusColor: Record<string, 'green' | 'yellow' | 'zinc'> = {
   past: 'zinc',
 }
 
-export function CompetitionCard({ competition }: { competition: CompetitionSummary }) {
+export function CompetitionCard({
+  competition,
+  teamId,
+}: {
+  competition: CompetitionSummary
+  teamId?: string | null
+}) {
+  const href = teamId
+    ? `/competitions/${competition.slug}?team_id=${encodeURIComponent(teamId)}`
+    : `/competitions/${competition.slug}`
   return (
     <Link
-      href={`/competitions/${competition.slug}`}
+      href={href}
       onClick={() => trackCompetitionClick(competition)}
       className="group relative flex flex-col overflow-hidden rounded-3xl border border-neutral-200/80 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-neutral-700 dark:bg-neutral-800"
     >

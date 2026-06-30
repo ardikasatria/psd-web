@@ -21,9 +21,10 @@ type Props = {
   open: boolean
   onClose: () => void
   defaultPipelineId?: string | null
+  defaultTeamId?: string | null
 }
 
-export function CreateDashboardDialog({ open, onClose, defaultPipelineId }: Props) {
+export function CreateDashboardDialog({ open, onClose, defaultPipelineId, defaultTeamId }: Props) {
   const router = useRouter()
   const qc = useQueryClient()
   const [title, setTitle] = useState('')
@@ -47,7 +48,8 @@ export function CreateDashboardDialog({ open, onClose, defaultPipelineId }: Prop
 
   useEffect(() => {
     if (open && defaultPipelineId) setPipelineId(defaultPipelineId)
-  }, [open, defaultPipelineId])
+    if (open && defaultTeamId) setTeamId(defaultTeamId)
+  }, [open, defaultPipelineId, defaultTeamId])
 
   const mutation = useMutation({
     mutationFn: () =>

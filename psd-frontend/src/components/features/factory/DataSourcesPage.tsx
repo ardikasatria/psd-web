@@ -18,12 +18,18 @@ import {
 } from '@heroicons/react/24/outline'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 
 function DataSourcesPageInner() {
+  const searchParams = useSearchParams()
   const { isLoggedIn } = useAuth()
   const qc = useQueryClient()
-  const [registerOpen, setRegisterOpen] = useState(false)
+  const [registerOpen, setRegisterOpen] = useState(searchParams.get('create') === '1')
+
+  useEffect(() => {
+    if (searchParams.get('create') === '1') setRegisterOpen(true)
+  }, [searchParams])
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['factory-sources'],

@@ -7,6 +7,7 @@ import { CategoryFilter } from '@/components/common/CategoryFilter'
 import { QueryState } from '@/components/features/QueryState'
 import { FeaturePageHero, FeaturePageShell, FilterTabs } from '@/components/features/layout'
 import { getCompetitions, getCompetitionStats } from '@/lib/api/competitions'
+import { getMyTeams } from '@/lib/api/teams'
 import { CompetitionSummary, PaginatedCompetitionSummary } from '@/types/api'
 import { ArrowsUpDownIcon, CalendarIcon } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
@@ -33,6 +34,14 @@ function CompetitionsList() {
   const year = searchParams.get('year') ? Number(searchParams.get('year')) : undefined
   const fromDate = searchParams.get('from') ?? ''
   const toDate = searchParams.get('to') ?? ''
+  const teamId = searchParams.get('team_id')
+
+  const myTeams = useQuery({
+    queryKey: ['my-teams'],
+    queryFn: async () => (await getMyTeams()).items as { id: string; name: string }[],
+    enabled: !!teamId,
+  })
+  const teamName = myTeams.data?.find((t) => t.id === teamId)?.name
 
   const query = useMemo(
     () => ({
@@ -105,6 +114,13 @@ function CompetitionsList() {
           />
 
           <CompetitionConceptSection />
+
+          {teamId && teamName && (
+            <div className="rounded-2xl border border-primary-200/80 bg-primary-50/80 px-4 py-3 text-sm text-primary-900 dark:border-primary-800/50 dark:bg-primary-950/30 dark:text-primary-100">
+              Mode tim: <strong>{teamName}</strong>. Buka kompetisi aktif, lalu pada tab Submission pilih &quot;Submit
+              sebagai&quot; → tim ini.
+            </div>
+          )}
 
           <div id="competition-catalog" className="space-y-6 scroll-mt-28">
           <FilterTabs
@@ -232,7 +248,7 @@ function CompetitionsList() {
           >
             <div className="grid gap-5 md:grid-cols-2">
               {items.map((c: CompetitionSummary) => (
-                <CompetitionCard key={c.slug} competition={c} />
+                <CompetitionCard key={c.slug} competition={c} teamId={teamId} />
               ))}
             </div>
             {(data?.total ?? 0) > items.length && (

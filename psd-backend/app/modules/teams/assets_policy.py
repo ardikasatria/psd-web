@@ -15,6 +15,7 @@ TEAM_ASSET_KINDS = {
     "model_registry",
     "synthetic_data",
     "analytics_space",
+    "competition",
 }
 
 _BLOCKED_EXT = {"exe", "sh", "bat", "cmd", "com", "msi", "scr", "ps1", "jar", "app"}

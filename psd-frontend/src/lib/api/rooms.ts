@@ -25,6 +25,7 @@ export const createRoom = (b: {
   max_members?: number | null
   visibility?: 'public' | 'private'
   team_name?: string
+  team_id?: string
 }) =>
   apiFetch('/idea-rooms', SlugResponseSchema, { method: 'POST', body: JSON.stringify(b) })
 

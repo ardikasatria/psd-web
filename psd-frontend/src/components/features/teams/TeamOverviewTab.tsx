@@ -23,42 +23,55 @@ export function TeamOverviewTab({
 
   return (
     <div className="space-y-6">
-      <section className={`${teamCardMuted} p-5`}>
-        <h3 className={`text-sm font-semibold ${teamText}`}>Tentang tim</h3>
-        <p className={`mt-2 text-sm leading-relaxed ${teamTextMuted}`}>
-          {team.description || 'Belum ada deskripsi tim.'}
-        </p>
-        {role && (
-          <p className={`mt-3 text-sm ${teamTextMuted}`}>
-            Peran Anda: <span className="font-medium text-primary-600 dark:text-primary-400">{roleLabel[role] ?? role}</span>
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <section className={`${teamCardMuted} h-full p-5`}>
+          <h3 className={`text-sm font-semibold ${teamText}`}>Tentang tim</h3>
+          <p className={`mt-2 text-sm leading-relaxed ${teamTextMuted}`}>
+            {team.description || 'Belum ada deskripsi tim.'}
           </p>
-        )}
-      </section>
-
-      <section className={teamCard}>
-        <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3 dark:border-neutral-700">
-          <h3 className={`text-sm font-semibold ${teamText}`}>Anggota ({team.members.length})</h3>
-          {isMember && can(role, 'moderate_members') && (
-            <Link href={`/teams/${slug}?tab=members`} className="text-xs font-medium text-primary-600 dark:text-primary-400">
-              Kelola →
-            </Link>
+          {role && (
+            <p className={`mt-3 text-sm ${teamTextMuted}`}>
+              Peran Anda:{' '}
+              <span className="font-medium text-primary-600 dark:text-primary-400">
+                {roleLabel[role] ?? role}
+              </span>
+            </p>
           )}
-        </div>
-        <ul className={`divide-y ${teamDivider}`}>
-          {team.members.slice(0, 6).map((m: TeamMember) => (
-            <li key={m.username} className="flex items-center gap-3 px-4 py-3">
-              <div className="flex size-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-700">
-                <UserGroupIcon className="size-4 text-neutral-500" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className={`truncate text-sm font-medium ${teamText}`}>{m.name ?? m.username}</p>
-                <p className={`text-xs ${teamTextMuted}`}>@{m.username}</p>
-              </div>
-              <Badge color="zinc">{roleLabel[normalizeTeamRole(m.role) ?? m.role] ?? m.role}</Badge>
-            </li>
-          ))}
-        </ul>
-      </section>
+        </section>
+
+        <section className={`${teamCard} h-full`}>
+          <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3 dark:border-neutral-700">
+            <h3 className={`text-sm font-semibold ${teamText}`}>Anggota ({team.members.length})</h3>
+            {isMember && can(role, 'moderate_members') && (
+              <Link
+                href={`/teams/${slug}?tab=members`}
+                className="text-xs font-medium text-primary-600 dark:text-primary-400"
+              >
+                Kelola anggota →
+              </Link>
+            )}
+          </div>
+          <ul className={`divide-y ${teamDivider}`}>
+            {team.members.slice(0, 6).map((m: TeamMember) => (
+              <li key={m.username} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex size-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-700">
+                  <UserGroupIcon className="size-4 text-neutral-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`truncate text-sm font-medium ${teamText}`}>{m.name ?? m.username}</p>
+                  <p className={`text-xs ${teamTextMuted}`}>@{m.username}</p>
+                </div>
+                <Badge color="zinc">{roleLabel[normalizeTeamRole(m.role) ?? m.role] ?? m.role}</Badge>
+              </li>
+            ))}
+          </ul>
+          {team.members.length > 6 && (
+            <p className={`border-t px-4 py-2.5 text-xs ${teamTextMuted} ${teamDivider}`}>
+              +{team.members.length - 6} anggota lainnya — lihat di tab Anggota
+            </p>
+          )}
+        </section>
+      </div>
 
       {isMember && (
         <div className="flex flex-wrap gap-2">

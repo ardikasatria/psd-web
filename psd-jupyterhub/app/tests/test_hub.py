@@ -25,6 +25,7 @@ def test_cpu_only_no_gpu():
 @pytest.mark.asyncio
 async def test_apply_tier_limits_sets_limits_and_env(monkeypatch):
     monkeypatch.setenv("PSD_API_BASE", "http://psd.local")
+    monkeypatch.setenv("PSD_APP_BASE_URL", "http://psd.local")
     spawner = SimpleNamespace(environment={})
 
     await spawn.auth_state_hook(
@@ -42,6 +43,7 @@ async def test_apply_tier_limits_sets_limits_and_env(monkeypatch):
     assert spawner.environment["PSD_TOKEN"] == "AT-123"
     assert spawner.environment["PSD_TIER"] == "lanjut"
     assert spawner.environment["PSD_API_BASE"] == "http://psd.local"
+    assert "ServerApp.allow_origin=http://psd.local" in spawner.environment["NOTEBOOK_ARGS"]
     assert spawner._psd_max_lifetime == 6 * 3600
     assert not hasattr(spawner, "gpu")
     assert lim.gpu == 0
@@ -50,11 +52,13 @@ async def test_apply_tier_limits_sets_limits_and_env(monkeypatch):
 @pytest.mark.asyncio
 async def test_apply_tier_limits_defaults_when_no_tier(monkeypatch):
     monkeypatch.setenv("PSD_API_BASE", "http://psd.local")
+    monkeypatch.setenv("PSD_APP_BASE_URL", "https://psd.example")
     spawner = SimpleNamespace(environment={})
     await spawn.auth_state_hook(spawner, {"access_token": "x", "oauth_user": {}})
     await spawn.apply_tier_limits(spawner)
     assert spawner.mem_limit == "2G"
     assert spawner.environment["PSD_TIER"] == "pemula"
+    assert "ServerApp.allow_origin=https://psd.example" in spawner.environment["NOTEBOOK_ARGS"]
 
 
 def test_parse_uri():

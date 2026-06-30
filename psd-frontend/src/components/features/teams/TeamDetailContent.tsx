@@ -22,8 +22,8 @@ import { Badge } from '@/shared/Badge'
 import { LockClosedIcon, UserMinusIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { Suspense, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 
 const TABS = [
   { id: 'overview', label: 'Ikhtisar' },
@@ -35,14 +35,39 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id']
 
+function tabFromSearchParams(params: URLSearchParams): TabId {
+  const raw = params.get('tab') as TabId | null
+  return raw && TABS.some((t) => t.id === raw) ? raw : 'overview'
+}
+
 function TeamDetailInner({ slug }: { slug: string }) {
   const searchParams = useSearchParams()
-  const initialTab = (searchParams.get('tab') as TabId) || 'overview'
+  const pathname = usePathname()
+  const router = useRouter()
   const { user, isLoggedIn } = useAuth()
   const qc = useQueryClient()
-  const [tab, setTab] = useState<TabId>(TABS.some((t) => t.id === initialTab) ? initialTab : 'overview')
+  const [tab, setTab] = useState<TabId>(() => tabFromSearchParams(searchParams))
   const [error, setError] = useState<string | null>(null)
   const [leaveOpen, setLeaveOpen] = useState(false)
+
+  useEffect(() => {
+    setTab(tabFromSearchParams(searchParams))
+  }, [searchParams])
+
+  const selectTab = useCallback(
+    (id: TabId) => {
+      setTab(id)
+      const params = new URLSearchParams(searchParams.toString())
+      if (id === 'overview') {
+        params.delete('tab')
+      } else {
+        params.set('tab', id)
+      }
+      const qs = params.toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    },
+    [pathname, router, searchParams],
+  )
 
   const teamQuery = useQuery({
     queryKey: ['team', slug],
@@ -198,7 +223,7 @@ function TeamDetailInner({ slug }: { slug: string }) {
           <button
             key={t.id}
             type="button"
-            onClick={() => setTab(t.id)}
+            onClick={() => selectTab(t.id)}
             className={`border-b-2 px-4 py-2 text-sm font-medium transition ${
               tab === t.id ? teamTabActive : teamTabIdle
             }`}

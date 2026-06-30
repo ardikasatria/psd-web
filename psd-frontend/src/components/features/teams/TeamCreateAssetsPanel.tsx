@@ -1,5 +1,6 @@
 'use client'
 
+import { teamAssetHref } from '@/lib/teams/assetLinks'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import {
   BeakerIcon,
@@ -11,27 +12,23 @@ import {
   FolderIcon,
   LightBulbIcon,
   SparklesIcon,
+  TrophyIcon,
   WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline'
-import { TEAM_ASSET_KINDS } from '@/lib/teams/permissions'
 
-const ASSET_LINKS: {
-  kind: (typeof TEAM_ASSET_KINDS)[number]
-  href: (id: string) => string
-  label: string
-  icon: typeof FolderIcon
-}[] = [
-  { kind: 'project', href: (id) => `/projects/new?team_id=${id}`, label: 'Proyek', icon: FolderIcon },
-  { kind: 'dataset', href: (id) => `/datasets/new?team_id=${id}`, label: 'Dataset', icon: CubeIcon },
-  { kind: 'model', href: (id) => `/models/new?team_id=${id}`, label: 'Model', icon: BeakerIcon },
-  { kind: 'notebook', href: (id) => `/notebooks/new?team_id=${id}`, label: 'Notebook', icon: BookOpenIcon },
-  { kind: 'idea_space', href: (id) => `/rooms/new?team_id=${id}`, label: 'Ruang ide', icon: LightBulbIcon },
-  { kind: 'data_factory', href: (id) => `/factory/sources/new?team_id=${id}`, label: 'Pabrik data', icon: CloudArrowUpIcon },
-  { kind: 'transformer_space', href: (id) => `/factory/pipelines/new?team_id=${id}`, label: 'Ruang transformer', icon: WrenchScrewdriverIcon },
-  { kind: 'model_registry', href: (id) => `/mlops/registry/new?team_id=${id}`, label: 'Registry model', icon: CpuChipIcon },
-  { kind: 'synthetic_data', href: (id) => `/synthesis/new?team_id=${id}`, label: 'Data sintesis', icon: SparklesIcon },
-  { kind: 'analytics_space', href: (id) => `/dashboards/new?team_id=${id}`, label: 'Ruang analitik', icon: ChartBarIcon },
-]
+const ASSET_LINKS = [
+  { kind: 'project', label: 'Proyek', icon: FolderIcon },
+  { kind: 'dataset', label: 'Dataset', icon: CubeIcon },
+  { kind: 'model', label: 'Model', icon: BeakerIcon },
+  { kind: 'notebook', label: 'Notebook', icon: BookOpenIcon },
+  { kind: 'competition', label: 'Kompetisi', icon: TrophyIcon },
+  { kind: 'idea_space', label: 'Ruang ide', icon: LightBulbIcon },
+  { kind: 'data_factory', label: 'Pabrik data', icon: CloudArrowUpIcon },
+  { kind: 'transformer_space', label: 'Ruang transformer', icon: WrenchScrewdriverIcon },
+  { kind: 'model_registry', label: 'Registry model', icon: CpuChipIcon },
+  { kind: 'synthetic_data', label: 'Data sintesis', icon: SparklesIcon },
+  { kind: 'analytics_space', label: 'Ruang analitik', icon: ChartBarIcon },
+] as const
 
 export function TeamCreateAssetsPanel({
   teamId,
@@ -51,8 +48,8 @@ export function TeamCreateAssetsPanel({
         Semua anggota tim dapat mengedit aset yang dibuat di bawah tim ini.
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
-        {ASSET_LINKS.map(({ href, label, icon: Icon }) => (
-          <ButtonPrimary key={label} href={href(teamId)} outline className="!gap-2">
+        {ASSET_LINKS.map(({ kind, label, icon: Icon }) => (
+          <ButtonPrimary key={kind} href={teamAssetHref(kind, teamId)} outline className="!gap-2">
             <Icon className="size-4 shrink-0" aria-hidden />
             {label}
           </ButtonPrimary>

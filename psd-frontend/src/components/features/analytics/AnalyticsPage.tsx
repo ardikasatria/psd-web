@@ -21,6 +21,7 @@ import { useSearchParams } from 'next/navigation'
 function AnalyticsPageInner() {
   const searchParams = useSearchParams()
   const defaultPipelineId = searchParams.get('pipeline_id')
+  const defaultTeamId = searchParams.get('team_id')
   const shouldOpenCreate = searchParams.get('create') === '1'
   const { isLoggedIn } = useAuth()
   const [search, setSearch] = useState('')
@@ -163,6 +164,7 @@ function AnalyticsPageInner() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         defaultPipelineId={defaultPipelineId}
+        defaultTeamId={defaultTeamId}
       />
     </FeaturePageShell>
   )

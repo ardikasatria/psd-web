@@ -103,6 +103,7 @@ export const createModelRegistry = (body: {
   competition_id?: string
   reference_source_id?: string
   description_md?: string
+  team_id?: string
 }) =>
   mlFetch('/api/ml/registries', RegistrySummarySchema, {
     method: 'POST',

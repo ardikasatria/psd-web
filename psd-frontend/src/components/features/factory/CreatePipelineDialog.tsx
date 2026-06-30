@@ -13,16 +13,17 @@ import { useState } from 'react'
 type Props = {
   open: boolean
   onClose: () => void
+  teamId?: string | null
 }
 
-export function CreatePipelineDialog({ open, onClose }: Props) {
+export function CreatePipelineDialog({ open, onClose, teamId }: Props) {
   const router = useRouter()
   const qc = useQueryClient()
   const [title, setTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const mutation = useMutation({
-    mutationFn: () => createPipeline({ title: title.trim() }),
+    mutationFn: () => createPipeline({ title: title.trim(), team_id: teamId || null }),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['factory-pipelines'] })
       onClose()

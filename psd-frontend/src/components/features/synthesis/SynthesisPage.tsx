@@ -12,14 +12,21 @@ import { useAuth } from '@/lib/auth/useAuth'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import { AcademicCapIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
-import { Suspense, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Suspense, useCallback, useEffect } from 'react'
 
 function SynthesisPageInner() {
+  const searchParams = useSearchParams()
+  const presetTeamId = searchParams.get('team_id')
   const { isLoggedIn, isLoading: authLoading } = useAuth()
 
   const scrollToWorkshop = useCallback(() => {
     document.getElementById('synthesis-workshop')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
+
+  useEffect(() => {
+    if (searchParams.get('create') === '1') scrollToWorkshop()
+  }, [searchParams, scrollToWorkshop])
 
   return (
     <FeaturePageShell>
@@ -89,7 +96,7 @@ function SynthesisPageInner() {
             </div>
           )}
 
-          {!authLoading && isLoggedIn && <SynthesisWorkshop />}
+          {!authLoading && isLoggedIn && <SynthesisWorkshop teamId={presetTeamId} />}
 
           {!authLoading && isLoggedIn && (
             <p className="text-center text-sm text-neutral-500 dark:text-neutral-400">

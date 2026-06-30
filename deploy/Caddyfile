@@ -19,7 +19,12 @@ api.{$DOMAIN} {
         reverse_proxy minio:9000
     }
     handle {
-        reverse_proxy backend:8000
+        reverse_proxy backend:8000 {
+            transport http {
+                read_timeout 3m
+                write_timeout 3m
+            }
+        }
     }
 }
 
@@ -33,7 +38,12 @@ git.{$DOMAIN} {
 }
 
 hub.{$DOMAIN} {
-    reverse_proxy jupyterhub:8000
+    reverse_proxy jupyterhub:8000 {
+        transport http {
+            read_timeout 5m
+            write_timeout 5m
+        }
+    }
 }
 
 bi.{$DOMAIN} {

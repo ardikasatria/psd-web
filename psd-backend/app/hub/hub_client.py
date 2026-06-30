@@ -46,7 +46,7 @@ class JupyterHubClient:
         return r
 
     def create_user(self, name: str) -> dict:
-        return self._req("POST", f"/users/{name}").json()
+        return self._req("POST", f"/users/{name}", json={}).json()
 
     def ensure_user(self, name: str) -> dict:
         try:
@@ -61,7 +61,7 @@ class JupyterHubClient:
 
     def start_server(self, name: str, server_name: str = "") -> int:
         path = f"/users/{name}/server" if not server_name else f"/users/{name}/servers/{server_name}"
-        return self._req("POST", path).status_code
+        return self._req("POST", path, json={}).status_code
 
     def stop_server(self, name: str, server_name: str = "") -> None:
         path = f"/users/{name}/server" if not server_name else f"/users/{name}/servers/{server_name}"
@@ -97,9 +97,19 @@ class JupyterHubClient:
             return model
         self.start_server(name, server_name)
         deadline = clock() + timeout_s
+        last_model: dict | None = None
         while clock() < deadline:
             model = self.get_user(name)
+            last_model = model
             if server_ready(model, server_name):
                 return model
             sleep(interval)
-        raise HubError(504, f"server '{name}' tak kunjung siap ({timeout_s}s)")
+        pending = None
+        if last_model:
+            servers = last_model.get("servers") or {}
+            entry = servers.get(server_name) if server_name in servers else servers.get("", {})
+            pending = last_model.get("pending") or (entry or {}).get("pending")
+        detail = f"server '{name}' tak kunjung siap ({timeout_s}s)"
+        if pending:
+            detail += f"; status={pending}"
+        raise HubError(504, detail)

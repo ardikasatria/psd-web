@@ -133,6 +133,13 @@ async def launch_notebook(
             ) from exc
         if exc.status == 404:
             raise ApiError(503, "hub_unavailable", "Pengguna/server Hub tidak ditemukan.")
+        if exc.status >= 500:
+            hint = " Periksa image psd-singleuser:latest dan log: docker compose logs jupyterhub --tail 80"
+            raise ApiError(
+                503,
+                "hub_spawn_failed",
+                f"Gagal menjalankan kernel server di JupyterHub.{hint}",
+            ) from exc
         code = "hub_timeout" if exc.status == 504 else "hub_error"
         raise ApiError(502, code, str(exc)) from exc
 

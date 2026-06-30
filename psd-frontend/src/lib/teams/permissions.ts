@@ -12,6 +12,7 @@ export const TEAM_ASSET_KINDS = [
   'model_registry',
   'synthetic_data',
   'analytics_space',
+  'competition',
 ] as const
 
 const PERMS: Record<string, Set<string>> = {

@@ -192,9 +192,10 @@ function PreviewTable({ rows }: { rows: Record<string, string>[] }) {
 
 type Props = {
   id?: string
+  teamId?: string | null
 }
 
-export function SynthesisWorkshop({ id = 'synthesis-workshop' }: Props) {
+export function SynthesisWorkshop({ id = 'synthesis-workshop', teamId }: Props) {
   const qc = useQueryClient()
 
   const [mode, setMode] = useState<'prompt' | 'spec'>('prompt')
@@ -261,7 +262,7 @@ export function SynthesisWorkshop({ id = 'synthesis-workshop' }: Props) {
 
   const createJob = useMutation({
     mutationFn: (body: { prompt?: string; spec?: Record<string, unknown>; n_rows: number }) =>
-      createSynthJob(body),
+      createSynthJob({ ...body, team_id: teamId || null }),
     onSuccess: (res) => {
       setActiveJobId(res.job_id)
       qc.invalidateQueries({ queryKey: ['synth-quota'] })

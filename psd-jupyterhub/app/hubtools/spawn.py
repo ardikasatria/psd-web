@@ -35,6 +35,14 @@ async def apply_tier_limits(spawner):
     token = getattr(spawner, "_psd_access_token", None)
     if token:
         env["PSD_TOKEN"] = token
+
+    # Editor PSD (domain utama) memanggil REST kernel di subdomain hub — wajib CORS.
+    app_base = os.environ.get("PSD_APP_BASE_URL", "").rstrip("/")
+    if app_base:
+        env["NOTEBOOK_ARGS"] = (
+            f"--ServerApp.allow_origin={app_base} --ServerApp.allow_credentials=True"
+        )
+
     spawner.environment = env
 
     spawner._psd_max_lifetime = lim.max_lifetime_s

@@ -27,8 +27,9 @@ import {
 } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 
 const STATUS_FILTERS: { id: RoomStatus | ''; label: string; icon: typeof LightBulbIcon }[] = [
   { id: '', label: 'Semua', icon: BoltIcon },
@@ -39,11 +40,17 @@ const STATUS_FILTERS: { id: RoomStatus | ''; label: string; icon: typeof LightBu
 ]
 
 function IdeaRoomsPageInner() {
+  const searchParams = useSearchParams()
+  const presetTeamId = searchParams.get('team_id')
   const { isLoggedIn } = useAuth()
   const [statusFilter, setStatusFilter] = useState<RoomStatus | ''>('')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
-  const [createOpen, setCreateOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(searchParams.get('create') === '1')
+
+  useEffect(() => {
+    if (searchParams.get('create') === '1') setCreateOpen(true)
+  }, [searchParams])
 
   const { data, isLoading, isError, error } = useQuery<PaginatedRoomSummary>({
     queryKey: ['idea-rooms', statusFilter, page],
@@ -231,7 +238,11 @@ function IdeaRoomsPageInner() {
         </div>
       </div>
 
-      <CreateRoomDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      <CreateRoomDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        teamId={presetTeamId}
+      />
     </FeaturePageShell>
   )
 }

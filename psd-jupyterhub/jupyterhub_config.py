@@ -19,9 +19,11 @@ c.GenericOAuthenticator.username_claim = "preferred_username"
 c.GenericOAuthenticator.enable_auth_state = True
 
 c.JupyterHub.spawner_class = "docker"
-c.DockerSpawner.image = os.environ.get("PSD_SINGLEUSER_IMAGE", "psd/singleuser:latest")
+c.DockerSpawner.image = os.environ.get("PSD_SINGLEUSER_IMAGE", "psd-singleuser:latest")
 c.DockerSpawner.network_name = os.environ.get("PSD_HUB_NETWORK", "psd-net")
 c.DockerSpawner.remove = True
+c.DockerSpawner.pull_policy = "ifnotpresent"
+c.DockerSpawner.start_timeout = int(os.environ.get("PSD_HUB_SPAWN_TIMEOUT", "300"))
 c.DockerSpawner.notebook_dir = "/home/jovyan/work"
 c.DockerSpawner.volumes = {
     "psd-notebook-{username}": "/home/jovyan/work",

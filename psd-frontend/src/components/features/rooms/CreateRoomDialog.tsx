@@ -17,6 +17,7 @@ import { useState } from 'react'
 type Props = {
   open: boolean
   onClose: () => void
+  teamId?: string | null
 }
 
 function resetForm(
@@ -43,7 +44,7 @@ function resetForm(
   setters.setError(null)
 }
 
-export function CreateRoomDialog({ open, onClose }: Props) {
+export function CreateRoomDialog({ open, onClose, teamId }: Props) {
   const router = useRouter()
   const [title, setTitle] = useState('')
   const [pitchMd, setPitchMd] = useState('')
@@ -70,6 +71,7 @@ export function CreateRoomDialog({ open, onClose }: Props) {
         subcategory: subcategorySlug,
         max_members: maxMembers ? Number(maxMembers) : null,
         visibility,
+        team_id: teamId || undefined,
       })
     },
     onSuccess: (res) => {

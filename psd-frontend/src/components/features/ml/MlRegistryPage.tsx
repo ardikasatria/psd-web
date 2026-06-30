@@ -42,14 +42,7 @@ function MlRegistryPageInner() {
   const [title, setTitle] = useState('')
   const [repoId, setRepoId] = useState('')
   const [showForm, setShowForm] = useState(false)
-
-  useEffect(() => {
-    const fromRepo = searchParams.get('repo_id')
-    if (fromRepo) {
-      setRepoId(fromRepo)
-      setShowForm(true)
-    }
-  }, [searchParams])
+  const presetTeamId = searchParams.get('team_id')
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['ml-registries'],
@@ -62,6 +55,7 @@ function MlRegistryPageInner() {
       createModelRegistry({
         title,
         repo_id: repoId || undefined,
+        team_id: presetTeamId || undefined,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ml-registries'] })
@@ -84,6 +78,17 @@ function MlRegistryPageInner() {
     setShowForm(true)
     scrollToCatalog()
   }, [scrollToCatalog])
+
+  useEffect(() => {
+    const fromRepo = searchParams.get('repo_id')
+    const shouldCreate = searchParams.get('create') === '1'
+    if (fromRepo) {
+      setRepoId(fromRepo)
+      setShowForm(true)
+    } else if (shouldCreate) {
+      openCreateForm()
+    }
+  }, [searchParams, openCreateForm])
 
   return (
     <FeaturePageShell>

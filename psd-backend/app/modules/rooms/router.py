@@ -126,20 +126,29 @@ async def create_room(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    existing_team_id = body.get("team_id")
+    if existing_team_id:
+        if not await membership(db, existing_team_id, user.id):
+            raise ApiError(403, "forbidden", "Bukan anggota tim")
+        team = (await db.execute(select(Team).where(Team.id == existing_team_id))).scalar_one_or_none()
+        if not team:
+            raise ApiError(404, "not_found", "Tim tidak ditemukan")
+    else:
+        base = slugify(body["title"])
+        tslug = base
+        if (await db.execute(select(Team).where(Team.slug == tslug))).scalar_one_or_none():
+            tslug = f"{base}-{uuid.uuid4().hex[:4]}"
+        team = Team(
+            slug=tslug,
+            name=body.get("team_name") or body["title"],
+            visibility=body.get("visibility", "public"),
+            created_by=user.id,
+            rls_id=await next_team_rls_id(db),
+        )
+        db.add(team)
+        await db.flush()
+        db.add(TeamMember(team_id=team.id, user_id=user.id, role="owner"))
     base = slugify(body["title"])
-    tslug = base
-    if (await db.execute(select(Team).where(Team.slug == tslug))).scalar_one_or_none():
-        tslug = f"{base}-{uuid.uuid4().hex[:4]}"
-    team = Team(
-        slug=tslug,
-        name=body.get("team_name") or body["title"],
-        visibility=body.get("visibility", "public"),
-        created_by=user.id,
-        rls_id=await next_team_rls_id(db),
-    )
-    db.add(team)
-    await db.flush()
-    db.add(TeamMember(team_id=team.id, user_id=user.id, role="owner"))
     cat_id, sub_id = await resolve_category(db, body.get("category"), body.get("subcategory"))
     rslug = base
     if (await db.execute(select(IdeaRoom).where(IdeaRoom.slug == rslug))).scalar_one_or_none():

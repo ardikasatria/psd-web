@@ -3760,9 +3760,18 @@ export const handlers = [
       dataset: '/datasets/new',
       model: '/models/new',
       notebook: '/notebooks/new',
+      idea_space: '/idea-rooms',
+      data_factory: '/factory/sources',
+      transformer_space: '/factory/pipelines',
+      model_registry: '/ml',
+      synthetic_data: '/synthesis',
+      analytics_space: '/analytics',
+      competition: '/competitions',
     }
     const base = paths[body.kind] ?? '/projects/new'
-    return HttpResponse.json({ kind: body.kind, create_url: `${base}?team_id=${t.id}` }, { status: 201 })
+    const direct = ['project', 'dataset', 'model', 'notebook'].includes(body.kind)
+    const url = direct ? `${base}?team_id=${t.id}` : `${base}?team_id=${t.id}&create=1`
+    return HttpResponse.json({ kind: body.kind, create_url: url }, { status: 201 })
   }),
 
   http.get(`${API}/me/synthesis/quota`, ({ request }) => {

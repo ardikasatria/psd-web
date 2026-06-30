@@ -80,6 +80,41 @@ echo ""
 echo "6. Log JupyterHub terakhir (spawn error sering di sini)"
 compose logs jupyterhub --tail 25 2>/dev/null || true
 echo ""
+
+echo "7. Uji spawn single-user (butuh 1–3 menit pertama kali)"
+if compose exec -T backend python -c "
+import os, sys
+from app.core.config import settings
+from app.hub.hub_client import HubError, JupyterHubClient
+
+user = os.environ.get('HUB_TEST_USER', 'psd_spawn_probe')
+timeout = int(os.environ.get('PSD_HUB_SPAWN_TIMEOUT', '120'))
+client = JupyterHubClient(settings.PSD_HUB_API_URL, settings.PSD_HUB_SERVICE_TOKEN)
+try:
+    client.stop_server(user)
+except Exception:
+    pass
+try:
+    model = client.ensure_server(user, timeout_s=timeout, interval=2.0)
+    ready = (model.get('servers') or {}).get('', {}).get('ready')
+    print(f'  OK  spawn user={user} ready={ready}')
+except HubError as e:
+    print(f'  GAGAL spawn: HTTP {e.status} — {e.body[:300]}')
+    sys.exit(1)
+except Exception as e:
+    print(f'  GAGAL spawn: {e}')
+    sys.exit(1)
+finally:
+    try:
+        client.stop_server(user)
+    except Exception:
+        pass
+" 2>/dev/null; then
+  :
+else
+  echo "  GAGAL spawn — cek image psd-singleuser:latest & logs jupyterhub"
+fi
+echo ""
 echo "=== Selesai ==="
 echo "Jika spawn gagal: pastikan psd-singleuser:latest, Docker socket Hub, jaringan psd-net."
 echo "Setelah ubah .env: compose up -d --build backend jupyterhub && compose restart caddy"

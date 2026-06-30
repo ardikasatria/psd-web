@@ -78,6 +78,7 @@ def test_team_asset_kinds_extended():
         "model",
         "dataset",
         "notebook",
+        "competition",
         "idea_space",
         "data_factory",
         "transformer_space",

@@ -31,12 +31,13 @@ ASSET_CREATE_PATHS: dict[str, str] = {
     "dataset": "/datasets/new",
     "model": "/models/new",
     "notebook": "/notebooks/new",
-    "idea_space": "/rooms/new",
-    "data_factory": "/factory/sources/new",
-    "transformer_space": "/factory/pipelines/new",
-    "model_registry": "/mlops/registry/new",
-    "synthetic_data": "/synthesis/new",
-    "analytics_space": "/dashboards/new",
+    "idea_space": "/idea-rooms",
+    "data_factory": "/factory/sources",
+    "transformer_space": "/factory/pipelines",
+    "model_registry": "/ml",
+    "synthetic_data": "/synthesis",
+    "analytics_space": "/analytics",
+    "competition": "/competitions",
 }
 
 
@@ -226,7 +227,10 @@ def create_asset_redirect(team_id: str, kind: str) -> dict:
     path = ASSET_CREATE_PATHS.get(kind)
     if not path:
         raise ApiError(422, "bad_asset_kind", f"Belum ada alur buat untuk jenis: {kind}")
-    return {"kind": kind, "create_url": f"{path}?team_id={team_id}"}
+    direct_new = kind in ("project", "dataset", "model", "notebook", "competition")
+    if direct_new:
+        return {"kind": kind, "create_url": f"{path}?team_id={team_id}"}
+    return {"kind": kind, "create_url": f"{path}?team_id={team_id}&create=1"}
 
 
 def presign_upload(team_id: str, filename: str) -> dict:

@@ -37,7 +37,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense, useMemo, useState, useEffect } from 'react'
 
 const tabs = [
   { id: 'overview', label: 'Ikhtisar' },
@@ -105,6 +105,11 @@ function CompetitionDetailInner({ slug }: { slug: string }) {
   const [file, setFile] = useState<File | null>(null)
   const [note, setNote] = useState('')
   const [submitTeamId, setSubmitTeamId] = useState('')
+
+  useEffect(() => {
+    const tid = searchParams.get('team_id')
+    if (tid) setSubmitTeamId(tid)
+  }, [searchParams])
   const [submitError, setSubmitError] = useState<string | null>(null)
   const { user, isLoggedIn } = useAuth()
   const qc = useQueryClient()
