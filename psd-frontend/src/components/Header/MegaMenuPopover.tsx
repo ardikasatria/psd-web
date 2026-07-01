@@ -44,19 +44,22 @@ export default function MegaMenuPopover({
             <div className="bg-white shadow-lg dark:bg-neutral-900">
               <div className="container">
                 <div className="flex py-12 text-sm">
-                  <div className="grid flex-1 grid-cols-3 gap-6 pe-10 xl:gap-8 2xl:pe-14">
-                    {megamenu.children?.map((menuChild, index) => (
+                  <div className="grid flex-1 grid-cols-4 gap-6 pe-10 xl:gap-8 2xl:pe-14">
+                    {megamenu.children?.map((menuChild, index, cols) => {
+                      const sectionTitle = menuChild.name || cols[index - 1]?.name || ''
+                      return (
                       <div key={index}>
                         {menuChild.name ? (
                           <p className="font-medium text-neutral-900 dark:text-neutral-200">{menuChild.name}</p>
                         ) : (
                           <p className="font-medium invisible select-none" aria-hidden="true">
-                            Aset
+                            {sectionTitle}
                           </p>
                         )}
                         <ul className="mt-4 grid space-y-4">{menuChild.children?.map(renderNavlink)}</ul>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                   <div className="grid w-2/7 grid-cols-1 gap-5 xl:w-4/9 xl:grid-cols-2">
                     {featuredPosts.map((post, index) => (

@@ -90,16 +90,19 @@ export function NavMegaMenu({ menuItem }: { menuItem: TNavigationItem }) {
                 'grid gap-x-12 gap-y-8',
                 colCount === 1 && 'max-w-sm grid-cols-1',
                 colCount === 2 && 'grid-cols-2',
-                colCount >= 3 && 'grid-cols-3',
+                colCount === 3 && 'grid-cols-3',
+                colCount >= 4 && 'grid-cols-4',
               )}
             >
-              {columns.map((col) => (
+              {columns.map((col, index) => {
+                const sectionTitle = col.name || columns[index - 1]?.name || ''
+                return (
                 <div key={col.id} className="min-w-0">
                   {col.name ? (
                     <p className="font-medium text-neutral-900 dark:text-neutral-200">{col.name}</p>
                   ) : (
                     <p className="font-medium invisible select-none" aria-hidden="true">
-                      Aset
+                      {sectionTitle}
                     </p>
                   )}
                   <ul className="mt-4 flex flex-col gap-3">
@@ -110,7 +113,7 @@ export function NavMegaMenu({ menuItem }: { menuItem: TNavigationItem }) {
                     ))}
                   </ul>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         </div>

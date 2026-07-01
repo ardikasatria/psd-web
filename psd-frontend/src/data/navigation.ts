@@ -33,13 +33,19 @@ export async function getNavigation(): Promise<TNavigationItem[]> {
           ],
         },
         {
-          id: 'col-komunitas',
+          id: 'col-komunitas-1',
           name: 'Komunitas',
           children: [
             { id: 'org-browse', href: '/orgs', name: 'Organisasi' },
             { id: '2c', href: '/quests', name: 'Quest', authRequired: true },
             { id: '8', href: '/community', name: 'Feed' },
             { id: '9', href: '/forum', name: 'Forum' },
+          ],
+        },
+        {
+          id: 'col-komunitas-2',
+          name: '',
+          children: [
             { id: '9a', href: '/teams', name: 'Tim Kolaborasi' },
             { id: '10', href: '/leaderboard', name: 'Peringkat' },
             { id: '6', href: '/events', name: 'Event' },
