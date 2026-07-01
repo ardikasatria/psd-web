@@ -14,7 +14,8 @@ from app.modules.community.models import Thread
 from app.modules.competitions.models import Competition, CompetitionProposal, Submission
 from app.modules.competitions import submission_review
 from app.modules.competitions.service import submission_row_dict
-from app.modules.teams.models import Team
+from app.modules.teams.models import Team, TeamMember
+from app.modules.teams import service as team_svc
 from app.modules.competitions.proposals import proposal_dict, review_proposal
 from app.modules.events.models import Event, EventProposal, EventRegistration
 from app.modules.events.proposals import proposal_dict as event_proposal_dict
@@ -50,6 +51,7 @@ async def stats(db: AsyncSession = Depends(get_db)):
         "events": await c(Event),
         "courses": await c(Course),
         "threads": await c(Thread),
+        "teams": await c(Team),
     }
 
 
@@ -645,6 +647,78 @@ async def update_repo(repo_id: str, body: dict, db: AsyncSession = Depends(get_d
         r.featured = bool(body["featured"])
     await db.commit()
     return to_summary(r)
+
+
+async def _admin_team_row(db: AsyncSession, t: Team) -> dict:
+    owner = (await db.execute(select(User).where(User.id == t.created_by))).scalar_one_or_none()
+    member_count = (
+        await db.execute(select(func.count()).select_from(TeamMember).where(TeamMember.team_id == t.id))
+    ).scalar_one()
+    return {
+        "id": t.id,
+        "slug": t.slug,
+        "name": t.name,
+        "description": t.description or "",
+        "visibility": t.visibility,
+        "focus": t.focus,
+        "member_count": member_count,
+        "owner_username": owner.username if owner else "",
+        "owner_account_type": owner.account_type if owner else "individual",
+        "featured": bool(t.featured),
+        "created_at": t.created_at,
+    }
+
+
+@router.get("/admin/teams")
+async def list_admin_teams(
+    q: str | None = None,
+    p: PageParams = Depends(page_params),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(Team)
+    if q:
+        like = f"%{q}%"
+        stmt = select(Team).join(User, User.id == Team.created_by).where(
+            or_(
+                Team.name.ilike(like),
+                Team.slug.ilike(like),
+                Team.focus.ilike(like),
+                User.username.ilike(like),
+            )
+        )
+    stmt = stmt.order_by(Team.created_at.desc())
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
+    rows = (await db.execute(stmt.offset(p.offset).limit(p.page_size))).scalars().all()
+    out = []
+    for t in rows:
+        out.append(await _admin_team_row(db, t))
+    return paginated(out, total, p)
+
+
+@router.patch("/admin/teams/{team_id}")
+async def update_admin_team(team_id: str, body: dict, db: AsyncSession = Depends(get_db)):
+    t = (await db.execute(select(Team).where(Team.id == team_id))).scalar_one_or_none()
+    if not t:
+        raise ApiError(404, "not_found", "Tim tidak ditemukan")
+    if "visibility" in body:
+        vis = body["visibility"]
+        if vis not in ("public", "private"):
+            raise ApiError(422, "validation_error", "Visibilitas harus public atau private")
+        t.visibility = vis
+    if "featured" in body:
+        t.featured = bool(body["featured"])
+    await db.commit()
+    await db.refresh(t)
+    return await _admin_team_row(db, t)
+
+
+@router.delete("/admin/teams/{team_id}", status_code=204)
+async def delete_admin_team(team_id: str, db: AsyncSession = Depends(get_db)):
+    t = (await db.execute(select(Team).where(Team.id == team_id))).scalar_one_or_none()
+    if not t:
+        raise ApiError(404, "not_found", "Tim tidak ditemukan")
+    await team_svc.delete_team_cascade(db, t)
+    await db.commit()
 
 
 @router.get("/admin/announcements")
