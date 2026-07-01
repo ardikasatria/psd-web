@@ -12,11 +12,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+    <div className="min-h-screen w-full overflow-x-hidden bg-neutral-50 dark:bg-neutral-950">
       <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="lg:pl-64">
+      <div className="min-w-0 lg:pl-64">
         <DashboardTopBar onMenuClick={() => setSidebarOpen(true)} />
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="min-w-0 overflow-x-auto p-4 sm:p-6 lg:p-8 [-webkit-overflow-scrolling:touch]">
           <AnnouncementBanner className="mb-6" />
           {children}
         </main>

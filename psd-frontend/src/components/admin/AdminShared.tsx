@@ -69,12 +69,12 @@ interface AdminPageHeaderProps {
 
 export function AdminPageHeader({ title, description, actions }: AdminPageHeaderProps) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
-      <div>
+    <div className="mb-6 flex min-w-0 flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0">
         <h2 className="text-2xl font-semibold text-neutral-900 sm:text-3xl dark:text-neutral-100">{title}</h2>
         {description && <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
     </div>
   )
 }
@@ -83,7 +83,7 @@ export function AdminContentCard({ children, className }: { children: React.Reac
   return (
     <div
       className={clsx(
-        'overflow-hidden rounded-2xl border border-neutral-200 bg-white [--gutter:--spacing(6)] dark:border-neutral-700 dark:bg-neutral-800',
+        'overflow-x-auto rounded-2xl border border-neutral-200 bg-white [--gutter:--spacing(6)] dark:border-neutral-700 dark:bg-neutral-800 [-webkit-overflow-scrolling:touch]',
         className,
       )}
     >
@@ -96,7 +96,7 @@ export function AdminTableToolbar({ children, className }: { children: React.Rea
   return (
     <div
       className={clsx(
-        'flex flex-col gap-3 border-b border-neutral-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-neutral-700',
+        'flex min-w-0 flex-col gap-3 border-b border-neutral-200 px-4 py-4 sm:px-6 sm:flex-row sm:items-center sm:justify-between dark:border-neutral-700',
         className,
       )}
     >
@@ -105,11 +105,12 @@ export function AdminTableToolbar({ children, className }: { children: React.Rea
   )
 }
 
-export function AdminTable({ children, className, ...props }: ComponentProps<typeof Table>) {
+export function AdminTable({ children, className, nowrap = true, ...props }: ComponentProps<typeof Table> & { nowrap?: boolean }) {
   return (
-    <div className="px-6 pt-4 pb-2">
+    <div className="overflow-x-auto px-4 pt-4 pb-2 sm:px-6 [-webkit-overflow-scrolling:touch]">
       <Table
         bleed
+        nowrap={nowrap}
         className={clsx(
           '[&_th]:text-xs [&_th]:font-semibold [&_th]:tracking-wide [&_th]:text-neutral-500 [&_th]:uppercase dark:[&_th]:text-neutral-400',
           '[&_th]:align-top [&_td]:align-top',
@@ -127,7 +128,7 @@ export function AdminTableFooter({ children, className }: { children: React.Reac
   return (
     <div
       className={clsx(
-        'flex flex-col gap-3 border-t border-neutral-200 px-6 py-4 text-sm text-neutral-600 sm:flex-row sm:items-center sm:justify-between dark:border-neutral-700 dark:text-neutral-400',
+        'flex min-w-0 flex-col gap-3 border-t border-neutral-200 px-4 py-4 text-sm text-neutral-600 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-neutral-700 dark:text-neutral-400',
         className,
       )}
     >
@@ -137,5 +138,5 @@ export function AdminTableFooter({ children, className }: { children: React.Reac
 }
 
 export function AdminTableEmpty({ children }: { children: React.ReactNode }) {
-  return <p className="px-6 py-10 text-center text-sm text-neutral-500">{children}</p>
+  return <p className="px-4 py-10 text-center text-sm text-neutral-500 sm:px-6">{children}</p>
 }

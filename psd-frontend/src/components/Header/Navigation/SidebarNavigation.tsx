@@ -2,7 +2,7 @@
 
 import { getNavItemIcon } from '@/data/navigation-icons'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
-import { filterNavigationByAuth, TNavigationItem } from '@/data/navigation'
+import { filterNavigationByAuth, groupMegaMenuColumns, TNavigationItem } from '@/data/navigation'
 import { useAuth } from '@/lib/auth/useAuth'
 import { Link } from '@/shared/link'
 import SocialsList from '@/shared/SocialsList'
@@ -64,12 +64,14 @@ const SidebarNavigation: React.FC<Props> = ({ data }) => {
     )
   }
 
-  const _renderMegaMenuChild = (item: TNavigationItem) => (
-    <ul className="nav-mobile-sub-menu space-y-5 ps-3 pb-2">
-      {item.children?.map((col) => (
-        <li key={col.id}>
+  const _renderMegaMenuChild = (item: TNavigationItem) => {
+    const groups = groupMegaMenuColumns(item.children ?? [])
+    return (
+    <ul className="nav-mobile-sub-menu grid grid-cols-2 gap-x-3 gap-y-5 ps-3 pb-2">
+      {groups.map((col) => (
+        <li key={col.id} className="min-w-0">
           {col.name ? (
-            <p className="px-3 text-xs font-bold tracking-wide text-neutral-800 uppercase dark:text-neutral-200">
+            <p className="px-1 text-xs font-bold tracking-wide text-neutral-800 uppercase dark:text-neutral-200">
               {col.name}
             </p>
           ) : null}
@@ -81,12 +83,12 @@ const SidebarNavigation: React.FC<Props> = ({ data }) => {
                   <Link
                     href={link.href || '#'}
                     onClick={handleClose}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                    className="flex items-center gap-2 rounded-lg px-1 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
                   >
                     {LinkIcon && (
-                      <LinkIcon className="size-5 shrink-0 text-primary-600 dark:text-primary-400" aria-hidden />
+                      <LinkIcon className="size-4 shrink-0 text-primary-600 dark:text-primary-400" aria-hidden />
                     )}
-                    {link.name}
+                    <span className="min-w-0 leading-snug">{link.name}</span>
                   </Link>
                 </li>
               )
@@ -95,7 +97,8 @@ const SidebarNavigation: React.FC<Props> = ({ data }) => {
         </li>
       ))}
     </ul>
-  )
+    )
+  }
 
   const _renderItem = (menu: TNavigationItem, index: number) => {
     const isMegaMenu = menu.type === 'mega-menu' && !!menu.children?.length

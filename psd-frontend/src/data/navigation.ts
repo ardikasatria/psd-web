@@ -16,7 +16,6 @@ export async function getNavigation(): Promise<TNavigationItem[]> {
           children: [
             { id: '3a', href: '/models', name: 'Model' },
             { id: '4', href: '/notebooks', name: 'Notebook' },
-            { id: '5', href: '/competitions', name: 'Kompetisi' },
             { id: '2b', href: '/categories', name: 'Kategori' },
             { id: '5e', href: '/ml', name: 'Registry Model' },
           ],
@@ -37,6 +36,7 @@ export async function getNavigation(): Promise<TNavigationItem[]> {
           name: 'Komunitas',
           children: [
             { id: 'org-browse', href: '/orgs', name: 'Organisasi' },
+            { id: '5', href: '/competitions', name: 'Kompetisi' },
             { id: '2c', href: '/quests', name: 'Quest', authRequired: true },
             { id: '8', href: '/community', name: 'Feed' },
             { id: '9', href: '/forum', name: 'Forum' },
@@ -83,6 +83,26 @@ export function filterNavigationByAuth(items: TNavigationItem[], isLoggedIn: boo
         ? { ...item, children: filterNavigationByAuth(item.children, isLoggedIn) }
         : item,
     )
+}
+
+/** Gabungkan kolom mega menu berkelanjutan (mis. aset-1 + aset-2) menjadi satu grup per kategori. */
+export function groupMegaMenuColumns(columns: TNavigationItem[]): TNavigationItem[] {
+  const groups: TNavigationItem[] = []
+  for (const col of columns) {
+    const title = col.name?.trim()
+    if (title) {
+      groups.push({
+        ...col,
+        children: [...(col.children ?? [])],
+      })
+    } else if (groups.length > 0) {
+      const last = groups[groups.length - 1]
+      last.children = [...(last.children ?? []), ...(col.children ?? [])]
+    } else {
+      groups.push({ ...col, children: [...(col.children ?? [])] })
+    }
+  }
+  return groups.filter((g) => g.children?.length)
 }
 
 export const getLanguages = async () => [
