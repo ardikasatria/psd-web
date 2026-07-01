@@ -1,5 +1,6 @@
 'use client'
 
+import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { QueryState } from '@/components/features/QueryState'
 import { NotebookEditor } from '@/components/features/notebooks/editor/NotebookEditor'
 import { useAuthGuard } from '@/lib/auth/useAuthGuard'
@@ -179,7 +180,7 @@ export function NotebookEditorContent({ id }: { id: string }) {
       error={meta.error ?? content.error}
     >
       {meta.data && content.data && (
-        <div className="min-h-screen bg-white dark:bg-[#202124]">
+        <div className="min-h-full bg-white dark:bg-[#202124]">
           <div className="border-b border-neutral-200 bg-white/90 px-4 py-2 backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/90">
             <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3">
               <Link
@@ -264,6 +265,8 @@ export function NotebookEditorContent({ id }: { id: string }) {
                     Ajukan kernel
                   </ButtonPrimary>
                 )}
+
+                <ThemeToggle className="!p-1.5" />
               </div>
             </div>
           </div>
