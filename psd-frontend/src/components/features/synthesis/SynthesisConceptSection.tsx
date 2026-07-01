@@ -68,6 +68,7 @@ export function SynthesisConceptSection() {
           <div
             key={col.label}
             className={clsx(
+              'p-5',
               col.tone === 'primary' ? synthesisGradient.accentCard : darkPanelClass,
             )}
           >
