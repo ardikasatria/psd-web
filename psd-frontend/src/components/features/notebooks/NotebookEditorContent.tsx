@@ -3,6 +3,7 @@
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { QueryState } from '@/components/features/QueryState'
 import { NotebookEditor } from '@/components/features/notebooks/editor/NotebookEditor'
+import { NotebookViewer } from '@/components/features/notebooks/editor/NotebookViewer'
 import { useAuthGuard } from '@/lib/auth/useAuthGuard'
 import { API_BASE, API_PREFIX, ApiError } from '@/lib/api/client'
 import { getMyGamification } from '@/lib/api/gamification'
@@ -10,6 +11,8 @@ import { getNotebook, getNotebookContent, launchNotebook, stopRuntime } from '@/
 import { kernelServerAvailable } from '@/lib/gamification/config'
 import { hubTierFromGamificationLevel } from '@/lib/notebooks/tier'
 import { useNotebookKernelAccess } from '@/lib/notebooks/useNotebookKernelAccess'
+import { useAssetCollaboration } from '@/lib/teams/useAssetCollaboration'
+import { profilePath } from '@/lib/routes/profile'
 import type { IpyNb } from '@/lib/notebooks/ipynb'
 import type { NotebookKernel } from '@/lib/notebooks/kernels/kernelInterface'
 import { createHubServerKernel } from '@/lib/notebooks/kernels/serverKernel'
@@ -41,6 +44,8 @@ export function NotebookEditorContent({ id }: { id: string }) {
     queryKey: ['notebook', id],
     queryFn: () => getNotebook(id),
   })
+
+  const { canEdit, isLoadingTeams } = useAssetCollaboration(meta.data?.team, meta.data?.owner.username)
 
   const content = useQuery({
     queryKey: ['notebook', id, 'content'],
@@ -124,8 +129,9 @@ export function NotebookEditorContent({ id }: { id: string }) {
   }, [canServer, disposeServerKernel, id, mapServerError])
 
   useEffect(() => {
+    if (!canEdit) return
     void initBrowserKernel()
-  }, [initBrowserKernel])
+  }, [canEdit, initBrowserKernel])
 
   const switchRuntime = async (mode: RuntimeMode) => {
     if (mode === runtimeMode) return
@@ -171,11 +177,11 @@ export function NotebookEditorContent({ id }: { id: string }) {
   const activeKernel = runtimeMode === 'browser' ? browserKernel : serverKernel
   const showServerControls = runtimeMode === 'server' && canServer
   const showServerConnecting = runtimeMode === 'server' && serverSession === 'connecting'
-  const showBrowserBoot = runtimeMode === 'browser' && browserLoading && !browserKernel
+  const showBrowserBoot = canEdit && runtimeMode === 'browser' && browserLoading && !browserKernel
 
   return (
     <QueryState
-      isLoading={meta.isLoading || content.isLoading}
+      isLoading={meta.isLoading || content.isLoading || isLoadingTeams}
       isError={meta.isError || content.isError}
       error={meta.error ?? content.error}
     >
@@ -192,6 +198,24 @@ export function NotebookEditorContent({ id }: { id: string }) {
               </Link>
 
               <div className="flex flex-wrap items-center gap-2">
+                {!canEdit ? (
+                  <>
+                    <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                      Mode baca
+                    </span>
+                    <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                      oleh{' '}
+                      <Link
+                        href={profilePath(meta.data.owner.username)}
+                        className="font-medium text-violet-700 hover:underline dark:text-violet-300"
+                      >
+                        {meta.data.owner.username}
+                      </Link>
+                    </span>
+                    <ThemeToggle className="!p-1.5" />
+                  </>
+                ) : (
+                  <>
                 {canServer ? (
                   <div className="inline-flex rounded-full border border-neutral-200 p-0.5 dark:border-neutral-700">
                     <button
@@ -267,11 +291,13 @@ export function NotebookEditorContent({ id }: { id: string }) {
                 )}
 
                 <ThemeToggle className="!p-1.5" />
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          {showServerConnecting && (
+          {canEdit && showServerConnecting && (
             <div className="border-b border-violet-200/80 bg-violet-50/80 px-4 py-4 text-center dark:border-violet-900/50 dark:bg-violet-950/30">
               <div className="mx-auto flex max-w-md flex-col items-center gap-2">
                 <div
@@ -288,7 +314,7 @@ export function NotebookEditorContent({ id }: { id: string }) {
             </div>
           )}
 
-          {runtimeMode === 'server' && serverSession === 'disconnected' && !kernelError && !showServerConnecting && (
+          {canEdit && runtimeMode === 'server' && serverSession === 'disconnected' && !kernelError && !showServerConnecting && (
             <div className="border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-center dark:border-neutral-800 dark:bg-neutral-900/60">
               <p className="text-sm text-neutral-600 dark:text-neutral-400">
                 Kernel server terputus. Anda masih bisa mengedit sel; tekan{' '}
@@ -298,7 +324,7 @@ export function NotebookEditorContent({ id }: { id: string }) {
             </div>
           )}
 
-          {kernelError && (
+          {canEdit && kernelError && (
             <div className="border-b border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/50 dark:bg-red-950/40">
               <p className="text-center text-sm text-red-700 dark:text-red-300">{kernelError}</p>
               {kernelError.includes('coba lagi') && canServer && runtimeMode === 'server' && (
@@ -316,7 +342,9 @@ export function NotebookEditorContent({ id }: { id: string }) {
             </div>
           )}
 
-          {showBrowserBoot ? (
+          {!canEdit ? (
+            <NotebookViewer title={meta.data.title} initialIpynb={content.data.content as IpyNb} />
+          ) : showBrowserBoot ? (
             <p className="py-16 text-center text-sm text-neutral-500 dark:text-neutral-400">
               Memuat kernel browser…
             </p>

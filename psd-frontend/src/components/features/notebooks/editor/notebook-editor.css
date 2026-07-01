@@ -546,3 +546,29 @@
     display: none;
   }
 }
+
+/* Mode baca — tanpa kontrol edit */
+.nb-viewer .nb-cell--readonly .nb-cell__toolbar,
+.nb-viewer .nb-run {
+  display: none;
+}
+.nb-src--readonly {
+  margin: 0;
+  padding: 8px 12px;
+  border: none;
+  background: var(--nb-code-bg);
+  color: var(--nb-fg);
+  font-family: var(--nb-mono);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  resize: none;
+  overflow: auto;
+}
+.nb-empty {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--nb-muted);
+  font-size: 0.875rem;
+}

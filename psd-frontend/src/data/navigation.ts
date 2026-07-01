@@ -5,14 +5,14 @@ export async function getNavigation(): Promise<TNavigationItem[]> {
     { id: '2', href: '/explore', name: 'Explore' },
     { id: '2a', href: '/projects', name: 'Proyek' },
     { id: '3', href: '/datasets', name: 'Dataset' },
-    { id: '3a', href: '/models', name: 'Model' },
-    { id: '4', href: '/notebooks', name: 'Notebook' },
-    { id: '5', href: '/competitions', name: 'Kompetisi' },
     {
       id: MORE_MENU_ID,
       name: 'Menu lainnya',
       type: 'hamburger-menu',
       children: [
+        { id: '3a', href: '/models', name: 'Model' },
+        { id: '4', href: '/notebooks', name: 'Notebook' },
+        { id: '5', href: '/competitions', name: 'Kompetisi' },
         { id: '2b', href: '/categories', name: 'Kategori' },
         { id: '2c', href: '/quests', name: 'Quest', authRequired: true },
         { id: '8', href: '/community', name: 'Feed' },

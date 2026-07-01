@@ -13,13 +13,20 @@ type Props = {
   outline?: boolean
   compact?: boolean
   plain?: boolean
+  viewOnly?: boolean
   className?: string
 }
 
 /** CTA utama — editor notebook terintegrasi di dalam PSD (bukan buka tab Hub). */
-export function OpenNotebookButton({ notebookId, outline, compact, plain, className }: Props) {
+export function OpenNotebookButton({ notebookId, outline, compact, plain, viewOnly, className }: Props) {
   const { isLoggedIn } = useAuth()
-  const label = compact ? 'Mulai' : 'Mulai notebook'
+  const label = compact
+    ? viewOnly
+      ? 'Lihat'
+      : 'Mulai'
+    : viewOnly
+      ? 'Lihat notebook'
+      : 'Mulai notebook'
   const target = notebookId ? `/notebooks/${notebookId}/workspace` : WORKSPACE_PATH
   const href = isLoggedIn ? target : `/login?next=${encodeURIComponent(target)}`
 

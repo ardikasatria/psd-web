@@ -696,7 +696,6 @@ async def get_notebook_content(
     n = await store.get(nb_id)
     if not n:
         raise ApiError(404, "not_found", "Notebook tidak ditemukan")
-    await _can_edit_notebook(db, n, user)
     content = await store.content_or_blank(n)
     await db.commit()
     return {"id": n.id, "content": content}
