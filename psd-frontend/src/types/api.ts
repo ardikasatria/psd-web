@@ -2097,7 +2097,7 @@ export const DataSourceListSchema = z.object({
 export const PipelineNodeSchema = z.object({
   id: z.string(),
   type: z.enum(['source', 'transform', 'sink']),
-  op: z.enum(['select', 'filter', 'join', 'aggregate', 'cast', 'derive', 'dedupe']).optional(),
+  op: z.enum(['select', 'filter', 'join', 'aggregate', 'cast', 'derive', 'dedupe', 'sql', 'pyspark']).optional(),
   layer: z.enum(['bronze', 'silver', 'gold']).nullable().optional(),
   params: z.record(z.any()).default({}),
   position: z.object({ x: z.number(), y: z.number() }).optional(),
@@ -2134,7 +2134,39 @@ export type Pipeline = z.infer<typeof PipelineSchema>
 export const PipelineValidateResultSchema = z.object({
   status: PipelineStatusSchema,
   errors: z.array(z.string()),
+  compiled_sql: z.string().nullable().optional(),
+  compiled_script: z.string().nullable().optional(),
+  script_language: z.string().nullable().optional(),
 })
+
+export const FactoryEngineLimitsSchema = z.object({
+  tier: z.string(),
+  tier_label: z.string().optional(),
+  estimated_bytes: z.number().optional(),
+  suggested_engine: z.enum(['duckdb', 'spark']).optional(),
+  engines: z.record(
+    z.object({
+      allowed: z.boolean(),
+      max_runs_per_day: z.number().optional(),
+      max_bytes: z.number().optional(),
+      raw_sql: z.boolean().optional(),
+      raw_code: z.boolean().optional(),
+      kernel_required: z.boolean().optional(),
+    }),
+  ),
+})
+export type FactoryEngineLimits = z.infer<typeof FactoryEngineLimitsSchema>
+
+export const PipelinePreviewResultSchema = z.object({
+  rows: z.array(z.record(z.string(), z.unknown())),
+})
+export type PipelinePreviewResult = z.infer<typeof PipelinePreviewResultSchema>
+
+export const PipelineCompileResultSchema = z.object({
+  script: z.string(),
+  language: z.string(),
+})
+export type PipelineCompileResult = z.infer<typeof PipelineCompileResultSchema>
 
 export const PipelineUpdateResultSchema = z.object({
   slug: z.string(),

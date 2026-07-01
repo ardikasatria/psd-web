@@ -2,7 +2,17 @@
 import type { PipelineSpec } from '@/types/api'
 
 const NODE_TYPES = new Set(['source', 'transform', 'sink'])
-const TRANSFORM_OPS = new Set(['select', 'filter', 'join', 'aggregate', 'cast', 'derive', 'dedupe'])
+const TRANSFORM_OPS = new Set([
+  'select',
+  'filter',
+  'join',
+  'aggregate',
+  'cast',
+  'derive',
+  'dedupe',
+  'sql',
+  'pyspark',
+])
 const LAYERS = new Set<string | null | undefined>([undefined, null, 'bronze', 'silver', 'gold'])
 
 export function validatePipelineSpec(spec: PipelineSpec, maxNodes: number): string[] {
@@ -27,6 +37,12 @@ export function validatePipelineSpec(spec: PipelineSpec, maxNodes: number): stri
       errors.push(`Operasi transform tidak dikenal pada '${nid}'`)
     }
     if (!LAYERS.has(n.layer ?? null)) errors.push(`Lapisan tidak valid pada '${nid}'`)
+    if (t === 'transform' && n.op === 'sql' && !(n.params?.query as string | undefined)?.trim()) {
+      errors.push(`Node SQL kosong pada '${nid}'`)
+    }
+    if (t === 'transform' && n.op === 'pyspark' && !(n.params?.code as string | undefined)?.trim()) {
+      errors.push(`Node PySpark kosong pada '${nid}'`)
+    }
     if (t === 'source' && !(n.params?.source_id)) {
       errors.push(`Node source tanpa source_id pada '${nid}'`)
     }

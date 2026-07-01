@@ -9,7 +9,17 @@ export type PsdNodeData = {
   error?: string
 }
 
-const TRANSFORM_OPS: PipelineNode['op'][] = ['select', 'filter', 'join', 'aggregate', 'cast', 'derive', 'dedupe']
+const TRANSFORM_OPS: PipelineNode['op'][] = [
+  'select',
+  'filter',
+  'join',
+  'aggregate',
+  'cast',
+  'derive',
+  'dedupe',
+  'sql',
+  'pyspark',
+]
 
 export function specToFlow(spec: PipelineSpec): { nodes: Node<PsdNodeData>[]; edges: Edge[] } {
   const nodes = (spec.nodes ?? []).map((n, i) => ({
@@ -71,7 +81,19 @@ export function defaultNodeData(kind: PipelineNode['type'], op?: PipelineNode['o
   const transformOp = op ?? 'select'
   const params: Record<string, unknown> = {}
   if (transformOp === 'select') params.columns = []
-  if (transformOp === 'filter') params.col = ''
+  if (transformOp === 'filter') {
+    params.column = ''
+    params.op = '='
+    params.value = ''
+  }
+  if (transformOp === 'sql') params.query = 'SELECT * FROM upstream_node'
+  if (transformOp === 'pyspark') {
+    params.code =
+      '# inputs: list DataFrame dari node di atas\n' +
+      'def transform(inputs):\n' +
+      '    df = inputs[0]\n' +
+      '    return df.dropDuplicates()'
+  }
   if (transformOp === 'join') params.how = 'inner'
   if (transformOp === 'aggregate') {
     params.group_by = []

@@ -150,8 +150,8 @@ export function NodePropertiesPanel({ nodeId, spec, columnsByNode, sources, onUp
           <Field>
             <Label>Kolom</Label>
             <select
-              value={String(data.params.col ?? '')}
-              onChange={(e) => patchParams({ col: e.target.value })}
+              value={String(data.params.column ?? data.params.col ?? '')}
+              onChange={(e) => patchParams({ column: e.target.value, col: e.target.value })}
               className={selectClass}
             >
               <option value="">—</option>
@@ -300,6 +300,37 @@ export function NodePropertiesPanel({ nodeId, spec, columnsByNode, sources, onUp
               </option>
             ))}
           </select>
+        </Field>
+      )}
+
+      {data.kind === 'transform' && data.op === 'sql' && (
+        <Field>
+          <Label>SQL (SELECT-only)</Label>
+          <textarea
+            value={String(data.params.query ?? '')}
+            onChange={(e) => patchParams({ query: e.target.value })}
+            rows={8}
+            className={`${selectClass} font-mono text-xs`}
+            placeholder="SELECT kolom FROM upstream_node_id"
+          />
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+            Hanya SELECT. Nama tabel = id node upstream. Tier menengah+ diperlukan.
+          </p>
+        </Field>
+      )}
+
+      {data.kind === 'transform' && data.op === 'pyspark' && (
+        <Field>
+          <Label>Kode PySpark</Label>
+          <textarea
+            value={String(data.params.code ?? '')}
+            onChange={(e) => patchParams({ code: e.target.value })}
+            rows={10}
+            className={`${selectClass} font-mono text-xs`}
+          />
+          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+            Berjalan di lingkungan terisolasi. Butuh tier Lanjut & akses kernel.
+          </p>
         </Field>
       )}
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { FactoryQuestsPanel } from '@/components/features/factory/FactoryQuestsPanel'
 import { SidebarStatTile, sidebarCalloutClass, sidebarSectionClass, sidebarTipClass } from '@/components/common/SidebarStatTile'
 import { listPipelines, listSources } from '@/lib/api/factory'
 import type { PipelineSummary } from '@/types/api'
@@ -19,7 +20,10 @@ const FACTORY_TIPS = [
   'Daftarkan dataset sebagai sumber dulu — node source pipeline butuh source_id yang valid.',
   'Pipeline harus DAG (asiklik): source → transform → sink, tanpa loop.',
   'Tier reputasi membatasi jumlah node — naikkan reputasi untuk pipeline lebih kompleks.',
-  'Simpan spec JSON, lalu klik Validasi untuk melihat error sebelum eksekusi (Langkah 45).',
+  'Gunakan Pratinjau sebelum run penuh agar hemat kuota harian.',
+  'Pilih DuckDB untuk data cepat; Spark hanya saat data benar-benar besar.',
+  'Baca SQL/PySpark yang ditampilkan saat validasi — cara bagus belajar kueri nyata.',
+  'Sumber dari Ruang Panen Data atau notebook → daftar di Sumber Data dulu.',
 ]
 
 type Props = {
@@ -75,6 +79,16 @@ export function FactorySidebar({ className, onCreateClick }: Props) {
         </div>
         <p className={sidebarTipClass}>{tip}</p>
       </div>
+
+      <Link
+        href="/factory/panduan"
+        className="flex items-center justify-between rounded-2xl border border-amber-200/80 bg-amber-50/40 px-4 py-3 text-sm font-medium text-amber-900 transition hover:border-amber-300 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200"
+      >
+        Panduan Pabrik Data
+        <Cog6ToothIcon className="size-4" aria-hidden />
+      </Link>
+
+      <FactoryQuestsPanel compact />
 
       <Link
         href="/analytics"

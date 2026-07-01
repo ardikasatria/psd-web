@@ -137,7 +137,10 @@ import {
   pipelineSummaryOf,
   pipelinesForUser,
   sourcesForUser,
+  type MockPipeline,
 } from './data/factory'
+import { engineLimitsForTierLevel } from './data/factory-engines'
+import { compilePipelineScript } from '@/lib/factory/compilePreview'
 import {
   createMockRun,
   findMockRun,
@@ -305,6 +308,58 @@ const mockSubStore: Record<string, { slug: string; name: string }[]> = Object.fr
 
 function errorResponse(status: number, code: string, message: string) {
   return HttpResponse.json({ error: { code, message } }, { status })
+}
+
+function factoryLimitsForUser(username: string) {
+  const g = mockGamificationFor(username)
+  return engineLimitsForTierLevel(g.tier.level)
+}
+
+function effectiveFactoryEngine(
+  pl: Pick<MockPipeline, 'engine'>,
+  requested?: string | null,
+  limits?: ReturnType<typeof factoryLimitsForUser>,
+): 'duckdb' | 'spark' {
+  const req = requested ?? pl.engine ?? 'auto'
+  if (req === 'spark') return 'spark'
+  if (req === 'duckdb') return 'duckdb'
+  return limits?.suggested_engine ?? 'duckdb'
+}
+
+function compilePipelineResponse(pl: MockPipeline, engine: 'duckdb' | 'spark') {
+  const { script, language } = compilePipelineScript(pl.spec ?? { nodes: [], edges: [] }, engine)
+  return language === 'sql'
+    ? { compiled_sql: script, script_language: 'sql' as const }
+    : { compiled_script: script, script_language: language }
+}
+
+function mockPreviewRows(pl: MockPipeline, limit: number) {
+  const selectNode = pl.spec?.nodes.find((n) => n.type === 'transform' && n.op === 'select')
+  const cols = (selectNode?.params?.columns as string[] | undefined) ?? ['rating', 'text', 'kategori']
+  const rows: Record<string, unknown>[] = []
+  for (let i = 0; i < Math.min(limit, 12); i++) {
+    const row: Record<string, unknown> = {}
+    for (const c of cols) {
+      row[c] = c === 'rating' ? 3 + (i % 3) : `sample_${i + 1}`
+    }
+    rows.push(row)
+  }
+  return rows
+}
+
+function validateMockPipeline(pl: MockPipeline, maxNodes = DEFAULT_MAX_NODES) {
+  let errors = validatePipelineSpec(pl.spec ?? { nodes: [], edges: [] }, maxNodes)
+  for (const n of pl.spec?.nodes ?? []) {
+    if (n.type === 'source') {
+      const sid = (n.params as { source_id?: string })?.source_id
+      if (sid && !mockDataSources.some((s) => s.id === sid)) {
+        errors = [...errors, `Sumber tidak ditemukan untuk node '${n.id}'`]
+      }
+    }
+  }
+  pl.status = errors.length ? 'error' : pl.spec?.nodes?.length ? 'valid' : 'draft'
+  pl.validation_error = errors.length ? errors.join('; ') : null
+  return errors
 }
 
 export const handlers = [
@@ -4508,6 +4563,8 @@ export const handlers = [
       status: status as 'draft' | 'valid' | 'error',
       spec,
       validation_error: errors.length ? errors.join('; ') : null,
+      engine: 'auto',
+      schedule_cron: null,
       team_id: null,
       room_id: null,
       owner_id: user.id,
@@ -4525,6 +4582,8 @@ export const handlers = [
       status: pl.status,
       spec: pl.spec,
       validation_error: pl.validation_error,
+      engine: pl.engine ?? 'auto',
+      schedule_cron: pl.schedule_cron ?? null,
       team_id: pl.team_id,
       room_id: pl.room_id,
     })
@@ -4535,20 +4594,17 @@ export const handlers = [
     if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
     const pl = findMockPipeline(String(params.slug))
     if (!pl || pl.owner_id !== user.id) return errorResponse(403, 'forbidden', 'Tidak berhak')
-    const body = (await request.json()) as { title?: string; spec?: { nodes: []; edges: [] } }
+    const body = (await request.json()) as {
+      title?: string
+      spec?: { nodes: []; edges: [] }
+      engine?: 'auto' | 'duckdb' | 'spark'
+      schedule_cron?: string | null
+    }
     if (body.title) pl.title = body.title
     if (body.spec) pl.spec = body.spec
-    let errors = validatePipelineSpec(pl.spec ?? { nodes: [], edges: [] }, DEFAULT_MAX_NODES)
-    for (const n of pl.spec?.nodes ?? []) {
-      if (n.type === 'source') {
-        const sid = (n.params as { source_id?: string })?.source_id
-        if (sid && !mockDataSources.some((s) => s.id === sid)) {
-          errors = [...errors, `Sumber tidak ditemukan untuk node '${n.id}'`]
-        }
-      }
-    }
-    pl.status = errors.length ? 'error' : pl.spec?.nodes?.length ? 'valid' : 'draft'
-    pl.validation_error = errors.length ? errors.join('; ') : null
+    if (body.engine) pl.engine = body.engine
+    if (body.schedule_cron !== undefined) pl.schedule_cron = body.schedule_cron
+    const errors = validateMockPipeline(pl)
     return HttpResponse.json({ slug: pl.slug, status: pl.status, errors })
   }),
 
@@ -4557,18 +4613,67 @@ export const handlers = [
     if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
     const pl = findMockPipeline(String(params.slug))
     if (!pl) return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
-    let errors = validatePipelineSpec(pl.spec ?? { nodes: [], edges: [] }, DEFAULT_MAX_NODES)
-    for (const n of pl.spec?.nodes ?? []) {
-      if (n.type === 'source') {
-        const sid = (n.params as { source_id?: string })?.source_id
-        if (sid && !mockDataSources.some((s) => s.id === sid)) {
-          errors = [...errors, `Sumber tidak ditemukan untuk node '${n.id}'`]
-        }
-      }
+    const errors = validateMockPipeline(pl)
+    const limits = factoryLimitsForUser(user.username)
+    const eng = effectiveFactoryEngine(pl, pl.engine, limits)
+    const compiled = errors.length ? {} : compilePipelineResponse(pl, eng)
+    return HttpResponse.json({ status: pl.status, errors, ...compiled })
+  }),
+
+  http.post(`${API}/pipelines/:slug/compile`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const pl = findMockPipeline(String(params.slug))
+    if (!pl) return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
+    const url = new URL(request.url)
+    const engineParam = url.searchParams.get('engine')
+    const limits = factoryLimitsForUser(user.username)
+    const eng = effectiveFactoryEngine(pl, engineParam, limits)
+    const { script, language } = compilePipelineScript(pl.spec ?? { nodes: [], edges: [] }, eng)
+    return HttpResponse.json({ script, language })
+  }),
+
+  http.post(`${API}/pipelines/:slug/preview`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const pl = findMockPipeline(String(params.slug))
+    if (!pl || pl.owner_id !== user.id) return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
+    if (pl.status !== 'valid') return errorResponse(400, 'invalid', 'Pipeline belum valid')
+    const body = (await request.json().catch(() => ({}))) as { limit?: number }
+    const limit = body.limit ?? 50
+    return HttpResponse.json({ rows: mockPreviewRows(pl, limit) })
+  }),
+
+  http.get(`${API}/pipelines/:slug/airflow-dag`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const pl = findMockPipeline(String(params.slug))
+    if (!pl || pl.owner_id !== user.id) return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
+    if (pl.status !== 'valid') return errorResponse(400, 'invalid', 'Pipeline belum valid')
+    if (!pl.schedule_cron?.trim()) {
+      return errorResponse(400, 'schedule_required', 'Isi jadwal cron sebelum mengekspor DAG')
     }
-    pl.status = errors.length ? 'error' : pl.spec?.nodes?.length ? 'valid' : 'draft'
-    pl.validation_error = errors.length ? errors.join('; ') : null
-    return HttpResponse.json({ status: pl.status, errors })
+    const dagId = `psd_${pl.slug.replace(/-/g, '_')}`
+    const nodeIds = pl.spec?.nodes.map((n) => n.id).join(', ') ?? 'none'
+    const code = `# PSD Airflow DAG — ${pl.title}
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime
+
+with DAG(
+    dag_id="${dagId}",
+    schedule="${pl.schedule_cron}",
+    start_date=datetime(2024, 1, 1),
+    catchup=False,
+    tags=["psd", "factory"],
+) as dag:
+    # Pipeline nodes: ${nodeIds}
+    run_pipeline = PythonOperator(
+        task_id="run_psd_pipeline",
+        python_callable=lambda **_: None,
+    )
+`
+    return HttpResponse.json({ dag_id: dagId, code })
   }),
 
   http.delete(`${API}/pipelines/:slug`, ({ request, params }) => {
@@ -4582,12 +4687,20 @@ export const handlers = [
   http.get(`${API}/me/factory/quota`, ({ request }) => {
     const user = resolveUserFromRequest(request)
     if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const limits = factoryLimitsForUser(user.username)
+    const duckRuns = limits.engines.duckdb?.max_runs_per_day ?? 5
     return HttpResponse.json({
-      runs_per_day: 5,
+      runs_per_day: duckRuns,
       max_rows: 50_000,
       max_nodes: 8,
       runs_used_today: getRunsUsedToday(user.id),
     })
+  }),
+
+  http.get(`${API}/me/factory/engine-limits`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    return HttpResponse.json(factoryLimitsForUser(user.username))
   }),
 
   http.post(`${API}/pipelines/:slug/run`, ({ request, params }) => {
@@ -4597,10 +4710,24 @@ export const handlers = [
     const pl = findMockPipeline(slug)
     if (!pl || pl.owner_id !== user.id) return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
     if (pl.status !== 'valid') return errorResponse(400, 'invalid', 'Pipeline belum valid')
-    if (getRunsUsedToday(user.id) >= 5) {
+    const limits = factoryLimitsForUser(user.username)
+    const eng = effectiveFactoryEngine(pl, pl.engine, limits)
+    if (eng === 'spark' && !limits.engines.spark?.allowed) {
+      return errorResponse(403, 'engine_locked', 'Engine Spark terkunci untuk tier Anda.')
+    }
+    if (pl.spec?.nodes.some((n) => n.op === 'pyspark') && !limits.engines.spark?.raw_code) {
+      return errorResponse(403, 'engine_locked', 'Node PySpark membutuhkan tier lanjut.')
+    }
+    const maxRuns = limits.engines[eng]?.max_runs_per_day ?? 5
+    if (getRunsUsedToday(user.id) >= maxRuns) {
       return errorResponse(429, 'quota_exceeded', 'Kuota run harian habis. Naik tier untuk lebih banyak.')
     }
-    const run = createMockRun(slug, user.id)
+    const estimated = limits.estimated_bytes ?? 0
+    const maxBytes = limits.engines[eng]?.max_bytes ?? 0
+    if (maxBytes > 0 && estimated > maxBytes) {
+      return errorResponse(413, 'data_too_large', 'Ukuran data melebihi batas tier untuk engine ini.')
+    }
+    const run = createMockRun(slug, user.id, { execution_engine: eng })
     return HttpResponse.json({ run_id: run.id, status: run.status }, { status: 202 })
   }),
 

@@ -313,7 +313,7 @@ export function HarvestWizardDialog({ open, onClose }: Props) {
                 </Field>
               </div>
             )}
-            <div>
+            <Field>
               <Label>Parameter query</Label>
               <ul className="mt-2 space-y-2">
                 {params.map((p, i) => (
@@ -358,7 +358,7 @@ export function HarvestWizardDialog({ open, onClose }: Props) {
                 <PlusIcon className="size-4" />
                 Tambah parameter
               </Button>
-            </div>
+            </Field>
           </div>
         )}
 
@@ -468,7 +468,7 @@ export function HarvestWizardDialog({ open, onClose }: Props) {
               Lewati pemetaan — ambil field apa adanya dari respons
             </label>
             {!skipMapping && (
-              <div>
+              <Field>
                 <Label>Pemetaan kolom</Label>
                 <ul className="mt-2 space-y-2">
                   {fieldRows.map((r, i) => (
@@ -505,7 +505,7 @@ export function HarvestWizardDialog({ open, onClose }: Props) {
                   <PlusIcon className="size-4" />
                   Tambah kolom
                 </Button>
-              </div>
+              </Field>
             )}
             <div className="rounded-2xl border border-neutral-200/80 bg-neutral-50/80 p-4 dark:border-neutral-700 dark:bg-neutral-900/50">
               <div className="flex flex-wrap items-center justify-between gap-2">

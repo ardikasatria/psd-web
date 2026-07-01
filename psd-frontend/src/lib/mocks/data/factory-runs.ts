@@ -5,6 +5,7 @@ export type MockPipelineRun = RunDetail & {
   owner_id: string
   created_at: string
   started_at: number
+  execution_engine?: string | null
 }
 
 const demoLayers = {
@@ -59,6 +60,7 @@ export function runsForPipeline(slug: string, userId?: string): RunSummary[] {
       rows_out: r.rows_out,
       duration_ms: r.duration_ms,
       created_at: r.created_at,
+      execution_engine: r.execution_engine ?? null,
     }))
 }
 
@@ -101,7 +103,13 @@ export function getRunsUsedToday(userId: string) {
   return mockRunsTodayByUser.get(userId) ?? 0
 }
 
-export function createMockRun(slug: string, userId: string, forceError = false): MockPipelineRun {
+export function createMockRun(
+  slug: string,
+  userId: string,
+  opts?: boolean | { forceError?: boolean; execution_engine?: string },
+): MockPipelineRun {
+  const forceError = typeof opts === 'boolean' ? opts : (opts?.forceError ?? false)
+  const execution_engine = typeof opts === 'object' ? opts?.execution_engine : undefined
   const id = `run_${Date.now().toString(36)}`
   const run: MockPipelineRun = {
     id,
@@ -115,6 +123,7 @@ export function createMockRun(slug: string, userId: string, forceError = false):
     layers: forceError ? {} : {},
     lineage: forceError ? {} : {},
     error: forceError ? 'Kolom rating tidak ditemukan dalam dataset sumber' : null,
+    execution_engine: execution_engine ?? 'duckdb',
   }
   if (forceError) {
     run.duration_ms = 1200

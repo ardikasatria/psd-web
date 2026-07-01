@@ -5,6 +5,8 @@ import {
   ArrowDownCircleIcon,
   ArrowPathIcon,
   CircleStackIcon,
+  CodeBracketIcon,
+  CommandLineIcon,
   FunnelIcon,
 } from '@heroicons/react/24/outline'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
@@ -22,9 +24,17 @@ const KIND_ICON = {
   sink: ArrowDownCircleIcon,
 }
 
+const OP_ICON: Partial<Record<string, typeof ArrowPathIcon>> = {
+  sql: CommandLineIcon,
+  pyspark: CodeBracketIcon,
+}
+
 export function PsdNode({ data, selected }: NodeProps) {
   const d = data as PsdNodeData
-  const Icon = KIND_ICON[d.kind] ?? FunnelIcon
+  const Icon =
+    d.kind === 'transform' && d.op && OP_ICON[d.op]
+      ? OP_ICON[d.op]!
+      : KIND_ICON[d.kind] ?? FunnelIcon
   const layer = d.layer ?? '—'
   const label = d.kind === 'transform' ? d.op ?? 'transform' : d.kind
 

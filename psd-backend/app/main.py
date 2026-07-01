@@ -39,6 +39,7 @@ from app.modules.reports.router import router as reports_router
 from app.modules.rooms.router import router as rooms_router
 from app.modules.collections.router import router as collections_router
 from app.modules.factory.router import router as factory_router
+from app.modules.harvest.router import router as harvest_router
 from app.modules.search.router import router as search_router
 from app.modules.social.router import router as social_router
 from app.modules.support.router import router as support_router
@@ -168,6 +169,7 @@ app.include_router(synthesis_router, prefix=settings.API_PREFIX)
 app.include_router(rooms_router, prefix=settings.API_PREFIX)
 app.include_router(collections_router, prefix=settings.API_PREFIX)
 app.include_router(factory_router, prefix=settings.API_PREFIX)
+app.include_router(harvest_router, prefix=settings.API_PREFIX)
 app.include_router(admin_router, prefix=settings.API_PREFIX)
 app.include_router(contrib_router, prefix=settings.API_PREFIX)
 app.include_router(hub_router, prefix="/api")

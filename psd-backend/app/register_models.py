@@ -22,6 +22,7 @@ def register_models() -> None:
     from app.modules.rooms import models as _rooms  # noqa: F401
     from app.modules.social import models as _social  # noqa: F401
     from app.modules.synthesis import models as _synthesis  # noqa: F401
+    from app.modules.harvest import models as _harvest  # noqa: F401
     from app.modules.teams import models as _teams  # noqa: F401
     from app.modules.orgs import models as _orgs  # noqa: F401
     from app.modules.users import models as _users  # noqa: F401

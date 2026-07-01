@@ -54,6 +54,8 @@ export const mockPipelines: MockPipeline[] = [
     status: 'valid',
     spec: validSpec,
     validation_error: null,
+    engine: 'auto',
+    schedule_cron: '0 2 * * *',
     team_id: null,
     room_id: null,
     owner_id: 'usr_01',

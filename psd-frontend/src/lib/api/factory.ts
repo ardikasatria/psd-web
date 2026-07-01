@@ -1,10 +1,13 @@
 import {
   DataSourceListSchema,
+  FactoryEngineLimitsSchema,
   FactoryQuotaSchema,
   LayerDownloadSchema,
   PaginatedPipelineSummary,
   PaginatedPipelineSummarySchema,
   Pipeline,
+  PipelineCompileResultSchema,
+  PipelinePreviewResultSchema,
   PipelineSchema,
   PipelineUpdateResultSchema,
   PipelineValidateResultSchema,
@@ -68,6 +71,22 @@ export const exportAirflowDag = (slug: string) =>
   apiFetch(`/pipelines/${slug}/airflow-dag`, z.object({ dag_id: z.string(), code: z.string() }))
 
 export const getFactoryQuota = () => apiFetch('/me/factory/quota', FactoryQuotaSchema)
+
+export const getFactoryEngineLimits = () =>
+  apiFetch('/me/factory/engine-limits', FactoryEngineLimitsSchema)
+
+export const compilePipeline = (slug: string, engine: 'duckdb' | 'spark' | 'auto' = 'auto') =>
+  apiFetch(
+    `/pipelines/${slug}/compile${buildQuery({ engine })}`,
+    PipelineCompileResultSchema,
+    { method: 'POST' },
+  )
+
+export const previewPipeline = (slug: string, limit = 50) =>
+  apiFetch(`/pipelines/${slug}/preview`, PipelinePreviewResultSchema, {
+    method: 'POST',
+    body: JSON.stringify({ limit }),
+  })
 
 export const runPipeline = (slug: string) =>
   apiFetch(`/pipelines/${slug}/run`, RunStartSchema, { method: 'POST' })

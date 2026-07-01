@@ -1,5 +1,6 @@
 'use client'
 
+import { CompiledScriptPanel } from '@/components/features/factory/CompiledScriptPanel'
 import { NodePalette } from '@/components/features/factory/NodePalette'
 import { NodePropertiesPanel } from '@/components/features/factory/NodePropertiesPanel'
 import { PipelineCanvas } from '@/components/features/factory/PipelineCanvas'
@@ -11,11 +12,14 @@ import { buildColumnsByNode, type ColumnDef } from '@/lib/factory/columnInferenc
 import { errorsByNodeId, type PsdNodeData } from '@/lib/factory/specFlow'
 import { DEFAULT_MAX_NODES, validatePipelineSpec } from '@/lib/factory/validate'
 import {
+  compilePipeline,
   exportAirflowDag,
+  getFactoryEngineLimits,
   getFactoryQuota,
   getPipeline,
   getSourceSchema,
   listSources,
+  previewPipeline,
   runPipeline,
   updatePipeline,
   validatePipeline,
@@ -44,6 +48,9 @@ export function PipelineDetailContent({ slug }: Props) {
   const [engine, setEngine] = useState<'auto' | 'duckdb' | 'spark'>('auto')
   const [scheduleCron, setScheduleCron] = useState('')
   const [dagError, setDagError] = useState<string | null>(null)
+  const [compiledScript, setCompiledScript] = useState<string | null>(null)
+  const [scriptLanguage, setScriptLanguage] = useState<string | null>(null)
+  const [previewRows, setPreviewRows] = useState<Record<string, unknown>[] | null>(null)
   const [mobilePanel, setMobilePanel] = useState<'palette' | 'properties' | null>(null)
 
   const { data, isLoading, isError, error } = useQuery<Pipeline>({
@@ -59,6 +66,11 @@ export function PipelineDetailContent({ slug }: Props) {
   const quota = useQuery({
     queryKey: ['factory-quota'],
     queryFn: getFactoryQuota,
+  })
+
+  const engineLimits = useQuery({
+    queryKey: ['factory-engine-limits'],
+    queryFn: getFactoryEngineLimits,
   })
 
   useEffect(() => {
@@ -165,11 +177,31 @@ export function PipelineDetailContent({ slug }: Props) {
 
   const validateMutation = useMutation({
     mutationFn: () => validatePipeline(slug),
-    onSuccess: (res) => {
+    onSuccess: async (res) => {
       setLocalErrors(res.errors)
+      const script = res.compiled_script ?? res.compiled_sql
+      if (script) {
+        setCompiledScript(script)
+        setScriptLanguage(res.script_language ?? (engine === 'spark' ? 'pyspark' : 'sql'))
+      } else {
+        const eng = engine === 'auto' ? (engineLimits.data?.suggested_engine ?? 'duckdb') : engine
+        try {
+          const compiled = await compilePipeline(slug, eng)
+          setCompiledScript(compiled.script)
+          setScriptLanguage(compiled.language)
+        } catch {
+          /* optional */
+        }
+      }
       qc.invalidateQueries({ queryKey: ['factory-pipeline', slug] })
       qc.invalidateQueries({ queryKey: ['factory-pipelines'] })
     },
+  })
+
+  const previewMutation = useMutation({
+    mutationFn: () => previewPipeline(slug),
+    onSuccess: (res) => setPreviewRows(res.rows),
+    onError: (e: Error) => setRunError(e.message),
   })
 
   const runMutation = useMutation({
@@ -180,6 +212,20 @@ export function PipelineDetailContent({ slug }: Props) {
       qc.invalidateQueries({ queryKey: ['factory-quota'] })
     },
     onError: (e: Error) => {
+      if (e instanceof ApiError) {
+        if (e.code === 'engine_locked') {
+          setRunError('Engine terkunci untuk tier Anda. Buka panduan atau naik tier.')
+          return
+        }
+        if (e.code === 'quota_exceeded' || e.status === 429) {
+          setRunError('Kuota run harian habis.')
+          return
+        }
+        if (e.status === 413) {
+          setRunError('Ukuran data melebihi batas tier. Perkecil data atau naik tier.')
+          return
+        }
+      }
       setRunError(e instanceof ApiError && e.status === 429 ? 'Kuota run harian habis.' : e.message)
     },
   })
@@ -269,6 +315,7 @@ export function PipelineDetailContent({ slug }: Props) {
               status={data.status}
               pipelineId={data.id}
               engine={engine}
+              engineLimits={engineLimits.data}
               onEngineChange={handleEngineChange}
               scheduleCron={scheduleCron}
               onScheduleCronChange={setScheduleCron}
@@ -280,12 +327,46 @@ export function PipelineDetailContent({ slug }: Props) {
               runsLeft={runsLeft}
               isSaving={saveMutation.isPending}
               isValidating={validateMutation.isPending}
+              isPreviewing={previewMutation.isPending}
               isRunning={runMutation.isPending}
               canRun={canRun}
               onSave={handleSave}
               onValidate={handleValidate}
+              onPreview={() => previewMutation.mutate()}
               onRun={() => runMutation.mutate()}
             />
+
+            <CompiledScriptPanel script={compiledScript} language={scriptLanguage} />
+
+            {previewRows && previewRows.length > 0 && (
+              <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white dark:border-neutral-700 dark:bg-neutral-800">
+                <div className="border-b border-neutral-200/80 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700">
+                  Pratinjau ({previewRows.length} baris)
+                </div>
+                <table className="min-w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-neutral-100 dark:border-neutral-700">
+                      {Object.keys(previewRows[0]!).map((k) => (
+                        <th key={k} className="px-3 py-2 font-semibold text-neutral-600 dark:text-neutral-300">
+                          {k}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {previewRows.slice(0, 10).map((row, ri) => (
+                      <tr key={ri} className="border-b border-neutral-50 dark:border-neutral-800">
+                        {Object.values(row).map((v, ci) => (
+                          <td key={ci} className="max-w-[10rem] truncate px-3 py-1.5 text-neutral-700 dark:text-neutral-300">
+                            {String(v)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {dagError && (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
@@ -301,7 +382,11 @@ export function PipelineDetailContent({ slug }: Props) {
 
             <div className="relative pb-20 xl:pb-0">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
-                <NodePalette className="hidden xl:block" onAdd={handleAddNode} />
+                <NodePalette
+                  className="hidden xl:block"
+                  engineLimits={engineLimits.data}
+                  onAdd={handleAddNode}
+                />
                 {data.spec && (
                   <PipelineCanvas
                     key={slug}
@@ -361,7 +446,7 @@ export function PipelineDetailContent({ slug }: Props) {
                 <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
                   Ketuk jenis node untuk menambahkannya ke kanvas.
                 </p>
-                <NodePalette embedded onAdd={handleAddNode} />
+                <NodePalette embedded engineLimits={engineLimits.data} onAdd={handleAddNode} />
               </DialogBody>
             </Dialog>
 
