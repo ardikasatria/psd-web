@@ -26,6 +26,14 @@ from app.perf.integration import fetch_schema_payload, fetch_widget_payload
 from app.perf.deps import get_cache
 from app.perf import targets as perf_targets
 from app.modules.factory.quota import quota_for
+from app.modules.factory.trash import (
+    assert_can_manage_pipeline,
+    is_active,
+    permanent_delete_pipeline,
+    restore_pipeline,
+    soft_delete_pipeline,
+    trash_summary_fields,
+)
 from app.modules.factory.validate import validate_spec
 from app.tasks.dispatch import submit_pipeline
 from app.modules.repos.models import Repo
@@ -36,6 +44,8 @@ router = APIRouter(tags=["factory"])
 
 
 async def _can_edit_pipeline(db: AsyncSession, pl: Pipeline, user: User) -> None:
+    if not is_active(pl):
+        raise ApiError(410, "trashed", "Pipeline berada di trash. Pulihkan dari dasbor Sampah.")
     if pl.owner_id == user.id:
         return
     if pl.team_id and await membership(db, pl.team_id, user.id):
@@ -45,6 +55,8 @@ async def _can_edit_pipeline(db: AsyncSession, pl: Pipeline, user: User) -> None
 
 async def _ensure_can_view_pipeline(db: AsyncSession, pl: Pipeline, user: User | None) -> None:
     """Pipeline privat — pemilik, anggota tim aset, atau staf."""
+    if not is_active(pl):
+        raise ApiError(410, "trashed", "Pipeline berada di trash. Pulihkan dari dasbor Sampah.")
     if user is not None:
         if pl.owner_id == user.id:
             return
@@ -73,10 +85,12 @@ async def _runs_today(db: AsyncSession, owner_id: str) -> int:
     ).scalar_one()
 
 
-async def _get_pipeline_by_slug(db: AsyncSession, slug: str) -> Pipeline:
+async def _get_pipeline_by_slug(db: AsyncSession, slug: str, *, include_trashed: bool = False) -> Pipeline:
     pl = (await db.execute(select(Pipeline).where(Pipeline.slug == slug))).scalar_one_or_none()
     if not pl:
         raise ApiError(404, "not_found", "Pipeline tidak ditemukan")
+    if not include_trashed and not is_active(pl):
+        raise ApiError(410, "trashed", "Pipeline berada di trash. Pulihkan dari dasbor Sampah.")
     return pl
 
 
@@ -215,7 +229,11 @@ async def list_pipelines(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(Pipeline).where(Pipeline.owner_id == user.id).order_by(Pipeline.updated_at.desc())
+    stmt = (
+        select(Pipeline)
+        .where(Pipeline.owner_id == user.id, Pipeline.deleted_at.is_(None))
+        .order_by(Pipeline.updated_at.desc())
+    )
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
     rows = (await db.execute(stmt.offset(p.offset).limit(p.page_size))).scalars().all()
     return paginated(
@@ -329,15 +347,57 @@ async def preview_pipeline(
     return {"rows": rows}
 
 
-@router.delete("/pipelines/{slug}", status_code=204)
+@router.delete("/pipelines/{slug}")
 async def delete_pipeline(
     slug: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
-    pl = (await db.execute(select(Pipeline).where(Pipeline.slug == slug))).scalar_one_or_none()
-    if pl:
-        await _can_edit_pipeline(db, pl, user)
-        await db.delete(pl)
-        await db.commit()
+    pl = await _get_pipeline_by_slug(db, slug, include_trashed=True)
+    return await soft_delete_pipeline(db, pl, user)
+
+
+@router.post("/pipelines/{slug}/restore")
+async def restore_pipeline_endpoint(
+    slug: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    pl = await _get_pipeline_by_slug(db, slug, include_trashed=True)
+    return await restore_pipeline(db, pl, user)
+
+
+@router.delete("/pipelines/{slug}/permanent", status_code=204)
+async def permanent_delete_pipeline_endpoint(
+    slug: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    pl = await _get_pipeline_by_slug(db, slug, include_trashed=True)
+    if is_active(pl):
+        raise ApiError(400, "not_trashed", "Hapus ke trash terlebih dahulu sebelum penghapusan permanen.")
+    await assert_can_manage_pipeline(db, pl, user)
+    await permanent_delete_pipeline(db, pl)
+
+
+@router.get("/me/pipelines/trash")
+async def list_pipeline_trash(
+    p: PageParams = Depends(page_params),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = (
+        select(Pipeline)
+        .where(Pipeline.owner_id == user.id, Pipeline.deleted_at.is_not(None))
+        .order_by(Pipeline.deleted_at.desc())
+    )
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
+    rows = (await db.execute(stmt.offset(p.offset).limit(p.page_size))).scalars().all()
+    items = [
+        {
+            "id": x.id,
+            "slug": x.slug,
+            "title": x.title,
+            "status": x.status,
+            **trash_summary_fields(x),
+        }
+        for x in rows
+    ]
+    return paginated(items, total, p)
 
 
 @router.post("/pipelines/{slug}/run", status_code=202)

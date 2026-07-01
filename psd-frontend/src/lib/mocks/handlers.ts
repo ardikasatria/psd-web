@@ -136,6 +136,7 @@ import {
   mockDataSources,
   mockPipelines,
   pipelineSummaryOf,
+  pipelineTrashForUser,
   pipelinesForUser,
   sourcesForUser,
   type MockPipeline,
@@ -4629,8 +4630,11 @@ export const handlers = [
   }),
 
   http.get(`${API}/pipelines/:slug`, ({ params, request }) => {
-    const pl = findMockPipeline(String(params.slug))
+    const pl = mockPipelines.find((p) => p.slug === String(params.slug))
     if (!pl) return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
+    if (pl.deleted_at) {
+      return errorResponse(410, 'trashed', 'Pipeline berada di trash. Pulihkan dari dasbor Sampah.')
+    }
     if (!canViewPipeline(pl, resolveUserFromRequest(request))) {
       return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
     }
@@ -4738,9 +4742,72 @@ with DAG(
   http.delete(`${API}/pipelines/:slug`, ({ request, params }) => {
     const user = resolveUserFromRequest(request)
     if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const pl = mockPipelines.find((p) => p.slug === String(params.slug) && p.owner_id === user.id)
+    if (!pl) return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
+    if (pl.deleted_at) return errorResponse(409, 'already_trashed', 'Pipeline sudah ada di trash')
+    const deletedAt = new Date().toISOString()
+    const purgeAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    pl.deleted_at = deletedAt
+    pl.deleted_by_id = user.id
+    return HttpResponse.json({
+      trashed: true,
+      deleted_at: deletedAt,
+      purge_at: purgeAt,
+      days_until_purge: 30,
+    })
+  }),
+
+  http.post(`${API}/pipelines/:slug/restore`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const pl = mockPipelines.find((p) => p.slug === String(params.slug) && p.owner_id === user.id)
+    if (!pl) return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
+    if (!pl.deleted_at) return errorResponse(409, 'not_trashed', 'Pipeline tidak berada di trash')
+    pl.deleted_at = null
+    pl.deleted_by_id = null
+    return HttpResponse.json({ restored: true, id: pl.id, slug: pl.slug })
+  }),
+
+  http.delete(`${API}/pipelines/:slug/permanent`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
     const idx = mockPipelines.findIndex((p) => p.slug === String(params.slug) && p.owner_id === user.id)
-    if (idx >= 0) mockPipelines.splice(idx, 1)
+    if (idx < 0) return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
+    const pl = mockPipelines[idx]!
+    if (!pl.deleted_at) return errorResponse(400, 'not_trashed', 'Hapus ke trash terlebih dahulu')
+    mockPipelines.splice(idx, 1)
     return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.get(`${API}/me/pipelines/trash`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+    const url = new URL(request.url)
+    const page = Number(url.searchParams.get('page') ?? '1')
+    const pageSize = Number(url.searchParams.get('page_size') ?? '50')
+    const items = pipelineTrashForUser(user.id).map((p) => {
+      const deletedAt = p.deleted_at!
+      const purgeAt = new Date(new Date(deletedAt).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      const daysLeft = Math.max(
+        0,
+        Math.ceil((new Date(purgeAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)),
+      )
+      return {
+        ...pipelineSummaryOf(p),
+        deleted_at: deletedAt,
+        purge_at: purgeAt,
+        days_until_purge: daysLeft,
+      }
+    })
+    const total = items.length
+    const start = (page - 1) * pageSize
+    return HttpResponse.json({
+      items: items.slice(start, start + pageSize),
+      total,
+      page,
+      page_size: pageSize,
+      pages: Math.max(1, Math.ceil(total / pageSize)),
+    })
   }),
 
   http.get(`${API}/me/factory/quota`, ({ request }) => {

@@ -2,7 +2,12 @@ import type { DataSource, Pipeline, PipelineSpec, PipelineSummary } from '@/type
 
 export type MockDataSource = DataSource & { owner_id: string }
 
-export type MockPipeline = Pipeline & { id: string; owner_id: string }
+export type MockPipeline = Pipeline & {
+  id: string
+  owner_id: string
+  deleted_at?: string | null
+  deleted_by_id?: string | null
+}
 
 const validSpec: PipelineSpec = {
   nodes: [
@@ -102,11 +107,19 @@ export function sourcesForUser(userId: string | undefined): DataSource[] {
 
 export function pipelinesForUser(userId: string | undefined): MockPipeline[] {
   if (!userId) return []
-  return mockPipelines.filter((p) => p.owner_id === userId)
+  return mockPipelines.filter((p) => p.owner_id === userId && !p.deleted_at)
 }
 
-export function findMockPipeline(slug: string): MockPipeline | undefined {
-  return mockPipelines.find((p) => p.slug === slug)
+export function pipelineTrashForUser(userId: string | undefined): MockPipeline[] {
+  if (!userId) return []
+  return mockPipelines.filter((p) => p.owner_id === userId && !!p.deleted_at)
+}
+
+export function findMockPipeline(slug: string, opts?: { includeTrashed?: boolean }): MockPipeline | undefined {
+  const pl = mockPipelines.find((p) => p.slug === slug)
+  if (!pl) return undefined
+  if (!opts?.includeTrashed && pl.deleted_at) return undefined
+  return pl
 }
 
 export function pipelineSummaryOf(p: MockPipeline): PipelineSummary {

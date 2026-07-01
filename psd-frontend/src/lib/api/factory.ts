@@ -5,6 +5,8 @@ import {
   LayerDownloadSchema,
   PaginatedPipelineSummary,
   PaginatedPipelineSummarySchema,
+  PaginatedTrashPipeline,
+  PaginatedTrashPipelineSchema,
   Pipeline,
   PipelineCompileResultSchema,
   PipelinePreviewResultSchema,
@@ -65,7 +67,33 @@ export const updatePipeline = (
 export const validatePipeline = (slug: string) =>
   apiFetch(`/pipelines/${slug}/validate`, PipelineValidateResultSchema, { method: 'POST' })
 
-export const deletePipeline = (slug: string) => apiDelete(`/pipelines/${slug}`)
+/** Pindahkan pipeline ke trash (soft delete, retensi 30 hari). */
+export const trashPipeline = (slug: string) =>
+  apiFetch(
+    `/pipelines/${slug}`,
+    z.object({
+      trashed: z.boolean(),
+      deleted_at: z.string(),
+      purge_at: z.string(),
+      days_until_purge: z.number(),
+    }),
+    { method: 'DELETE' },
+  )
+
+/** @deprecated Gunakan trashPipeline — tetap ada untuk kompatibilitas. */
+export const deletePipeline = trashPipeline
+
+export const restorePipeline = (slug: string) =>
+  apiFetch(
+    `/pipelines/${slug}/restore`,
+    z.object({ restored: z.boolean(), id: z.string(), slug: z.string() }),
+    { method: 'POST' },
+  )
+
+export const permanentDeletePipeline = (slug: string) => apiDelete(`/pipelines/${slug}/permanent`)
+
+export const listPipelineTrash = (q: { page?: number; page_size?: number } = {}) =>
+  apiFetch<PaginatedTrashPipeline>(`/me/pipelines/trash${buildQuery(q)}`, PaginatedTrashPipelineSchema)
 
 export const exportAirflowDag = (slug: string) =>
   apiFetch(`/pipelines/${slug}/airflow-dag`, z.object({ dag_id: z.string(), code: z.string() }))

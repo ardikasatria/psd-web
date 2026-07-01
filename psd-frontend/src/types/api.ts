@@ -2121,6 +2121,16 @@ export type PipelineSummary = z.infer<typeof PipelineSummarySchema>
 export const PaginatedPipelineSummarySchema = Paginated(PipelineSummarySchema)
 export type PaginatedPipelineSummary = PaginatedResult<PipelineSummary>
 
+export const TrashPipelineSummarySchema = PipelineSummarySchema.extend({
+  deleted_at: z.string(),
+  purge_at: z.string(),
+  days_until_purge: z.number(),
+})
+export type TrashPipelineSummary = z.infer<typeof TrashPipelineSummarySchema>
+
+export const PaginatedTrashPipelineSchema = Paginated(TrashPipelineSummarySchema)
+export type PaginatedTrashPipeline = PaginatedResult<TrashPipelineSummary>
+
 export const PipelineSchema = PipelineSummarySchema.extend({
   spec: PipelineSpecSchema.optional(),
   validation_error: z.string().nullable().optional(),

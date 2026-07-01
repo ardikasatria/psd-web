@@ -12,6 +12,7 @@ import {
   addEdge,
   useEdgesState,
   useNodesState,
+  useReactFlow,
   type Connection,
   type Edge,
   type Node,
@@ -61,6 +62,26 @@ function applyEdgeHighlight(edges: Edge[], highlightEdges?: Set<string>) {
   }))
 }
 
+function nodeDataFromSpec(sn: PipelineNode, error?: string): PsdNodeData {
+  return {
+    kind: sn.type,
+    op: sn.op,
+    layer: sn.layer,
+    params: (sn.params ?? {}) as Record<string, unknown>,
+    error,
+  }
+}
+
+function nodeDataChanged(a: PsdNodeData, b: PsdNodeData) {
+  return (
+    a.kind !== b.kind ||
+    a.op !== b.op ||
+    a.layer !== b.layer ||
+    a.error !== b.error ||
+    JSON.stringify(a.params) !== JSON.stringify(b.params)
+  )
+}
+
 function CanvasInner({
   pipelineSlug,
   initialSpec,
@@ -75,6 +96,7 @@ function CanvasInner({
   className,
 }: Props) {
   const colorMode = useColorMode()
+  const { fitView } = useReactFlow()
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<PsdNodeData>>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
@@ -89,26 +111,33 @@ function CanvasInner({
     const { nodes: n, edges: e } = specToFlow(initialSpec)
     setNodes(applyErrors(n, nodeErrors))
     setEdges(applyEdgeHighlight(e, highlightEdges))
-  }, [pipelineSlug, setNodes, setEdges])
+    requestAnimationFrame(() => fitView({ padding: 0.15, duration: 200 }))
+    // Reset kanvas hanya saat pindah pipeline, bukan tiap refetch API.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pipelineSlug, setNodes, setEdges, fitView])
 
   useEffect(() => {
-    setNodes((nds) =>
-      nds.map((n) => {
+    setNodes((nds) => {
+      let changed = false
+      const next = nds.map((n) => {
         const sn = liveSpec.nodes.find((x) => x.id === n.id)
         if (!sn) return n
-        return {
-          ...n,
-          data: {
-            kind: sn.type,
-            op: sn.op,
-            layer: sn.layer,
-            params: (sn.params ?? {}) as Record<string, unknown>,
-            error: nodeErrors[n.id],
-          },
-        }
-      }),
-    )
+        const data = nodeDataFromSpec(sn, nodeErrors[n.id])
+        if (!nodeDataChanged(n.data, data)) return n
+        changed = true
+        return { ...n, data }
+      })
+      return changed ? next : nds
+    })
   }, [liveSpec, nodeErrors, setNodes])
+
+  useEffect(() => {
+    setNodes((nds) => {
+      const needs = nds.some((n) => Boolean(n.selected) !== (n.id === selectedId))
+      if (!needs) return nds
+      return nds.map((n) => ({ ...n, selected: n.id === selectedId }))
+    })
+  }, [selectedId, setNodes])
 
   useEffect(() => {
     setEdges((eds) => applyEdgeHighlight(eds, highlightEdges))
@@ -175,15 +204,16 @@ function CanvasInner({
       )}
     >
       <ReactFlow
-        nodes={nodes.map((n) => ({ ...n, selected: n.id === selectedId }))}
+        nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDragStop={onNodeDragStop}
-        onNodeClick={(_, node) => onSelect(node.id)}
-        onPaneClick={() => onSelect(null)}
-        onSelectionChange={({ nodes: sel }) => onSelect(sel[0]?.id ?? null)}
+        onSelectionChange={({ nodes: sel }) => {
+          const next = sel[0]?.id ?? null
+          if (next !== selectedId) onSelect(next)
+        }}
         nodesDeletable
         onNodesDelete={(deleted) => {
           const ids = new Set(deleted.map((d) => d.id))
@@ -202,7 +232,6 @@ function CanvasInner({
         }}
         nodeTypes={psdNodeTypes}
         colorMode={colorMode}
-        fitView
         deleteKeyCode={['Backspace', 'Delete']}
         className="bg-neutral-50 dark:bg-neutral-900/80"
       >

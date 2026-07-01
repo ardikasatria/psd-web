@@ -4,7 +4,7 @@ import { Button } from '@/shared/Button'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import Input from '@/shared/Input'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 type Props = {
   open: boolean
@@ -30,6 +30,10 @@ export function RepoDeleteDialog({
 }: Props) {
   const [typed, setTyped] = useState('')
 
+  useEffect(() => {
+    if (!open) setTyped('')
+  }, [open])
+
   if (!open) return null
 
   const confirmed = typed.trim() === confirmName
@@ -49,7 +53,7 @@ export function RepoDeleteDialog({
               Hapus {kindLabel}?
             </h2>
             <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-              Aset <span className="font-mono font-medium text-neutral-800 dark:text-neutral-200">{slug}</span>{' '}
+              <span className="font-mono font-medium text-neutral-800 dark:text-neutral-200">{slug}</span>{' '}
               akan dipindahkan ke <strong>Sampah</strong> selama 30 hari. Anda masih bisa memulihkannya dari dasbor
               Sampah. Setelah 30 hari, penghapusan permanen otomatis.
             </p>

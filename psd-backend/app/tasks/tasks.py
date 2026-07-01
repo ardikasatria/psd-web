@@ -38,13 +38,16 @@ def purge_trash_job(self) -> dict:
 
     from app.core.db import SessionLocal
     from app.modules.repos.trash import purge_expired_trash
+    from app.modules.factory.trash import purge_expired_pipeline_trash
 
-    async def _run() -> int:
+    async def _run() -> dict:
         async with SessionLocal() as db:
-            return await purge_expired_trash(db)
+            repos = await purge_expired_trash(db)
+            pipelines = await purge_expired_pipeline_trash(db)
+            return {"repos": repos, "pipelines": pipelines}
 
-    count = asyncio.run(_run())
-    return {"purged": count}
+    result = asyncio.run(_run())
+    return {"purged": result["repos"] + result["pipelines"], **result}
 
 
 @celery_app.task(bind=True, base=PSDTask, name="psd.serving.retrain")

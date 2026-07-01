@@ -7,6 +7,7 @@ import { PipelineCanvas } from '@/components/features/factory/PipelineCanvas'
 import { PipelineRunsPanel } from '@/components/features/factory/PipelineRunsPanel'
 import { PipelineToolbar } from '@/components/features/factory/PipelineToolbar'
 import { PipelineStatusBadge } from '@/components/features/factory/pipeline-utils'
+import { RepoDeleteDialog } from '@/components/features/repos/RepoDeleteDialog'
 import { QueryState } from '@/components/features/QueryState'
 import { buildColumnsByNode, type ColumnDef } from '@/lib/factory/columnInference'
 import { errorsByNodeId, type PsdNodeData } from '@/lib/factory/specFlow'
@@ -21,6 +22,7 @@ import {
   listSources,
   previewPipeline,
   runPipeline,
+  trashPipeline,
   updatePipeline,
   validatePipeline,
 } from '@/lib/api/factory'
@@ -29,6 +31,7 @@ import { ApiError } from '@/lib/api/client'
 import { ExclamationCircleIcon, CheckCircleIcon, AdjustmentsHorizontalIcon, PlusCircleIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Dialog, DialogBody, DialogTitle } from '@/shared/dialog'
 import { Button } from '@/shared/Button'
@@ -39,6 +42,7 @@ type Props = {
 
 export function PipelineDetailContent({ slug }: Props) {
   const qc = useQueryClient()
+  const router = useRouter()
   const addNodeRef = useRef<((kind: PipelineNode['type'], op?: PipelineNode['op']) => string) | null>(null)
   const deleteNodeRef = useRef<((nodeId: string) => void) | null>(null)
   const [draftSpec, setDraftSpec] = useState<PipelineSpec>({ nodes: [], edges: [] })
@@ -53,6 +57,7 @@ export function PipelineDetailContent({ slug }: Props) {
   const [scriptLanguage, setScriptLanguage] = useState<string | null>(null)
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[] | null>(null)
   const [mobilePanel, setMobilePanel] = useState<'palette' | 'properties' | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const { data, isLoading, isError, error } = useQuery<Pipeline>({
     queryKey: ['factory-pipeline', slug],
@@ -77,10 +82,11 @@ export function PipelineDetailContent({ slug }: Props) {
   })
 
   useEffect(() => {
-    if (data?.spec) setDraftSpec(data.spec)
-    if (data?.engine) setEngine(data.engine)
-    if (data?.schedule_cron != null) setScheduleCron(data.schedule_cron)
-  }, [data?.spec, data?.engine, data?.schedule_cron, slug])
+    if (!data) return
+    setDraftSpec(data.spec ?? { nodes: [], edges: [] })
+    if (data.engine) setEngine(data.engine)
+    if (data.schedule_cron != null) setScheduleCron(data.schedule_cron)
+  }, [data?.id, slug])
 
   const sourceIds = useMemo(
     () =>
@@ -95,22 +101,22 @@ export function PipelineDetailContent({ slug }: Props) {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const next: Record<string, ColumnDef[]> = { ...schemas }
       for (const sid of sourceIds) {
-        if (next[sid]?.length) continue
         try {
           const res = await getSourceSchema(sid)
-          if (!cancelled) next[sid] = res.columns
+          if (cancelled) return
+          setSchemas((prev) => {
+            if (prev[sid]?.length) return prev
+            return { ...prev, [sid]: res.columns }
+          })
         } catch {
           /* ignore */
         }
       }
-      if (!cancelled) setSchemas(next)
     })()
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceIds.join(',')])
 
   const columnsByNode = useMemo(() => buildColumnsByNode(draftSpec, schemas), [draftSpec, schemas])
@@ -123,6 +129,16 @@ export function PipelineDetailContent({ slug }: Props) {
       : data?.validation_error
         ? data.validation_error.split('; ').filter(Boolean)
         : []
+
+  const trashMut = useMutation({
+    mutationFn: () => trashPipeline(slug),
+    onSuccess: () => {
+      setDeleteOpen(false)
+      qc.invalidateQueries({ queryKey: ['factory-pipelines'] })
+      qc.invalidateQueries({ queryKey: ['pipeline-trash'] })
+      router.push('/dashboard/trash')
+    },
+  })
 
   const saveMutation = useMutation({
     mutationFn: (spec: PipelineSpec) => updatePipeline(slug, { spec, engine }),
@@ -307,8 +323,12 @@ export function PipelineDetailContent({ slug }: Props) {
         {data && (
           <>
             <div className="rounded-3xl border border-neutral-200/80 bg-white p-6 dark:border-neutral-700 dark:bg-neutral-800 sm:p-8">
-              <div className="mb-2">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
                 <PipelineStatusBadge status={data.status} />
+                <Button type="button" outline className="!text-red-600" onClick={() => setDeleteOpen(true)}>
+                  <TrashIcon className="size-4" aria-hidden />
+                  Hapus pipeline
+                </Button>
               </div>
               <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50 sm:text-3xl">{data.title}</h1>
               <p className="mt-1 font-mono text-sm text-neutral-500 dark:text-neutral-400">{data.slug}</p>
@@ -500,6 +520,16 @@ export function PipelineDetailContent({ slug }: Props) {
             </Dialog>
 
             <PipelineRunsPanel slug={slug} pipeline={data} />
+
+            <RepoDeleteDialog
+              open={deleteOpen}
+              slug={data.slug}
+              confirmName={data.title}
+              kindLabel="pipeline"
+              onCancel={() => setDeleteOpen(false)}
+              onConfirm={() => trashMut.mutate()}
+              pending={trashMut.isPending}
+            />
           </>
         )}
       </QueryState>

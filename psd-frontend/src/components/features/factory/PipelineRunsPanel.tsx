@@ -55,12 +55,13 @@ export function PipelineRunsPanel({ slug, pipeline }: Props) {
   })
 
   const runItems = runs.data?.items ?? []
+  const firstRunId = runItems[0]?.id
 
   useEffect(() => {
-    if (!selectedRunId && runItems.length > 0) {
-      setSelectedRunId(runItems[0].id)
+    if (!selectedRunId && firstRunId) {
+      setSelectedRunId(firstRunId)
     }
-  }, [runItems, selectedRunId])
+  }, [firstRunId, selectedRunId])
 
   const activeRun = useQuery<RunDetail>({
     queryKey: ['factory-run', slug, selectedRunId],
