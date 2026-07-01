@@ -12,6 +12,7 @@ import {
   SparklesIcon,
 } from '@heroicons/react/24/outline'
 import Link from 'next/link'
+import clsx from 'clsx'
 
 const SECTIONS = [
   {
@@ -22,13 +23,20 @@ const SECTIONS = [
   {
     id: 'engine',
     title: 'Dua pilihan engine',
-    body: null,
-    table: [
-      ['Ukuran data kecil–menengah, butuh cepat', 'DuckDB (SQL)', 'Spark (PySpark)'],
-      ['Data besar / terdistribusi', '—', 'Spark'],
-      ['Node SQL SELECT-only', 'Tier menengah+', 'Spark SQL'],
-      ['Node kode .py kustom', '—', 'Tier lanjut + akses kernel'],
+    body: 'Setiap pipeline dijalankan oleh engine yang Anda pilih di toolbar kanvas. Node visual dikompilasi otomatis — ke SQL (DuckDB) atau PySpark (Spark) — sehingga Anda bisa belajar dari skrip yang ditampilkan saat validasi.',
+    bullets: [
+      'DuckDB — SQL in-process, cepat untuk eksplorasi dan pipeline harian pada data kecil–menengah.',
+      'Spark — komputasi terdistribusi untuk volume besar; node PySpark .py tersedia di tier Lanjut (butuh akses kernel).',
+      'Auto — sistem memperkirakan ukuran data sumber lalu memilih DuckDB (kecil) atau Spark (besar).',
     ],
+    tableHeaders: ['Pertanyaan', 'DuckDB (SQL)', 'Spark (PySpark)'],
+    tableRows: [
+      ['Ukuran data', 'Kecil–menengah (hingga batas tier)', 'Besar / terdistribusi'],
+      ['Kecepatan & interaktivitas', 'Hampir instan, hemat sumber daya', 'Lebih berat, startup lebih lama'],
+      ['Bahasa & node kode', 'SQL SELECT-only (tier menengah+)', 'Spark SQL + node PySpark .py (tier lanjut)'],
+      ['Kapan memakai', 'Eksplorasi, pipeline harian, data muat satu mesin', 'Data melebihi kapasitas DuckDB atau butuh paralel'],
+    ],
+    note: 'Tidak yakin? Pilih Auto — sistem memilih engine yang paling sesuai dari estimasi ukuran data sumber Anda.',
   },
   {
     id: 'nodes',
@@ -144,6 +152,55 @@ export function FactoryGuideContent() {
         <section key={s.id} className={`${factoryGradient.conceptBr}`}>
           <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">{s.title}</h2>
           {s.body && <p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">{s.body}</p>}
+          {s.bullets && (
+            <ul className="mt-4 space-y-2 text-sm text-neutral-700 dark:text-neutral-300">
+              {s.bullets.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <CheckCircleIcon className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {s.tableHeaders && s.tableRows && (
+            <div className="mt-4 overflow-x-auto rounded-xl border border-neutral-200/80 dark:border-neutral-700">
+              <table className="min-w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-200 bg-neutral-50/80 dark:border-neutral-700 dark:bg-neutral-900/50">
+                    {s.tableHeaders.map((h) => (
+                      <th key={h} className="px-3 py-2.5 font-semibold text-neutral-900 dark:text-neutral-100">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {s.tableRows.map((row) => (
+                    <tr key={row[0]} className="border-b border-neutral-100 last:border-0 dark:border-neutral-800">
+                      {row.map((cell, i) => (
+                        <td
+                          key={`${row[0]}-${i}`}
+                          className={clsx(
+                            'px-3 py-2.5',
+                            i === 0
+                              ? 'font-medium text-neutral-800 dark:text-neutral-200'
+                              : 'text-neutral-600 dark:text-neutral-400',
+                          )}
+                        >
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {s.note && (
+            <p className="mt-4 rounded-xl border border-amber-200/80 bg-amber-50/60 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100">
+              {s.note}
+            </p>
+          )}
           {s.items && (
             <ul className="mt-4 list-disc space-y-1 ps-5 text-sm text-neutral-700 dark:text-neutral-300">
               {s.items.map((item) => (

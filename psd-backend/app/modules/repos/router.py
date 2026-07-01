@@ -20,6 +20,7 @@ from app.modules.gamification.service import after_repo_created
 from app.modules.gamification.tiers import perks_for
 from app.modules.repos.models import Repo, RepoLike
 from app.modules.repos.schemas import RepoUpdate, to_detail, to_summary
+from app.modules.repos.visibility import ensure_can_view_repo, viewer_visibility_filter
 from app.modules.repos.trash import (
     is_active,
     permanent_delete_repo,
@@ -100,7 +101,8 @@ async def _repo_summary(db: AsyncSession, r: Repo) -> dict:
     return to_summary(r, cat, sub, tm)
 
 
-async def _list(db, kind, q, tags, sort, category, subcategory, team, p: PageParams):
+async def _list(db, kind, q, tags, sort, category, subcategory, team, p: PageParams, viewer=None):
+    vis_clause = viewer_visibility_filter(viewer)
     if q or tags:
         filters = [f'kind = "{kind}"']
         if tags:
@@ -117,11 +119,10 @@ async def _list(db, kind, q, tags, sort, category, subcategory, team, p: PagePar
             )
             ids = [h["id"] for h in res["hits"]]
             if ids:
-                rows = (
-                    await db.execute(
-                        select(Repo).where(Repo.id.in_(ids), Repo.deleted_at.is_(None))
-                    )
-                ).scalars().all()
+                id_stmt = select(Repo).where(Repo.id.in_(ids), Repo.deleted_at.is_(None))
+                if vis_clause is not None:
+                    id_stmt = id_stmt.where(vis_clause)
+                rows = (await db.execute(id_stmt)).scalars().all()
                 order = {rid: i for i, rid in enumerate(ids)}
                 rows.sort(key=lambda r: order.get(r.id, len(ids)))
             else:
@@ -138,6 +139,8 @@ async def _list(db, kind, q, tags, sort, category, subcategory, team, p: PagePar
             pass
 
     stmt = _active_only(select(Repo).where(Repo.kind == kind))
+    if vis_clause is not None:
+        stmt = stmt.where(vis_clause)
     if q:
         stmt = stmt.where(Repo.name.ilike(f"%{q}%") | Repo.description.ilike(f"%{q}%"))
     if tags:
@@ -168,7 +171,7 @@ async def _list(db, kind, q, tags, sort, category, subcategory, team, p: PagePar
     return paginated(items, total, p)
 
 
-async def _detail(db, kind, owner, name):
+async def _detail(db, kind, owner, name, viewer=None):
     slug = f"{owner}/{name}"
     r = (
         await db.execute(
@@ -177,6 +180,7 @@ async def _detail(db, kind, owner, name):
     ).scalar_one_or_none()
     if not r:
         raise ApiError(404, "not_found", "Aset tidak ditemukan")
+    await ensure_can_view_repo(db, r, viewer)
     cat, sub = await load_category_refs(db, r.category_id, r.subcategory_id)
     tm = await team_ref(db, r.team_id)
     fr = await _from_room_ref(db, getattr(r, "room_id", None))
@@ -214,7 +218,7 @@ async def _detail_with_liked_for_repo(db: AsyncSession, r: Repo, user: User | No
 
 
 async def _detail_with_liked(db, kind, owner, name, user: User | None):
-    data = await _detail(db, kind, owner, name)
+    data = await _detail(db, kind, owner, name, viewer=user)
     liked = False
     if user:
         liked = bool(
@@ -236,9 +240,10 @@ def _register(seg: str, kind: str):
         subcategory: str | None = None,
         team: str | None = None,
         p: PageParams = Depends(page_params),
+        user: User | None = Depends(get_current_user_optional),
         db: AsyncSession = Depends(get_db),
     ):
-        return await _list(db, kind, q, tags, sort, category, subcategory, team, p)
+        return await _list(db, kind, q, tags, sort, category, subcategory, team, p, viewer=user)
 
     async def detail_ep(
         owner: str,

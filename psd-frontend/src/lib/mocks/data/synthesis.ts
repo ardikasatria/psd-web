@@ -3,7 +3,10 @@ import type { SynthJob } from '@/types/api'
 export type MockSynthJob = SynthJob & {
   _createdAt: number
   _useLlm: boolean
+  _ownerId: string
 }
+
+const DEMO_OWNER_ID = 'usr_01'
 
 const SAMPLE_SPEC = {
   name: 'Penjualan UMKM Lampung',
@@ -40,6 +43,7 @@ export const mockSynthJobs: MockSynthJob[] = [
     error: null,
     _createdAt: Date.now() - 3600_000,
     _useLlm: true,
+    _ownerId: DEMO_OWNER_ID,
   },
   {
     id: 'syn_demo_failed',
@@ -53,8 +57,17 @@ export const mockSynthJobs: MockSynthJob[] = [
     error: 'Permintaan ditolak: konten tidak diizinkan',
     _createdAt: Date.now() - 7200_000,
     _useLlm: true,
+    _ownerId: DEMO_OWNER_ID,
   },
 ]
+
+export function synthJobsForUser(userId: string) {
+  return mockSynthJobs.filter((j) => j._ownerId === userId)
+}
+
+export function findSynthJobForUser(id: string, userId: string) {
+  return mockSynthJobs.find((j) => j.id === id && j._ownerId === userId)
+}
 
 export function mockSynthQuota(userId: string) {
   const used = mockSynthJobs.filter((j) => j._useLlm && j.prompt).length
@@ -69,13 +82,22 @@ export function mockSynthQuota(userId: string) {
 export function mockJobStatus(job: MockSynthJob): SynthJob {
   const elapsed = Date.now() - job._createdAt
   if (job.status === 'failed' || job.status === 'done') {
-    const { _createdAt: _, _useLlm: __, ...rest } = job
+    const { _createdAt: _, _useLlm: __, _ownerId: ___, ...rest } = job
     return rest
   }
-  if (elapsed < 1500) return { ...job, status: 'queued' }
-  if (elapsed < 3000) return { ...job, status: 'planning', spec: job._useLlm ? null : job.spec }
-  if (elapsed < 4500) return { ...job, status: 'generating', spec: job.spec ?? SAMPLE_SPEC }
-  const { _createdAt: _, _useLlm: __, ...done } = {
+  if (elapsed < 1500) {
+    const { _createdAt: _, _useLlm: __, _ownerId: ___, ...rest } = job
+    return { ...rest, status: 'queued' }
+  }
+  if (elapsed < 3000) {
+    const { _createdAt: _, _useLlm: __, _ownerId: ___, ...rest } = job
+    return { ...rest, status: 'planning', spec: job._useLlm ? null : job.spec }
+  }
+  if (elapsed < 4500) {
+    const { _createdAt: _, _useLlm: __, _ownerId: ___, ...rest } = job
+    return { ...rest, status: 'generating', spec: job.spec ?? SAMPLE_SPEC }
+  }
+  const { _createdAt: _, _useLlm: __, _ownerId: ___, ...done } = {
     ...job,
     status: 'done' as const,
     spec: job.spec ?? SAMPLE_SPEC,
@@ -86,11 +108,14 @@ export function mockJobStatus(job: MockSynthJob): SynthJob {
   return done
 }
 
-export function createMockJob(body: {
-  prompt?: string
-  spec?: Record<string, unknown>
-  n_rows: number
-}): MockSynthJob {
+export function createMockJob(
+  body: {
+    prompt?: string
+    spec?: Record<string, unknown>
+    n_rows: number
+  },
+  ownerId: string = DEMO_OWNER_ID,
+): MockSynthJob {
   const job: MockSynthJob = {
     id: `syn_${Date.now()}`,
     status: 'queued',
@@ -103,6 +128,7 @@ export function createMockJob(body: {
     error: null,
     _createdAt: Date.now(),
     _useLlm: !body.spec,
+    _ownerId: ownerId,
   }
   mockSynthJobs.unshift(job)
   return job

@@ -36,7 +36,9 @@ async def search(
     if type in ("repos", "competitions") and limit == 60:
         out = _legacy_out()
         if type == "repos":
-            res = client.index("repos").search(q, {"limit": 10})
+            res = client.index("repos").search(
+                q, {"limit": 10, "filter": 'visibility = "public"'}
+            )
             out["repos"] = res["hits"]
         else:
             res = client.index("competitions").search(q, {"limit": 10})
@@ -50,7 +52,9 @@ async def search(
 
     if search_repos:
         meili_limit = min(limit, 40)
-        res = client.index("repos").search(q, {"limit": meili_limit})
+        res = client.index("repos").search(
+            q, {"limit": meili_limit, "filter": 'visibility = "public"'}
+        )
         for doc in res["hits"]:
             hit = hit_from_repo(doc)
             if kind_filter and hit["kind"] != kind_filter:

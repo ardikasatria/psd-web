@@ -9,6 +9,7 @@ from app.core.errors import ApiError
 from app.core.pagination import PageParams, page_params, paginated
 from app.modules.repos.models import Repo
 from app.modules.repos.schemas import to_summary
+from app.modules.repos.visibility import viewer_visibility_filter
 from app.modules.gamification.service import profile_gamification
 from app.modules.social.models import Follow
 from app.modules.users.models import User
@@ -111,6 +112,9 @@ async def portfolio(
         raise ApiError(404, "not_found", "Pengguna tidak ditemukan")
     _check_profile_access(u, viewer)
     stmt = select(Repo).where(Repo.owner_id == u.id, Repo.deleted_at.is_(None))
+    vis_clause = viewer_visibility_filter(viewer)
+    if vis_clause is not None:
+        stmt = stmt.where(vis_clause)
     if kind:
         stmt = stmt.where(Repo.kind == kind)
     stmt = stmt.order_by(Repo.updated_at.desc())

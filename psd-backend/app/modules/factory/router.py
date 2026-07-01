@@ -41,6 +41,19 @@ async def _can_edit_pipeline(db: AsyncSession, pl: Pipeline, user: User) -> None
     raise ApiError(403, "forbidden", "Tidak berhak menyunting pipeline")
 
 
+async def _ensure_can_view_pipeline(db: AsyncSession, pl: Pipeline, user: User | None) -> None:
+    """Pipeline hanya milik pemilik/anggota tim/staf — sembunyikan dari lainnya."""
+    if user is not None:
+        if pl.owner_id == user.id:
+            return
+        if getattr(user, "role", None) in ("superadmin", "humas", "moderator"):
+            return
+        if pl.team_id and await membership(db, pl.team_id, user.id):
+            return
+    # 404 agar keberadaan pipeline privat tidak terekspos.
+    raise ApiError(404, "not_found", "Pipeline tidak ditemukan")
+
+
 async def _runs_today(db: AsyncSession, owner_id: str) -> int:
     start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     return (
@@ -199,10 +212,15 @@ async def list_pipelines(
 
 
 @router.get("/pipelines/{slug}")
-async def get_pipeline(slug: str, db: AsyncSession = Depends(get_db)):
+async def get_pipeline(
+    slug: str,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
     pl = (await db.execute(select(Pipeline).where(Pipeline.slug == slug))).scalar_one_or_none()
     if not pl:
         raise ApiError(404, "not_found", "Pipeline tidak ditemukan")
+    await _ensure_can_view_pipeline(db, pl, user)
     return {
         "id": pl.id,
         "slug": pl.slug,
@@ -315,8 +333,13 @@ async def export_airflow_dag(
 
 
 @router.get("/pipelines/{slug}/runs")
-async def list_runs(slug: str, db: AsyncSession = Depends(get_db)):
+async def list_runs(
+    slug: str,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
     pl = await _get_pipeline_by_slug(db, slug)
+    await _ensure_can_view_pipeline(db, pl, user)
     rows = (
         await db.execute(
             select(PipelineRun)
@@ -341,8 +364,14 @@ async def list_runs(slug: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/pipelines/{slug}/runs/{run_id}")
-async def run_detail(slug: str, run_id: str, db: AsyncSession = Depends(get_db)):
+async def run_detail(
+    slug: str,
+    run_id: str,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
     pl = await _get_pipeline_by_slug(db, slug)
+    await _ensure_can_view_pipeline(db, pl, user)
     r = (
         await db.execute(
             select(PipelineRun).where(PipelineRun.id == run_id, PipelineRun.pipeline_id == pl.id)
@@ -367,9 +396,11 @@ async def download_layer(
     slug: str,
     run_id: str,
     uri: str,
+    user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
     pl = await _get_pipeline_by_slug(db, slug)
+    await _ensure_can_view_pipeline(db, pl, user)
     r = (
         await db.execute(
             select(PipelineRun).where(PipelineRun.id == run_id, PipelineRun.pipeline_id == pl.id)

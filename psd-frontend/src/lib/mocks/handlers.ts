@@ -106,9 +106,10 @@ import {
 } from './data/teams'
 import {
   createMockJob,
+  findSynthJobForUser,
   mockJobStatus,
-  mockSynthJobs,
   mockSynthQuota,
+  synthJobsForUser,
 } from './data/synthesis'
 import {
   DEFAULT_SOLUTION_TEMPLATE,
@@ -308,6 +309,28 @@ const mockSubStore: Record<string, { slug: string; name: string }[]> = Object.fr
 
 function errorResponse(status: number, code: string, message: string) {
   return HttpResponse.json({ error: { code, message } }, { status })
+}
+
+const STAFF_ROLES = ['moderator', 'superadmin', 'humas']
+
+type ViewerLike = { id: string; username: string; role?: string } | null | undefined
+type RepoLike = { owner: { username: string }; visibility?: 'public' | 'private' }
+
+/** True bila viewer boleh melihat aset repo sesuai visibilitas owner. */
+function canViewRepo(repo: RepoLike, viewer: ViewerLike): boolean {
+  if ((repo.visibility ?? 'public') !== 'private') return true
+  if (!viewer) return false
+  if (repo.owner.username === viewer.username) return true
+  if (viewer.role && STAFF_ROLES.includes(viewer.role)) return true
+  return false
+}
+
+/** Pipeline hanya milik pemilik/staf — sembunyikan dari pengguna lain. */
+function canViewPipeline(pl: { owner_id: string }, viewer: ViewerLike): boolean {
+  if (!viewer) return false
+  if (pl.owner_id === viewer.id) return true
+  if (viewer.role && STAFF_ROLES.includes(viewer.role)) return true
+  return false
 }
 
 function factoryLimitsForUser(username: string) {
@@ -537,7 +560,10 @@ export const handlers = [
     const url = new URL(request.url)
     const page = Number(url.searchParams.get('page') ?? 1)
     const kind = url.searchParams.get('kind')
-    let items = repos.filter((r) => r.owner.username === params.username && !isRepoTrashed(r.id))
+    const viewer = resolveUserFromRequest(request)
+    let items = repos.filter(
+      (r) => r.owner.username === params.username && !isRepoTrashed(r.id) && canViewRepo(r, viewer),
+    )
     if (kind) items = items.filter((r) => r.kind === kind)
     return HttpResponse.json(paginate(items, page))
   }),
@@ -552,7 +578,7 @@ export const handlers = [
     const url = new URL(request.url)
     const q = url.searchParams.get('q') ?? ''
     const limit = Number(url.searchParams.get('limit') ?? 40)
-    const items = mockSearchUserProfile(String(params.username), q, limit)
+    const items = mockSearchUserProfile(String(params.username), q, limit, viewer)
     return HttpResponse.json({ items, total: items.length, q: q.trim() })
   }),
 
@@ -566,8 +592,11 @@ export const handlers = [
       const page = Number(url.searchParams.get('page') ?? 1)
       const page_size = Number(url.searchParams.get('page_size') ?? 20)
       const kindSingular = kind.slice(0, -1) as 'project' | 'dataset' | 'model'
+      const viewer = resolveUserFromRequest(request)
 
-      let items = repos.filter((r) => r.kind === kindSingular && !isRepoTrashed(r.id))
+      let items = repos.filter(
+        (r) => r.kind === kindSingular && !isRepoTrashed(r.id) && canViewRepo(r, viewer),
+      )
       if (q) items = items.filter((r) => r.name.includes(q) || r.description.toLowerCase().includes(q))
       if (tags?.length) items = items.filter((r) => tags.some((t) => r.tags.includes(t)))
       const teamSlug = url.searchParams.get('team')
@@ -583,10 +612,13 @@ export const handlers = [
   ),
 
   ...(['projects', 'datasets', 'models'] as const).flatMap((kind) => [
-    http.get(`${API}/${kind}/:owner/:name`, ({ params }) => {
+    http.get(`${API}/${kind}/:owner/:name`, ({ params, request }) => {
       const kindSingular = kind.slice(0, -1)
       const repo = findRepo(kindSingular, String(params.owner), String(params.name))
       if (!repo || isRepoTrashed(repo.id)) return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      if (!canViewRepo(repo, resolveUserFromRequest(request))) {
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
       const state = likeState[repo.id] ?? { liked: false, likes: repo.likes }
       return HttpResponse.json({ ...mockRepoDetail(repo), liked: state.liked, likes: state.likes })
     }),
@@ -627,16 +659,24 @@ export const handlers = [
   ]),
 
   ...(['projects', 'datasets', 'models'] as const).flatMap((kind) => [
-    http.get(`${API}/${kind}/:owner/:name/readme`, ({ params }) => {
+    http.get(`${API}/${kind}/:owner/:name/readme`, ({ params, request }) => {
       const kindSingular = kind.slice(0, -1)
+      const repo = findRepo(kindSingular, String(params.owner), String(params.name))
+      if (!repo || !canViewRepo(repo, resolveUserFromRequest(request))) {
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
       try {
         return HttpResponse.json(mockAssetReadme(kindSingular, String(params.owner), String(params.name)))
       } catch {
         return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
       }
     }),
-    http.get(`${API}/${kind}/:owner/:name/tree`, ({ params }) => {
+    http.get(`${API}/${kind}/:owner/:name/tree`, ({ params, request }) => {
       const kindSingular = kind.slice(0, -1)
+      const repo = findRepo(kindSingular, String(params.owner), String(params.name))
+      if (!repo || !canViewRepo(repo, resolveUserFromRequest(request))) {
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
       try {
         return HttpResponse.json(mockAssetTree(kindSingular, String(params.owner), String(params.name)))
       } catch {
@@ -645,6 +685,10 @@ export const handlers = [
     }),
     http.get(`${API}/${kind}/:owner/:name/file`, ({ params, request }) => {
       const kindSingular = kind.slice(0, -1)
+      const repo = findRepo(kindSingular, String(params.owner), String(params.name))
+      if (!repo || !canViewRepo(repo, resolveUserFromRequest(request))) {
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
       const path = new URL(request.url).searchParams.get('path')
       if (!path) return errorResponse(422, 'invalid', 'Parameter path wajib.')
       try {
@@ -655,8 +699,12 @@ export const handlers = [
         return errorResponse(404, 'not_found', 'Berkas tidak ditemukan.')
       }
     }),
-    http.get(`${API}/${kind}/:owner/:name/branches`, ({ params }) => {
+    http.get(`${API}/${kind}/:owner/:name/branches`, ({ params, request }) => {
       const kindSingular = kind.slice(0, -1)
+      const repo = findRepo(kindSingular, String(params.owner), String(params.name))
+      if (!repo || !canViewRepo(repo, resolveUserFromRequest(request))) {
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
       try {
         return HttpResponse.json(mockAssetBranches(kindSingular, String(params.owner), String(params.name)))
       } catch {
@@ -682,16 +730,24 @@ export const handlers = [
         return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
       }
     }),
-    http.get(`${API}/${kind}/:owner/:name/versions`, ({ params }) => {
+    http.get(`${API}/${kind}/:owner/:name/versions`, ({ params, request }) => {
       const kindSingular = kind.slice(0, -1)
+      const repo = findRepo(kindSingular, String(params.owner), String(params.name))
+      if (!repo || !canViewRepo(repo, resolveUserFromRequest(request))) {
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
       try {
         return HttpResponse.json(mockAssetVersions(kindSingular, String(params.owner), String(params.name)))
       } catch {
         return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
       }
     }),
-    http.get(`${API}/${kind}/:owner/:name/contributors`, ({ params }) => {
+    http.get(`${API}/${kind}/:owner/:name/contributors`, ({ params, request }) => {
       const kindSingular = kind.slice(0, -1)
+      const repo = findRepo(kindSingular, String(params.owner), String(params.name))
+      if (!repo || !canViewRepo(repo, resolveUserFromRequest(request))) {
+        return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      }
       try {
         return HttpResponse.json(mockAssetContributors(kindSingular, String(params.owner), String(params.name)))
       } catch {
@@ -3984,14 +4040,14 @@ export const handlers = [
     if (!body.spec && quota.plans_left <= 0) {
       return errorResponse(429, 'quota_exceeded', 'Kuota sintesis harian habis')
     }
-    const job = createMockJob(body)
+    const job = createMockJob(body, user.id)
     return HttpResponse.json({ job_id: job.id, status: job.status }, { status: 202 })
   }),
 
   http.get(`${API}/synthesis/jobs/:id`, ({ request, params }) => {
     const user = resolveUserFromRequest(request)
     if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
-    const job = mockSynthJobs.find((j) => j.id === params.id)
+    const job = findSynthJobForUser(String(params.id), user.id)
     if (!job) return errorResponse(404, 'not_found', 'Job tidak ditemukan')
     return HttpResponse.json(mockJobStatus(job))
   }),
@@ -4000,14 +4056,14 @@ export const handlers = [
     const user = resolveUserFromRequest(request)
     if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
     return HttpResponse.json({
-      items: mockSynthJobs.map((j) => mockJobStatus(j)),
+      items: synthJobsForUser(user.id).map((j) => mockJobStatus(j)),
     })
   }),
 
   http.post(`${API}/synthesis/jobs/:id/publish`, async ({ request, params }) => {
     const user = resolveUserFromRequest(request)
     if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
-    const job = mockSynthJobs.find((j) => j.id === params.id)
+    const job = findSynthJobForUser(String(params.id), user.id)
     if (!job || job.status !== 'done') return errorResponse(400, 'not_ready', 'Job belum selesai')
     const body = (await request.json()) as { name?: string; visibility?: string }
     const slug = `${user.username}/${(body.name ?? 'dataset-sintesis').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
@@ -4572,9 +4628,12 @@ export const handlers = [
     return HttpResponse.json({ slug, status }, { status: 201 })
   }),
 
-  http.get(`${API}/pipelines/:slug`, ({ params }) => {
+  http.get(`${API}/pipelines/:slug`, ({ params, request }) => {
     const pl = findMockPipeline(String(params.slug))
     if (!pl) return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
+    if (!canViewPipeline(pl, resolveUserFromRequest(request))) {
+      return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
+    }
     return HttpResponse.json({
       id: pl.id,
       slug: pl.slug,
@@ -4734,10 +4793,18 @@ with DAG(
   http.get(`${API}/pipelines/:slug/runs`, ({ request, params }) => {
     const user = resolveUserFromRequest(request)
     const slug = String(params.slug)
+    const pl = findMockPipeline(slug)
+    if (pl && !canViewPipeline(pl, user)) {
+      return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
+    }
     return HttpResponse.json({ items: runsForPipeline(slug, user?.id) })
   }),
 
-  http.get(`${API}/pipelines/:slug/runs/:runId`, ({ params }) => {
+  http.get(`${API}/pipelines/:slug/runs/:runId`, ({ params, request }) => {
+    const pl = findMockPipeline(String(params.slug))
+    if (pl && !canViewPipeline(pl, resolveUserFromRequest(request))) {
+      return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
+    }
     const run = findMockRun(String(params.runId))
     if (!run || run.pipeline_slug !== String(params.slug)) {
       return errorResponse(404, 'not_found', 'Run tidak ditemukan')
@@ -4746,6 +4813,10 @@ with DAG(
   }),
 
   http.get(`${API}/pipelines/:slug/runs/:runId/download`, ({ params, request }) => {
+    const pl = findMockPipeline(String(params.slug))
+    if (pl && !canViewPipeline(pl, resolveUserFromRequest(request))) {
+      return errorResponse(404, 'not_found', 'Pipeline tidak ditemukan')
+    }
     const run = findMockRun(String(params.runId))
     if (!run) return errorResponse(404, 'not_found', 'Run tidak ditemukan')
     const url = new URL(request.url)

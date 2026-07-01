@@ -8,13 +8,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.db import get_db
+from app.core.deps import get_current_user_optional
 from app.core.errors import ApiError
 from app.modules.asset_detail import contributors, filetree, gitea_content, language, modelcard, versioning
 from app.modules.categories.service import load_category_refs
 from app.modules.repos.models import Repo
 from app.modules.repos.router import _from_room_ref
 from app.modules.repos.schemas import normalize_files, to_detail
+from app.modules.repos.visibility import ensure_can_view_repo
 from app.modules.teams.deps import team_ref
+from app.modules.users.models import User
 
 router = APIRouter(tags=["asset-detail"])
 
@@ -35,7 +38,9 @@ async def _repo_detail(db: AsyncSession, r: Repo) -> dict:
     return to_detail(r, cat, sub, tm, fr)
 
 
-async def _repo(db: AsyncSession, kind_path: str, owner: str, name: str) -> Repo:
+async def _repo(
+    db: AsyncSession, kind_path: str, owner: str, name: str, viewer: User | None = None
+) -> Repo:
     kind = KIND_MAP.get(kind_path)
     if not kind:
         raise ApiError(404, "not_found", "Jenis aset tidak dikenal")
@@ -47,6 +52,7 @@ async def _repo(db: AsyncSession, kind_path: str, owner: str, name: str) -> Repo
     ).scalar_one_or_none()
     if not r:
         raise ApiError(404, "not_found", "Aset tidak ditemukan")
+    await ensure_can_view_repo(db, r, viewer)
     return r
 
 
@@ -63,17 +69,24 @@ def _register(kind_path: str):
         owner: str,
         name: str,
         ref: str | None = None,
+        viewer: User | None = Depends(get_current_user_optional),
         db: AsyncSession = Depends(get_db),
     ):
-        r = await _repo(db, kind_path, owner, name)
+        r = await _repo(db, kind_path, owner, name, viewer)
         detail = await _repo_detail(db, r)
         raw = await _readme_text(r, detail, ref)
         meta, body = modelcard.parse_front_matter(raw)
         return {"meta": meta, "body_md": body, "card": modelcard.card_summary(meta)}
 
     @router.get(f"/{kind_path}/{{owner}}/{{name}}/tree")
-    async def tree(owner: str, name: str, ref: str | None = None, db: AsyncSession = Depends(get_db)):
-        r = await _repo(db, kind_path, owner, name)
+    async def tree(
+        owner: str,
+        name: str,
+        ref: str | None = None,
+        viewer: User | None = Depends(get_current_user_optional),
+        db: AsyncSession = Depends(get_db),
+    ):
+        r = await _repo(db, kind_path, owner, name, viewer)
         detail = await _repo_detail(db, r)
         paths, default_branch = await gitea_content.fetch_tree_paths(r, ref)
         if not paths:
@@ -88,9 +101,10 @@ def _register(kind_path: str):
         name: str,
         path: str = Query(...),
         ref: str | None = None,
+        viewer: User | None = Depends(get_current_user_optional),
         db: AsyncSession = Depends(get_db),
     ):
-        r = await _repo(db, kind_path, owner, name)
+        r = await _repo(db, kind_path, owner, name, viewer)
         detail = await _repo_detail(db, r)
 
         gitea_file = await gitea_content.fetch_file(r, path, ref)
@@ -124,8 +138,13 @@ def _register(kind_path: str):
         }
 
     @router.get(f"/{kind_path}/{{owner}}/{{name}}/branches")
-    async def branches(owner: str, name: str, db: AsyncSession = Depends(get_db)):
-        r = await _repo(db, kind_path, owner, name)
+    async def branches(
+        owner: str,
+        name: str,
+        viewer: User | None = Depends(get_current_user_optional),
+        db: AsyncSession = Depends(get_db),
+    ):
+        r = await _repo(db, kind_path, owner, name, viewer)
         rows = await gitea_content.fetch_branches(r)
         if rows is not None:
             return rows
@@ -150,8 +169,13 @@ def _register(kind_path: str):
         return {"name": body.name, "commit_sha": "new000", "is_default": False}
 
     @router.get(f"/{kind_path}/{{owner}}/{{name}}/versions")
-    async def versions(owner: str, name: str, db: AsyncSession = Depends(get_db)):
-        r = await _repo(db, kind_path, owner, name)
+    async def versions(
+        owner: str,
+        name: str,
+        viewer: User | None = Depends(get_current_user_optional),
+        db: AsyncSession = Depends(get_db),
+    ):
+        r = await _repo(db, kind_path, owner, name, viewer)
         rows = await gitea_content.fetch_versions(r)
         if rows is not None:
             return rows
@@ -159,8 +183,13 @@ def _register(kind_path: str):
         return [{"tag": t, "name": t} for t in tags]
 
     @router.get(f"/{kind_path}/{{owner}}/{{name}}/contributors")
-    async def contribs(owner: str, name: str, db: AsyncSession = Depends(get_db)):
-        r = await _repo(db, kind_path, owner, name)
+    async def contribs(
+        owner: str,
+        name: str,
+        viewer: User | None = Depends(get_current_user_optional),
+        db: AsyncSession = Depends(get_db),
+    ):
+        r = await _repo(db, kind_path, owner, name, viewer)
         commit_authors = await gitea_content.fetch_commit_authors(r)
         if not commit_authors and r.owner:
             commit_authors = [{"username": r.owner.username, "commits": 1}]

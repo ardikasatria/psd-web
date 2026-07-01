@@ -78,7 +78,7 @@ const baseRepos: RepoSummary[] = [
     tags: ['umkm', 'forecasting', 'tabular'],
     likes: 23,
     downloads: 156,
-    visibility: 'public',
+    visibility: 'private',
     updated_at: '2026-06-15T09:00:00Z',
   },
   {

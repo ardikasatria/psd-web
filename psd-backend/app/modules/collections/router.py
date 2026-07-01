@@ -30,7 +30,7 @@ async def _resolve_items(db: AsyncSession, items: list | None) -> list[dict]:
                     select(Repo).options(selectinload(Repo.owner)).where(Repo.slug == it.get("slug"))
                 )
             ).scalar_one_or_none()
-            if r:
+            if r and getattr(r, "visibility", "public") == "public":
                 out.append(
                     {
                         "type": t,

@@ -21,16 +21,27 @@ function matches(q: string, ...fields: (string | undefined | null)[]) {
   return fields.some((f) => (f ?? '').toLowerCase().includes(needle))
 }
 
-export function mockSearchUserProfile(username: string, q: string, limit = 40): ProfileSearchItem[] {
+export function mockSearchUserProfile(
+  username: string,
+  q: string,
+  limit = 40,
+  viewer?: { username: string; role?: string } | null,
+): ProfileSearchItem[] {
   const term = q.trim()
   if (term.length < 2) return []
   const user = users.find((u) => u.username === username)
   if (!user) return []
 
+  const isOwnerOrStaff =
+    !!viewer &&
+    (viewer.username === username ||
+      (viewer.role && ['moderator', 'superadmin', 'humas'].includes(viewer.role)))
+
   const out: ProfileSearchItem[] = []
 
   for (const repo of repos) {
     if (repo.owner.username !== username) continue
+    if (repo.visibility === 'private' && !isOwnerOrStaff) continue
     if (
       !matches(
         term,
