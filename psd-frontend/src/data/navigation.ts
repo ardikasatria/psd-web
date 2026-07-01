@@ -8,7 +8,6 @@ export async function getNavigation(): Promise<TNavigationItem[]> {
     { id: '3a', href: '/models', name: 'Model' },
     { id: '4', href: '/notebooks', name: 'Notebook' },
     { id: '5', href: '/competitions', name: 'Kompetisi' },
-    { id: '9b', href: '/teams', name: 'Tim Kolaborasi' },
     {
       id: MORE_MENU_ID,
       name: 'Menu lainnya',
