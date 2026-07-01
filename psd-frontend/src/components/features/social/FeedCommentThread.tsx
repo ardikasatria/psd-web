@@ -1,11 +1,14 @@
 'use client'
 
+import { ProfileAvatar } from '@/components/features/users/ProfileCover'
 import { buildNestedTree } from '@/lib/utils/nestedReplies'
 import { profilePath } from '@/lib/routes/profile'
 import { ContentReportMenu } from '@/components/common/ContentReportMenu'
-import type { OwnerRef, SocialComment } from '@/types/api'
+import type { OwnerRef, Profile, SocialComment } from '@/types/api'
 import { Button } from '@/shared/Button'
 import Textarea from '@/shared/Textarea'
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import clsx from 'clsx'
 import Link from 'next/link'
 import { FormEvent, useMemo, useState } from 'react'
 
@@ -19,11 +22,39 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
 }
 
+function ownerToProfile(author: OwnerRef): Profile {
+  return {
+    id: author.username,
+    username: author.username,
+    name: author.name ?? author.username,
+    avatar_url: author.avatar_url,
+    banner_url: null,
+    accent_color: null,
+    pronouns: null,
+    location: null,
+    bio: null,
+    about_md: null,
+    status_emoji: null,
+    status_text: null,
+    links: [],
+    interests: [],
+    onboarded: true,
+    is_official: author.is_official ?? false,
+    is_instructor: false,
+    account_type: author.type === 'org' ? 'organization' : 'individual',
+    role: 'member',
+    email_verified: true,
+    created_at: new Date().toISOString(),
+  }
+}
+
 function CommentBody({
   author,
   replyTo,
   body,
   createdAt,
+  collapsed,
+  onToggle,
   onReply,
   canReply,
 }: {
@@ -31,40 +62,95 @@ function CommentBody({
   replyTo?: OwnerRef | null
   body: string
   createdAt: string
+  collapsed: boolean
+  onToggle: () => void
   onReply?: () => void
   canReply?: boolean
 }) {
+  const profile = ownerToProfile(author)
+
   return (
-    <div className="min-w-0 flex-1">
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onToggle()
+        }
+      }}
+      className={clsx(
+        'min-w-0 flex-1 cursor-pointer rounded-lg text-left motion-safe:transition-colors',
+        'hover:bg-neutral-50 dark:hover:bg-neutral-800/60',
+        collapsed ? 'px-1 py-0.5' : 'px-1 py-1',
+      )}
+    >
+      <div className="flex items-start gap-2">
         <Link
           href={profilePath(author.username)}
-          className="font-medium text-primary-600 hover:underline dark:text-primary-400"
+          onClick={(e) => e.stopPropagation()}
+          className="shrink-0"
         >
-          @{author.username}
+          <ProfileAvatar profile={profile} size="xs" />
         </Link>
-        <span className="text-xs text-neutral-400">{timeAgo(createdAt)}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <Link
+              href={profilePath(author.username)}
+              onClick={(e) => e.stopPropagation()}
+              className="text-sm font-semibold leading-none text-neutral-900 hover:underline dark:text-neutral-100"
+            >
+              @{author.username}
+            </Link>
+            <span className="text-xs leading-none text-neutral-400">{timeAgo(createdAt)}</span>
+            {collapsed ? (
+              <ChevronDownIcon className="size-3.5 text-neutral-400" aria-hidden />
+            ) : (
+              <ChevronUpIcon className="size-3.5 text-neutral-400" aria-hidden />
+            )}
+          </div>
+          {!collapsed && (
+            <>
+              <p className="mt-1.5 text-sm text-neutral-700 dark:text-neutral-300">
+                {replyTo && (
+                  <Link
+                    href={profilePath(replyTo.username)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-medium text-primary-600 hover:underline dark:text-primary-400"
+                  >
+                    @{replyTo.username}{' '}
+                  </Link>
+                )}
+                {body}
+              </p>
+              {canReply && onReply && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onReply()
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.stopPropagation()
+                      e.preventDefault()
+                      onReply()
+                    }
+                  }}
+                  className="mt-1 inline-block text-xs font-medium text-neutral-500 hover:text-primary-600 dark:hover:text-primary-400"
+                >
+                  Balas
+                </span>
+              )}
+            </>
+          )}
+          {collapsed && (
+            <p className="mt-0.5 truncate text-xs text-neutral-500 dark:text-neutral-400">{body}</p>
+          )}
+        </div>
       </div>
-      <p className="mt-0.5 text-sm text-neutral-700 dark:text-neutral-300">
-        {replyTo && (
-          <Link
-            href={profilePath(replyTo.username)}
-            className="font-medium text-primary-600 hover:underline dark:text-primary-400"
-          >
-            @{replyTo.username}{' '}
-          </Link>
-        )}
-        {body}
-      </p>
-      {canReply && onReply && (
-        <button
-          type="button"
-          onClick={onReply}
-          className="mt-1 text-xs font-medium text-neutral-500 hover:text-primary-600 dark:hover:text-primary-400"
-        >
-          Balas
-        </button>
-      )}
     </div>
   )
 }
@@ -94,26 +180,31 @@ function CommentNode({
   replyPending: boolean
   currentUsername?: string
 }) {
+  const [collapsed, setCollapsed] = useState(true)
   const isReplying = replyingToId === comment.id
 
   return (
-    <div className={depth > 0 ? 'ms-6 border-s-2 border-neutral-100 ps-3 dark:border-neutral-800' : ''}>
-      <div className="flex gap-2 py-2">
+    <div className={depth > 0 ? 'ms-8 border-s border-neutral-100 ps-2 dark:border-neutral-800' : ''}>
+      <div className="flex items-start gap-1 py-1">
         <CommentBody
           author={comment.author}
           replyTo={comment.reply_to}
           body={comment.body_md}
           createdAt={comment.created_at}
-          canReply={isLoggedIn && depth < 1}
+          collapsed={collapsed}
+          onToggle={() => setCollapsed((v) => !v)}
+          canReply={isLoggedIn && depth < 1 && !collapsed}
           onReply={() => onStartReply(comment.id)}
         />
         {isLoggedIn && currentUsername !== comment.author.username && (
-          <ContentReportMenu kind="comment" targetId={comment.id} className="shrink-0" />
+          <div className="shrink-0 pt-1" onClick={(e) => e.stopPropagation()}>
+            <ContentReportMenu kind="comment" targetId={comment.id} />
+          </div>
         )}
       </div>
-      {isReplying && (
+      {isReplying && !collapsed && (
         <form
-          className="mb-2 ms-2 space-y-2"
+          className="mb-2 ms-10 space-y-2"
           onSubmit={(e: FormEvent) => {
             e.preventDefault()
             onSubmitReply(comment.id)
@@ -137,7 +228,7 @@ function CommentNode({
           </div>
         </form>
       )}
-      {comment.children.length > 0 && (
+      {!collapsed && comment.children.length > 0 && (
         <div className="space-y-0">
           {comment.children.map((child) => (
             <CommentNode
@@ -150,10 +241,10 @@ function CommentNode({
               onStartReply={onStartReply}
               onCancelReply={onCancelReply}
               onReplyTextChange={onReplyTextChange}
-          onSubmitReply={onSubmitReply}
-          replyPending={replyPending}
-          currentUsername={currentUsername}
-        />
+              onSubmitReply={onSubmitReply}
+              replyPending={replyPending}
+              currentUsername={currentUsername}
+            />
           ))}
         </div>
       )}
@@ -184,7 +275,12 @@ export function FeedCommentThread({
   const [replyText, setReplyText] = useState('')
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-0.5">
+      {tree.length > 0 && (
+        <p className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">
+          Ketuk komentar untuk membuka atau menyembunyikan isinya.
+        </p>
+      )}
       {tree.map((comment) => (
         <CommentNode
           key={comment.id}

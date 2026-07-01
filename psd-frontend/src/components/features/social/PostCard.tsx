@@ -190,15 +190,15 @@ export function PostCard({
 
   return (
     <article className="rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/50">
-      <header className="flex items-start gap-3">
-        <Link href={profilePath(post.author.username)} className="shrink-0">
-          <ProfileAvatar profile={authorProfile} size="sm" />
+      <header className="flex items-center gap-2.5">
+        <Link href={profilePath(post.author.username)} className="shrink-0 self-center">
+          <ProfileAvatar profile={authorProfile} size="xs" />
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <Link
               href={profilePath(post.author.username)}
-              className="text-sm font-semibold text-neutral-900 hover:underline dark:text-white"
+              className="text-sm font-semibold leading-none text-neutral-900 hover:underline dark:text-white"
             >
               @{post.author.username}
             </Link>
@@ -209,7 +209,7 @@ export function PostCard({
                 Hanya saya
               </span>
             )}
-            <span className="text-xs text-neutral-400">
+            <span className="text-xs leading-none text-neutral-400">
               ·{' '}
               {detail ? (
                 timeAgo(post.created_at)
@@ -220,11 +220,6 @@ export function PostCard({
               )}
             </span>
           </div>
-          {post.author.name && (
-            <p className="mt-0.5 text-sm leading-snug text-neutral-600 dark:text-neutral-400">
-              {post.author.name}
-            </p>
-          )}
         </div>
         {isOwner && !isEditing && (
           <ContentOwnerMenu

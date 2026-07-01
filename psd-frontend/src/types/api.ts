@@ -629,6 +629,44 @@ export const SearchResultSchema = z.object({
 })
 export type SearchResult = z.infer<typeof SearchResultSchema>
 
+export const SEARCH_KINDS = [
+  'user',
+  'post',
+  'org',
+  'project',
+  'model',
+  'dataset',
+  'notebook',
+  'competition',
+  'event',
+  'team',
+  'forum',
+] as const
+export type SearchKind = (typeof SEARCH_KINDS)[number]
+
+export const SearchHitSchema = z.object({
+  kind: z.enum(SEARCH_KINDS),
+  id: z.string(),
+  title: z.string(),
+  subtitle: z.string().nullable().optional(),
+  url: z.string(),
+  avatar_url: z.string().nullable().optional(),
+  is_official: z.boolean().optional(),
+  score: z.number().optional(),
+})
+export type SearchHit = z.infer<typeof SearchHitSchema>
+
+export const SearchResponseSchema = z.object({
+  query: z.object({
+    text: z.string(),
+    filters: z.record(z.any()),
+  }),
+  total: z.number(),
+  results: z.array(SearchHitSchema),
+  grouped: z.record(z.array(SearchHitSchema)),
+})
+export type SearchResponse = z.infer<typeof SearchResponseSchema>
+
 export const DiscoverSchema = z.object({
   featured: z.array(RepoSummarySchema),
   recent: z.array(RepoSummarySchema),

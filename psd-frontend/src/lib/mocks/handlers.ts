@@ -51,6 +51,7 @@ import {
   resolveMockCommentParent,
 } from './data/social'
 import { buildDiscoveryPanels, discoveryListForKind } from './data/discovery'
+import { runUniversalSearch } from './data/search'
 import { mockContributors, mockGamificationFor } from './data/gamification'
 import {
   getMockAssetStats,
@@ -2569,52 +2570,69 @@ export const handlers = [
   // Search & discover
   http.get(`${API}/search`, ({ request }) => {
     const url = new URL(request.url)
-    const q = (url.searchParams.get('q') ?? '').toLowerCase()
+    const q = url.searchParams.get('q') ?? ''
     const type = url.searchParams.get('type')
-    const matchRepo = (r: (typeof repos)[number]) =>
-      r.name.toLowerCase().includes(q) ||
-      r.description.toLowerCase().includes(q) ||
-      r.tags.some((t) => t.toLowerCase().includes(q))
-    const matchComp = (c: (typeof competitions)[number]) =>
-      c.title.toLowerCase().includes(q) ||
-      (c.sponsor?.toLowerCase().includes(q) ?? false)
-    const matchUser = (u: (typeof users)[number]) =>
-      u.username.toLowerCase().includes(q) || u.name.toLowerCase().includes(q)
-    const repoHits = repos.filter(matchRepo).slice(0, 10).map((r) => ({
-      id: r.id,
-      slug: r.slug,
-      kind: r.kind,
-      name: r.name,
-      description: r.description,
-      tags: r.tags,
-      visibility: r.visibility,
-      owner: r.owner.username,
-      likes: r.likes,
-      downloads: r.downloads,
-      updated_at: r.updated_at,
-    }))
-    const compHits = competitions.filter(matchComp).slice(0, 10).map((c) => ({
-      id: c.slug,
-      slug: c.slug,
-      title: c.title,
-      sponsor: c.sponsor,
-      status: c.status,
-      tags: competitionDetailOf(c).tags,
-    }))
-    const userHits = users
-      .filter((u) => matchUser(u) && isMockUserSearchable(u.id))
-      .slice(0, 10)
-      .map((u) => ({
-        id: u.id,
-        username: u.username,
-        name: u.name,
-        avatar_url: u.avatar_url,
-        is_official: u.is_official,
-      }))
-    if (type === 'repos') return HttpResponse.json({ repos: repoHits, competitions: [], users: [] })
-    if (type === 'competitions') return HttpResponse.json({ repos: [], competitions: compHits, users: [] })
-    if (type === 'users') return HttpResponse.json({ repos: [], competitions: [], users: userHits })
-    return HttpResponse.json({ repos: repoHits, competitions: compHits, users: userHits })
+    const limit = url.searchParams.get('limit')
+    const perCategory = url.searchParams.get('per_category')
+    const page = url.searchParams.get('page')
+
+    const universal = runUniversalSearch(q, {
+      type,
+      limit: limit ? Number(limit) : undefined,
+      perCategory: perCategory ? Number(perCategory) : undefined,
+      page: page ? Number(page) : undefined,
+    })
+
+    // Kompatibilitas mundur: pemilih aset lama memakai {repos,competitions} via type=repos/competitions.
+    if (type === 'repos' || type === 'competitions') {
+      const ql = q.toLowerCase()
+      const repoHits =
+        type === 'repos'
+          ? repos
+              .filter(
+                (r) =>
+                  r.visibility === 'public' &&
+                  (r.name.toLowerCase().includes(ql) ||
+                    r.description.toLowerCase().includes(ql) ||
+                    r.tags.some((t) => t.toLowerCase().includes(ql))),
+              )
+              .slice(0, 10)
+              .map((r) => ({
+                id: r.id,
+                slug: r.slug,
+                kind: r.kind,
+                name: r.name,
+                description: r.description,
+                tags: r.tags,
+                visibility: r.visibility,
+                owner: r.owner.username,
+                likes: r.likes,
+                downloads: r.downloads,
+                updated_at: r.updated_at,
+              }))
+          : []
+      const compHits =
+        type === 'competitions'
+          ? competitions
+              .filter(
+                (c) =>
+                  c.title.toLowerCase().includes(ql) ||
+                  (c.sponsor?.toLowerCase().includes(ql) ?? false),
+              )
+              .slice(0, 10)
+              .map((c) => ({
+                id: c.slug,
+                slug: c.slug,
+                title: c.title,
+                sponsor: c.sponsor,
+                status: c.status,
+                tags: competitionDetailOf(c).tags,
+              }))
+          : []
+      return HttpResponse.json({ ...universal, repos: repoHits, competitions: compHits })
+    }
+
+    return HttpResponse.json(universal)
   }),
 
   http.get(`${API}/discover`, () => {
