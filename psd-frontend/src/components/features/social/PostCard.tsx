@@ -2,15 +2,17 @@
 
 import { ContentOwnerMenu } from '@/components/common/ContentOwnerMenu'
 import { ContentReportMenu } from '@/components/common/ContentReportMenu'
+import { useToast } from '@/components/common/Toast'
 import { SimpleMarkdown } from '@/components/common/SimpleMarkdown'
 import { OfficialBadge } from '@/components/common/OfficialBadge'
 import { ProfileAvatar } from '@/components/features/users/ProfileCover'
 import { FeedCommentThread } from '@/components/features/social/FeedCommentThread'
 import { addComment, deletePost, getComments, likePost, unlikePost, updatePost } from '@/lib/api/social'
+import { getApiErrorMessage } from '@/lib/api/errors'
 import { useAuth } from '@/lib/auth/useAuth'
 import { feedPostPath } from '@/lib/routes/community'
 import { profilePath } from '@/lib/routes/profile'
-import type { Profile, SocialPost } from '@/types/api'
+import type { PaginatedSocialPost, Profile, SocialPost } from '@/types/api'
 import { Button } from '@/shared/Button'
 import Textarea from '@/shared/Textarea'
 import {
@@ -70,6 +72,7 @@ export function PostCard({
 }) {
   const router = useRouter()
   const { user, isLoggedIn } = useAuth()
+  const { toast } = useToast()
   const qc = useQueryClient()
   const [liked, setLiked] = useState(post.liked)
   const [likeCount, setLikeCount] = useState(post.like_count)
@@ -137,8 +140,31 @@ export function PostCard({
 
   const deleteMutation = useMutation({
     mutationFn: () => deletePost(post.id),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ['feed'] })
+      await qc.cancelQueries({ queryKey: ['user-posts'] })
+      const previousFeed = qc.getQueriesData<PaginatedSocialPost>({ queryKey: ['feed'] })
+      const previousUserPosts = qc.getQueriesData<PaginatedSocialPost>({ queryKey: ['user-posts'] })
+      const remove = (old: PaginatedSocialPost | undefined) => {
+        if (!old) return old
+        return {
+          ...old,
+          items: old.items.filter((p) => p.id !== post.id),
+          total: Math.max(0, old.total - 1),
+        }
+      }
+      qc.setQueriesData<PaginatedSocialPost>({ queryKey: ['feed'] }, remove)
+      qc.setQueriesData<PaginatedSocialPost>({ queryKey: ['user-posts'] }, remove)
+      return { previousFeed, previousUserPosts }
+    },
+    onError: (err, _, ctx) => {
+      ctx?.previousFeed.forEach(([key, data]) => qc.setQueryData(key, data))
+      ctx?.previousUserPosts.forEach(([key, data]) => qc.setQueryData(key, data))
+      toast(getApiErrorMessage(err, 'Gagal menghapus postingan.'), 'error')
+    },
     onSuccess: () => {
       onDeleted?.()
+      toast('Postingan dihapus.', 'default')
       qc.invalidateQueries({ queryKey: ['feed'] })
       qc.invalidateQueries({ queryKey: ['post', post.id] })
       qc.invalidateQueries({ queryKey: ['feed-stats'] })

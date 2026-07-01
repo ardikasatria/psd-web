@@ -5,7 +5,6 @@ import { useAuth } from '@/lib/auth/useAuth'
 import { updateSettings } from '@/lib/api/settings'
 import { Dropdown, DropdownButton, DropdownItem, DropdownMenu } from '@/shared/dropdown'
 import {
-  CheckIcon,
   ComputerDesktopIcon,
   MoonIcon,
   SunIcon,
@@ -61,13 +60,23 @@ export function ThemeToggle({ className }: { className?: string }) {
         <BtnIcon className="size-5" aria-hidden />
       </DropdownButton>
       <DropdownMenu anchor="bottom end" className="min-w-36">
-        {OPTIONS.map(({ mode, label, Icon }) => (
-          <DropdownItem key={mode} onClick={() => setTheme(mode)} className="flex w-full items-center gap-2">
-            <Icon className="size-4 shrink-0" data-slot="icon" />
-            <span className="flex-1">{label}</span>
-            {theme.themeMode === mode && <CheckIcon className="size-4 text-primary-600" />}
-          </DropdownItem>
-        ))}
+        {OPTIONS.map(({ mode, label, Icon }) => {
+          const selected = theme.themeMode === mode
+          return (
+            <DropdownItem
+              key={mode}
+              onClick={() => setTheme(mode)}
+              className={clsx(
+                'flex w-full items-center gap-2',
+                selected &&
+                  'bg-primary-50 font-semibold text-primary-700 dark:bg-primary-950/30 dark:text-primary-300',
+              )}
+            >
+              <Icon className="size-4 shrink-0" data-slot="icon" />
+              <span className="flex-1">{label}</span>
+            </DropdownItem>
+          )
+        })}
       </DropdownMenu>
     </Dropdown>
   )

@@ -10,7 +10,6 @@ import {
 } from '@/shared/dropdown'
 import { Button } from '@/shared/Button'
 import {
-  CheckIcon,
   EllipsisVerticalIcon,
   EyeIcon,
   EyeSlashIcon,
@@ -20,6 +19,9 @@ import {
 import clsx from 'clsx'
 
 export type ContentVisibility = 'public' | 'private'
+
+const selectedOptionClass =
+  'bg-primary-50 font-semibold text-primary-700 dark:bg-primary-950/30 dark:text-primary-300'
 
 type ContentOwnerMenuProps = {
   visibility: ContentVisibility
@@ -60,18 +62,18 @@ export function ContentOwnerMenu({
           <DropdownItem
             onClick={() => onVisibilityChange('public')}
             disabled={visibilityPending}
+            className={clsx(visibility === 'public' && selectedOptionClass)}
           >
             <EyeIcon data-slot="icon" className="size-4" />
             <span>Publik</span>
-            {visibility === 'public' && <CheckIcon className="ms-auto size-4 text-primary-600" />}
           </DropdownItem>
           <DropdownItem
             onClick={() => onVisibilityChange('private')}
             disabled={visibilityPending}
+            className={clsx(visibility === 'private' && selectedOptionClass)}
           >
             <EyeSlashIcon data-slot="icon" className="size-4" />
             <span>Hanya saya</span>
-            {visibility === 'private' && <CheckIcon className="ms-auto size-4 text-primary-600" />}
           </DropdownItem>
         </DropdownSection>
         <DropdownDivider />

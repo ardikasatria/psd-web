@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, File, UploadFile
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -418,9 +418,14 @@ async def update_post(post_id: str, body: dict, user=Depends(get_current_user), 
 @router.delete("/posts/{post_id}", status_code=204)
 async def delete_post(post_id: str, user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     p = (await db.execute(select(Post).where(Post.id == post_id))).scalar_one_or_none()
-    if p and (p.author_id == user.id or is_staff(user)):
-        await db.delete(p)
-        await db.commit()
+    if not p:
+        raise ApiError(404, "not_found", "Postingan tidak ditemukan")
+    if p.author_id != user.id and not is_staff(user):
+        raise ApiError(403, "forbidden", "Tidak diizinkan menghapus postingan ini")
+    await db.execute(delete(PostComment).where(PostComment.post_id == post_id))
+    await db.execute(delete(PostLike).where(PostLike.post_id == post_id))
+    await db.delete(p)
+    await db.commit()
 
 
 @router.post("/posts/{post_id}/like")
