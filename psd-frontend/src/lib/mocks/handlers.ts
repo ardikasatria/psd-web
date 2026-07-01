@@ -222,7 +222,7 @@ function mockRepoDetail(repo: (typeof repos)[number]) {
 const adminUsers = users.map((u) => ({
   id: u.id,
   username: u.username,
-  email: `${u.username}@psd.id`,
+  email: `${u.username}@projeksainsdata.com`,
   name: u.name,
   role: u.role,
   is_active: true,
@@ -343,7 +343,7 @@ export const handlers = [
     const user = users.find((u) => body.email.includes(u.username)) ?? demoUser
     const token = 'mock_token_' + user.username
     return withAuthCookie(
-      { user: { ...user, email: `${user.username}@psd.id` }, token },
+      { user: { ...user, email: `${user.username}@projeksainsdata.com` }, token },
       token
     )
   }),
@@ -361,7 +361,7 @@ export const handlers = [
     return HttpResponse.json({
       user: {
         ...user,
-        email: `${user.username}@psd.id`,
+        email: `${user.username}@projeksainsdata.com`,
         reputation: g.tier.reputation,
         tier: g.tier,
         badges: g.badges.filter((b) => b.earned).map((b) => b.id),
@@ -416,9 +416,9 @@ export const handlers = [
     const idx = users.findIndex((u) => u.id === user.id)
     if (idx >= 0) {
       users[idx] = { ...users[idx], ...body } as (typeof users)[number]
-      return HttpResponse.json({ ...users[idx], email: `${users[idx].username}@psd.id` })
+      return HttpResponse.json({ ...users[idx], email: `${users[idx].username}@projeksainsdata.com` })
     }
-    return HttpResponse.json({ ...user, ...body, email: `${user.username}@psd.id` })
+    return HttpResponse.json({ ...user, ...body, email: `${user.username}@projeksainsdata.com` })
   }),
 
   http.post(`${API}/me/avatar`, async ({ request }) => {

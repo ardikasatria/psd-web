@@ -75,6 +75,13 @@ export default function HeaderAuthActions({ className }: Props) {
         )}
         <DropdownItem href="/dashboard">Dasbor</DropdownItem>
         {isStaff(user) && <DropdownItem href="/admin">Admin</DropdownItem>}
+        <DropdownDivider />
+        <DropdownItem href="/me/orgs">Organisasi saya</DropdownItem>
+        <DropdownItem href="/orgs/new">Buat organisasi</DropdownItem>
+        {user?.account_type === 'organization' && (
+          <DropdownItem href="/me/org/teams">Hub tim organisasi</DropdownItem>
+        )}
+        <DropdownDivider />
         <DropdownItem href="/settings">Pengaturan</DropdownItem>
         <DropdownDivider />
         <DropdownItem onClick={handleLogout}>Keluar</DropdownItem>

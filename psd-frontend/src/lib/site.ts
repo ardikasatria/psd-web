@@ -11,3 +11,16 @@ export function absoluteUrl(path: string): string {
   if (!path || path === '/') return base
   return `${base}${path.startsWith('/') ? path : `/${path}`}`
 }
+
+/** Host publik untuk prefix URL organisasi, mis. projeksainsdata.com */
+export function getPublicHostname(): string {
+  try {
+    return new URL(getSiteUrl()).hostname
+  } catch {
+    return 'projeksainsdata.com'
+  }
+}
+
+export function orgPublicUrl(handle: string): string {
+  return absoluteUrl(`/orgs/${handle}`)
+}

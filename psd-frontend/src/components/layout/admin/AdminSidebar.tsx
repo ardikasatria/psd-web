@@ -7,7 +7,7 @@ import { useLogout } from '@/lib/auth/useLogout'
 import Avatar from '@/shared/Avatar'
 import Logo from '@/shared/Logo'
 import { Badge } from '@/shared/Badge'
-import { Dropdown, DropdownButton, DropdownItem, DropdownMenu } from '@/shared/dropdown'
+import { Dropdown, DropdownButton, DropdownDivider, DropdownItem, DropdownMenu } from '@/shared/dropdown'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -112,6 +112,11 @@ export function AdminSidebar({ open, onClose }: Props) {
               </DropdownButton>
               <DropdownMenu>
                 <DropdownItem href="/dashboard">Dasbor pengguna</DropdownItem>
+                <DropdownDivider />
+                <DropdownItem href="/me/orgs">Organisasi saya</DropdownItem>
+                <DropdownItem href="/orgs/new">Buat organisasi</DropdownItem>
+                <DropdownItem href="/orgs">Organisasi</DropdownItem>
+                <DropdownDivider />
                 <DropdownItem href="/settings">Pengaturan</DropdownItem>
                 <DropdownItem onClick={handleLogout}>Keluar</DropdownItem>
               </DropdownMenu>

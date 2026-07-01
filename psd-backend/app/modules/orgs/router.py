@@ -33,6 +33,7 @@ from app.modules.orgs.models import (
 from app.modules.orgs.org_types import apply_verification, can_post_opportunity, validate_org_type
 from app.modules.orgs.roles import can_set_role, require as require_perm
 from app.modules.users.models import User
+from app.modules.users.refs import is_staff
 
 router = APIRouter(tags=["orgs"])
 
@@ -134,7 +135,7 @@ async def get_org(
     db: AsyncSession = Depends(get_db),
 ):
     org = await get_org_by_handle(db, handle)
-    if org.suspended and (not user or not user.role in ("superadmin", "moderator")):
+    if org.suspended and (not user or not is_staff(user)):
         raise ApiError(403, "suspended", "Organisasi ditangguhkan")
     return await org_svc.serialize_org_detail(db, org, user.id if user else None)
 

@@ -2,6 +2,7 @@
 
 import { createOrg } from '@/lib/api/orgs'
 import { ORG_TYPES, orgTypeLabel, requiresVerification, validateHandle } from '@/lib/orgs/org-utils'
+import { getPublicHostname } from '@/lib/site'
 import { MY_ORGS_QUERY_KEY } from '@/components/features/orgs/MyOrgsPage'
 import { useAuthGuard } from '@/lib/auth/useAuthGuard'
 import { FeaturePageHero, FeaturePageShell } from '@/components/features/layout'
@@ -24,6 +25,7 @@ export function CreateOrgPage() {
 
   const handleError = useMemo(() => (handle ? validateHandle(handle) : null), [handle])
   const needsVerifyInfo = requiresVerification(type)
+  const publicHost = getPublicHostname()
 
   const create = useMutation({
     mutationFn: () => createOrg({ handle: handle.trim().toLowerCase(), name: name.trim(), type }),
@@ -38,7 +40,7 @@ export function CreateOrgPage() {
     <FeaturePageShell>
       <FeaturePageHero
         title="Buat organisasi"
-        subtitle="Handle unik untuk URL publik. Anda bisa membuat banyak organisasi dari satu akun."
+        subtitle={`Handle unik untuk URL publik (${getPublicHostname()}/orgs/…). Anda bisa membuat banyak organisasi dari satu akun.`}
       />
       <form
         className="mx-auto max-w-lg space-y-5 rounded-3xl border border-neutral-200/80 bg-white p-6 dark:border-neutral-700 dark:bg-neutral-800"
@@ -62,7 +64,7 @@ export function CreateOrgPage() {
             Handle
           </label>
           <div className="flex items-center gap-1">
-            <span className="text-sm text-neutral-500">psd.id/orgs/</span>
+            <span className="text-sm text-neutral-500">{publicHost}/orgs/</span>
             <Input
               id="org-handle"
               value={handle}
