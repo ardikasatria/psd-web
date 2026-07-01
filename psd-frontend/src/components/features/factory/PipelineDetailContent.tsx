@@ -26,7 +26,7 @@ import {
 } from '@/lib/api/factory'
 import type { Pipeline, PipelineNode, PipelineSpec } from '@/types/api'
 import { ApiError } from '@/lib/api/client'
-import { ExclamationCircleIcon, CheckCircleIcon, AdjustmentsHorizontalIcon, PlusCircleIcon } from '@heroicons/react/24/outline'
+import { ExclamationCircleIcon, CheckCircleIcon, AdjustmentsHorizontalIcon, PlusCircleIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -39,7 +39,8 @@ type Props = {
 
 export function PipelineDetailContent({ slug }: Props) {
   const qc = useQueryClient()
-  const addNodeRef = useRef<((kind: PipelineNode['type'], op?: PipelineNode['op']) => void) | null>(null)
+  const addNodeRef = useRef<((kind: PipelineNode['type'], op?: PipelineNode['op']) => string) | null>(null)
+  const deleteNodeRef = useRef<((nodeId: string) => void) | null>(null)
   const [draftSpec, setDraftSpec] = useState<PipelineSpec>({ nodes: [], edges: [] })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [localErrors, setLocalErrors] = useState<string[]>([])
@@ -258,11 +259,24 @@ export function PipelineDetailContent({ slug }: Props) {
 
   const handleAddNode = useCallback(
     (kind: PipelineNode['type'], op?: PipelineNode['op']) => {
-      addNodeRef.current?.(kind, op)
+      const id = addNodeRef.current?.(kind, op)
+      if (id) {
+        setSelectedId(id)
+        if (typeof window !== 'undefined' && window.innerWidth < 1280) {
+          setMobilePanel('properties')
+          return
+        }
+      }
       setMobilePanel(null)
     },
     [],
   )
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    deleteNodeRef.current?.(nodeId)
+    setSelectedId((cur) => (cur === nodeId ? null : cur))
+    setMobilePanel(null)
+  }, [])
 
   const q = quota.data
   const runsLeft = q ? Math.max(0, q.runs_per_day - q.runs_used_today) : 0
@@ -400,6 +414,9 @@ export function PipelineDetailContent({ slug }: Props) {
                     registerAddNode={(fn) => {
                       addNodeRef.current = fn
                     }}
+                    registerDeleteNode={(fn) => {
+                      deleteNodeRef.current = fn
+                    }}
                   />
                 )}
                 <NodePropertiesPanel
@@ -409,6 +426,7 @@ export function PipelineDetailContent({ slug }: Props) {
                   columnsByNode={columnsByNode}
                   sources={sources.data?.items ?? []}
                   onUpdate={updateNode}
+                  onDelete={handleDeleteNode}
                 />
               </div>
 
@@ -436,6 +454,16 @@ export function PipelineDetailContent({ slug }: Props) {
                       <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary-500 ring-2 ring-white dark:ring-neutral-900" />
                     )}
                   </Button>
+                  <Button
+                    type="button"
+                    outline
+                    className="shrink-0 justify-center gap-2 !px-3 text-red-600 dark:text-red-400"
+                    disabled={!selectedId}
+                    onClick={() => selectedId && handleDeleteNode(selectedId)}
+                    aria-label="Hapus node"
+                  >
+                    <TrashIcon className="size-5 shrink-0" aria-hidden />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -460,6 +488,7 @@ export function PipelineDetailContent({ slug }: Props) {
                   columnsByNode={columnsByNode}
                   sources={sources.data?.items ?? []}
                   onUpdate={updateNode}
+                  onDelete={handleDeleteNode}
                 />
               </DialogBody>
             </Dialog>

@@ -1,10 +1,13 @@
 'use client'
 
+import { NodeHelpPanel } from '@/components/features/factory/NodeHelpPanel'
 import { upstreamColumnOptions, validateDeriveExpr } from '@/lib/factory/columnInference'
 import type { PsdNodeData } from '@/lib/factory/specFlow'
 import type { DataSource, PipelineNode, PipelineSpec } from '@/types/api'
+import { Button } from '@/shared/Button'
 import { Field, Label } from '@/shared/fieldset'
 import Input from '@/shared/Input'
+import { TrashIcon } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
 
 const selectClass =
@@ -18,6 +21,7 @@ type Props = {
   columnsByNode: Record<string, string[]>
   sources: DataSource[]
   onUpdate: (nodeId: string, patch: Partial<PsdNodeData>) => void
+  onDelete?: (nodeId: string) => void
   className?: string
 }
 
@@ -55,7 +59,7 @@ function ColumnMultiSelect({
   )
 }
 
-export function NodePropertiesPanel({ nodeId, spec, columnsByNode, sources, onUpdate, className }: Props) {
+export function NodePropertiesPanel({ nodeId, spec, columnsByNode, sources, onUpdate, onDelete, className }: Props) {
   if (!nodeId) {
     return (
       <aside
@@ -97,12 +101,35 @@ export function NodePropertiesPanel({ nodeId, spec, columnsByNode, sources, onUp
         className,
       )}
     >
-      <div>
-        <p className="font-mono text-xs text-neutral-500">{nodeId}</p>
-        <h3 className="text-sm font-semibold capitalize text-neutral-900 dark:text-neutral-100">
-          {node.type}{node.op ? ` · ${node.op}` : ''}
-        </h3>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-mono text-xs text-neutral-500">{nodeId}</p>
+          <h3 className="text-sm font-semibold capitalize text-neutral-900 dark:text-neutral-100">
+            {node.type}{node.op ? ` · ${node.op}` : ''}
+          </h3>
+        </div>
+        {onDelete && (
+          <Button
+            type="button"
+            outline
+            className="!px-2 !py-1.5 text-red-600 hover:border-red-300 hover:bg-red-50 dark:text-red-400 dark:hover:border-red-900 dark:hover:bg-red-950/30"
+            onClick={() => onDelete(nodeId)}
+            title="Hapus node (Del / Backspace)"
+          >
+            <TrashIcon className="size-4" aria-hidden />
+            <span className="sr-only">Hapus node</span>
+          </Button>
+        )}
       </div>
+
+      <NodeHelpPanel kind={node.type} op={node.op} />
+
+      {upstream.single.length > 0 && node.type !== 'source' && (
+        <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+          Kolom hulu: {upstream.single.slice(0, 8).join(', ')}
+          {upstream.single.length > 8 ? ` +${upstream.single.length - 8}` : ''}
+        </p>
+      )}
 
       <Field>
         <Label>Lapisan</Label>
@@ -345,6 +372,12 @@ export function NodePropertiesPanel({ nodeId, spec, columnsByNode, sources, onUp
             <option value="parquet">parquet</option>
           </select>
         </Field>
+      )}
+
+      {onDelete && (
+        <p className="text-[10px] text-neutral-400 dark:text-neutral-500">
+          Tip: pilih node di kanvas lalu tekan Del atau Backspace untuk menghapus.
+        </p>
       )}
     </aside>
   )

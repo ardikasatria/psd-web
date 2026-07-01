@@ -1,6 +1,7 @@
 'use client'
 
 import { canUsePySparkNode, canUseSqlNode } from '@/components/features/factory/EngineSelector'
+import { getNodeHelp } from '@/lib/factory/nodeHelp'
 import { TRANSFORM_OPS } from '@/lib/factory/specFlow'
 import type { FactoryEngineLimits } from '@/types/api'
 import type { PipelineNode } from '@/types/api'
@@ -53,7 +54,7 @@ export function NodePalette({ className, embedded = false, engineLimits, onAdd }
       className={clsx(
         embedded
           ? 'w-full space-y-3'
-          : 'w-full shrink-0 space-y-3 rounded-2xl border border-neutral-200/80 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800 xl:w-52',
+          : 'w-full shrink-0 space-y-3 rounded-2xl border border-neutral-200/80 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800 xl:w-64',
         className,
       )}
     >
@@ -67,6 +68,7 @@ export function NodePalette({ className, embedded = false, engineLimits, onAdd }
           const Icon = item.icon
           const locked =
             (item.requiresSql && !sqlOk) || (item.requiresPySpark && !pyOk)
+          const help = getNodeHelp(item.kind, item.op)
           return (
             <li key={`${item.kind}-${item.op ?? ''}`}>
               <button
@@ -74,7 +76,7 @@ export function NodePalette({ className, embedded = false, engineLimits, onAdd }
                 disabled={locked}
                 onClick={() => !locked && onAdd(item.kind, item.op)}
                 className={clsx(
-                  'flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm font-medium transition',
+                  'flex w-full flex-col gap-0.5 rounded-xl border px-3 py-2 text-left text-sm font-medium transition',
                   locked
                     ? 'cursor-not-allowed border-neutral-200/60 bg-neutral-100/50 text-neutral-400 dark:border-neutral-700 dark:bg-neutral-900/30'
                     : 'border-neutral-200/80 bg-neutral-50/80 text-neutral-800 hover:border-primary-300 hover:bg-primary-50/50 dark:border-neutral-600 dark:bg-neutral-900/40 dark:text-neutral-200 dark:hover:border-primary-800 dark:hover:bg-primary-950/30',
@@ -84,15 +86,22 @@ export function NodePalette({ className, embedded = false, engineLimits, onAdd }
                     ? item.requiresPySpark
                       ? 'Butuh tier Lanjut & akses kernel'
                       : 'Butuh tier Menengah untuk node SQL'
-                    : undefined
+                    : help.summary
                 }
               >
-                <Icon className="size-4 shrink-0 text-primary-600 dark:text-primary-400" aria-hidden />
-                <span className="capitalize">{item.label}</span>
-                {locked ? (
-                  <LockClosedIcon className="ms-auto size-3.5" aria-hidden />
-                ) : (
-                  <PlusIcon className="ms-auto size-3.5 text-neutral-400" aria-hidden />
+                <span className="flex w-full items-center gap-2">
+                  <Icon className="size-4 shrink-0 text-primary-600 dark:text-primary-400" aria-hidden />
+                  <span className="capitalize">{item.label}</span>
+                  {locked ? (
+                    <LockClosedIcon className="ms-auto size-3.5" aria-hidden />
+                  ) : (
+                    <PlusIcon className="ms-auto size-3.5 text-neutral-400" aria-hidden />
+                  )}
+                </span>
+                {!locked && !embedded && (
+                  <span className="line-clamp-2 ps-6 text-[10px] font-normal leading-snug text-neutral-500 dark:text-neutral-400">
+                    {help.summary}
+                  </span>
                 )}
               </button>
             </li>

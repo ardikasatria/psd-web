@@ -29,7 +29,8 @@ type Props = {
   onSelect: (id: string | null) => void
   nodeErrors: Record<string, string>
   highlightEdges?: Set<string>
-  registerAddNode?: (fn: (kind: PipelineNode['type'], op?: PipelineNode['op']) => void) => void
+  registerAddNode?: (fn: (kind: PipelineNode['type'], op?: PipelineNode['op']) => string) => void
+  registerDeleteNode?: (fn: (nodeId: string) => void) => void
   className?: string
 }
 
@@ -70,6 +71,7 @@ function CanvasInner({
   nodeErrors,
   highlightEdges,
   registerAddNode,
+  registerDeleteNode,
   className,
 }: Props) {
   const colorMode = useColorMode()
@@ -124,13 +126,31 @@ function CanvasInner({
       const nextNodes = [...nodes, newNode]
       setNodes(nextNodes)
       syncOut(nextNodes, edges)
+      onSelect(id)
+      return id
     },
-    [nodes, edges, setNodes, syncOut],
+    [nodes, edges, setNodes, syncOut, onSelect],
+  )
+
+  const deleteNode = useCallback(
+    (nodeId: string) => {
+      const nextNodes = nodes.filter((n) => n.id !== nodeId)
+      const nextEdges = edges.filter((e) => e.source !== nodeId && e.target !== nodeId)
+      setNodes(nextNodes)
+      setEdges(nextEdges)
+      syncOut(nextNodes, nextEdges)
+      if (selectedId === nodeId) onSelect(null)
+    },
+    [nodes, edges, setNodes, setEdges, syncOut, selectedId, onSelect],
   )
 
   useEffect(() => {
     registerAddNode?.(addNode)
   }, [addNode, registerAddNode])
+
+  useEffect(() => {
+    registerDeleteNode?.(deleteNode)
+  }, [deleteNode, registerDeleteNode])
 
   const onConnect = useCallback(
     (conn: Connection) => {
@@ -161,7 +181,10 @@ function CanvasInner({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDragStop={onNodeDragStop}
+        onNodeClick={(_, node) => onSelect(node.id)}
+        onPaneClick={() => onSelect(null)}
         onSelectionChange={({ nodes: sel }) => onSelect(sel[0]?.id ?? null)}
+        nodesDeletable
         onNodesDelete={(deleted) => {
           const ids = new Set(deleted.map((d) => d.id))
           const nextNodes = nodes.filter((n) => !ids.has(n.id))
@@ -169,6 +192,7 @@ function CanvasInner({
           setNodes(nextNodes)
           setEdges(nextEdges)
           syncOut(nextNodes, nextEdges)
+          if (deleted.some((d) => d.id === selectedId)) onSelect(null)
         }}
         onEdgesDelete={(deleted) => {
           const ids = new Set(deleted.map((d) => d.id))
