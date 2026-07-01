@@ -42,13 +42,15 @@ else
 fi
 
 echo ""
-echo "Migrasi Alembic (harus head = 048_mlops_features):"
-if docker compose -f docker-compose.prod.yml exec -T backend alembic current 2>/dev/null | grep -q "048_mlops_features"; then
-  echo "  OK  alembic head (048_mlops_features)"
+echo "Migrasi Alembic (harus head = 059_repo_trash):"
+if docker compose -f docker-compose.prod.yml exec -T backend alembic current 2>/dev/null | grep -q "059_repo_trash"; then
+  echo "  OK  alembic head (059_repo_trash)"
 else
   echo "  WARN alembic current — cek: docker compose -f docker-compose.prod.yml exec backend alembic current"
   fail=1
 fi
+
+check "API orm" "${API}/health/orm" || fail=1
 
 echo ""
 echo "Endpoint publik Fase 0:"

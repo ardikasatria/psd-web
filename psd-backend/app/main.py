@@ -189,10 +189,22 @@ async def health_db(db: AsyncSession = Depends(get_db)):
 async def startup_search_indexes():
     import logging
 
-    logging.getLogger("psd.cors").info("BACKEND_CORS_ORIGINS=%s", settings.BACKEND_CORS_ORIGINS)
+    from app.core.db import SessionLocal
+
+    log = logging.getLogger("psd.startup")
+    log.info("BACKEND_CORS_ORIGINS=%s", settings.BACKEND_CORS_ORIGINS)
     try:
         from app.core.search import ensure_indexes
 
         ensure_indexes()
     except Exception:
         pass
+    try:
+        async with SessionLocal() as db:
+            await db.execute(text("SELECT deleted_at FROM repos LIMIT 0"))
+    except Exception as exc:
+        log.error(
+            "Skema DB belum lengkap (repos.deleted_at?) — jalankan: "
+            "docker compose -f docker-compose.prod.yml exec backend alembic upgrade head — %s",
+            exc,
+        )
