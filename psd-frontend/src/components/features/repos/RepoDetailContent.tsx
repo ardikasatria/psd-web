@@ -24,7 +24,8 @@ import { DetailPageHeader, DetailPageShell } from '@/components/features/layout'
 import { createRepoDiscussion, getRepoDiscussions } from '@/lib/api/community'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useAssetCollaboration } from '@/lib/teams/useAssetCollaboration'
-import { getRepo, provisionRepoGit } from '@/lib/api/repos'
+import { RepoDeleteDialog } from '@/components/features/repos/RepoDeleteDialog'
+import { getRepo, provisionRepoGit, trashRepo } from '@/lib/api/repos'
 import { assetKindPath, getAssetBranches, getAssetVersions } from '@/lib/api/asset'
 import { profilePath } from '@/lib/routes/profile'
 import { Badge } from '@/shared/Badge'
@@ -38,7 +39,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { PencilSquareIcon } from '@heroicons/react/24/outline'
+import { PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
 
 const kindLabel: Record<RepoKind, string> = {
   project: 'Proyek',
@@ -86,6 +87,7 @@ export function RepoDetailContent({
   const [ref, setRef] = useState('main')
   const [showForm, setShowForm] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
 
@@ -141,6 +143,16 @@ export function RepoDetailContent({
     triedLink.current = true
     linkGit.mutate()
   }, [canEdit, data?.id, data?.clone_url, linkGit])
+
+  const removeRepo = useMutation({
+    mutationFn: () => trashRepo(data!.id),
+    onSuccess: () => {
+      setDeleteOpen(false)
+      qc.invalidateQueries({ queryKey: ['my-trash'] })
+      qc.invalidateQueries({ queryKey: ['my-repos'] })
+      router.push('/dashboard/trash')
+    },
+  })
 
   const kp = assetKindPath(kind)
 
@@ -224,10 +236,16 @@ export function RepoDetailContent({
                     </Button>
                   )}
                   {canEdit && (
-                    <Button outline onClick={() => setEditOpen(true)}>
-                      <PencilSquareIcon className="size-4" data-slot="icon" aria-hidden />
-                      Edit
-                    </Button>
+                    <>
+                      <Button outline onClick={() => setEditOpen(true)}>
+                        <PencilSquareIcon className="size-4" data-slot="icon" aria-hidden />
+                        Edit
+                      </Button>
+                      <Button outline className="!text-red-600" onClick={() => setDeleteOpen(true)}>
+                        <TrashIcon className="size-4" data-slot="icon" aria-hidden />
+                        Hapus
+                      </Button>
+                    </>
                   )}
                 </div>
               }
@@ -433,6 +451,16 @@ export function RepoDetailContent({
               open={editOpen}
               onClose={() => setEditOpen(false)}
               onSaved={refreshRepo}
+            />
+
+            <RepoDeleteDialog
+              open={deleteOpen}
+              slug={data.slug}
+              confirmName={data.name}
+              kindLabel={kindLabel[data.kind as RepoKind]}
+              onCancel={() => setDeleteOpen(false)}
+              onConfirm={() => removeRepo.mutate()}
+              pending={removeRepo.isPending}
             />
           </>
         )}

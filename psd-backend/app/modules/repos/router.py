@@ -20,6 +20,13 @@ from app.modules.gamification.service import after_repo_created
 from app.modules.gamification.tiers import perks_for
 from app.modules.repos.models import Repo, RepoLike
 from app.modules.repos.schemas import RepoUpdate, to_detail, to_summary
+from app.modules.repos.trash import (
+    is_active,
+    permanent_delete_repo,
+    restore_repo,
+    soft_delete_repo,
+    trash_summary_fields,
+)
 from app.modules.rooms.models import IdeaRoom
 from app.modules.teams.deps import membership, team_ref
 from app.modules.teams.models import Team
@@ -44,6 +51,10 @@ async def _get_repo(db: AsyncSession, repo_id: str) -> Repo:
     if not r:
         raise ApiError(404, "not_found", "Aset tidak ditemukan")
     return r
+
+
+def _active_only(stmt):
+    return stmt.where(Repo.deleted_at.is_(None))
 
 
 def _meili_sort(sort: str | None) -> list[str]:
@@ -106,7 +117,11 @@ async def _list(db, kind, q, tags, sort, category, subcategory, team, p: PagePar
             )
             ids = [h["id"] for h in res["hits"]]
             if ids:
-                rows = (await db.execute(select(Repo).where(Repo.id.in_(ids)))).scalars().all()
+                rows = (
+                    await db.execute(
+                        select(Repo).where(Repo.id.in_(ids), Repo.deleted_at.is_(None))
+                    )
+                ).scalars().all()
                 order = {rid: i for i, rid in enumerate(ids)}
                 rows.sort(key=lambda r: order.get(r.id, len(ids)))
             else:
@@ -122,7 +137,7 @@ async def _list(db, kind, q, tags, sort, category, subcategory, team, p: PagePar
         except Exception:
             pass
 
-    stmt = select(Repo).where(Repo.kind == kind)
+    stmt = _active_only(select(Repo).where(Repo.kind == kind))
     if q:
         stmt = stmt.where(Repo.name.ilike(f"%{q}%") | Repo.description.ilike(f"%{q}%"))
     if tags:
@@ -156,7 +171,9 @@ async def _list(db, kind, q, tags, sort, category, subcategory, team, p: PagePar
 async def _detail(db, kind, owner, name):
     slug = f"{owner}/{name}"
     r = (
-        await db.execute(select(Repo).where(Repo.slug == slug, Repo.kind == kind))
+        await db.execute(
+            select(Repo).where(Repo.slug == slug, Repo.kind == kind, Repo.deleted_at.is_(None))
+        )
     ).scalar_one_or_none()
     if not r:
         raise ApiError(404, "not_found", "Aset tidak ditemukan")
@@ -168,6 +185,8 @@ async def _detail(db, kind, owner, name):
 
 async def _can_edit_repo(db: AsyncSession, repo_id: str, user: User) -> Repo:
     r = await _get_repo(db, repo_id)
+    if not is_active(r):
+        raise ApiError(410, "trashed", "Aset berada di trash. Pulihkan dari dasbor Sampah.")
     if r.owner_id == user.id:
         return r
     if r.team_id and await membership(db, r.team_id, user.id):
@@ -290,7 +309,7 @@ async def discover(db: AsyncSession = Depends(get_db)):
     featured_rows = (
         await db.execute(
             select(Repo)
-            .where(Repo.visibility == "public", Repo.featured.is_(True))
+            .where(Repo.visibility == "public", Repo.featured.is_(True), Repo.deleted_at.is_(None))
             .order_by(Repo.updated_at.desc())
             .limit(6)
         )
@@ -298,7 +317,7 @@ async def discover(db: AsyncSession = Depends(get_db)):
     recent_rows = (
         await db.execute(
             select(Repo)
-            .where(Repo.visibility == "public")
+            .where(Repo.visibility == "public", Repo.deleted_at.is_(None))
             .order_by(Repo.updated_at.desc())
             .limit(6)
         )
@@ -412,6 +431,8 @@ async def like_repo(
     db: AsyncSession = Depends(get_db),
 ):
     r = await _get_repo(db, repo_id)
+    if not is_active(r):
+        raise ApiError(404, "not_found", "Aset tidak ditemukan")
     key = engagement_service.asset_key(r.kind, r.slug)
     if await engagement_service.has_loved(db, user.id, key):
         stats = await engagement_service.get_stats(db, r.kind, r.slug, user)
@@ -432,6 +453,8 @@ async def unlike_repo(
     db: AsyncSession = Depends(get_db),
 ):
     r = await _get_repo(db, repo_id)
+    if not is_active(r):
+        raise ApiError(404, "not_found", "Aset tidak ditemukan")
     key = engagement_service.asset_key(r.kind, r.slug)
     if not await engagement_service.has_loved(db, user.id, key):
         stats = await engagement_service.get_stats(db, r.kind, r.slug, user)
@@ -504,3 +527,68 @@ async def gitea_flip_source(
         raise ApiError(400, "not_linked", "Repositori Git belum diaktifkan untuk aset ini")
     await flip_source(db, r)
     return {"source_of_truth": r.source_of_truth, "clone_url": r.clone_url}
+
+
+@router.get("/me/repos/trash")
+async def list_my_trash(
+    kind: str | None = None,
+    p: PageParams = Depends(page_params),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.modules.teams.models import TeamMember
+
+    team_ids = list(
+        (await db.execute(select(TeamMember.team_id).where(TeamMember.user_id == user.id))).scalars().all()
+    )
+    access = [Repo.owner_id == user.id]
+    if team_ids:
+        access.append(Repo.team_id.in_(team_ids))
+    stmt = select(Repo).where(Repo.deleted_at.is_not(None), or_(*access))
+    if kind in KIND_MAP.values():
+        stmt = stmt.where(Repo.kind == kind)
+    stmt = stmt.order_by(Repo.deleted_at.desc())
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
+    rows = (await db.execute(stmt.offset(p.offset).limit(p.page_size))).scalars().all()
+    items = []
+    for r in rows:
+        cat, sub = await load_category_refs(db, r.category_id, r.subcategory_id)
+        tm = await team_ref(db, r.team_id)
+        items.append({**to_summary(r, cat, sub, tm), **trash_summary_fields(r)})
+    return paginated(items, total, p)
+
+
+@router.delete("/repos/{repo_id}")
+async def trash_repo(
+    repo_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    r = await _get_repo(db, repo_id)
+    return await soft_delete_repo(db, r, user)
+
+
+@router.post("/repos/{repo_id}/restore")
+async def restore_repo_endpoint(
+    repo_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    r = await _get_repo(db, repo_id)
+    return await restore_repo(db, r, user)
+
+
+@router.delete("/repos/{repo_id}/permanent", status_code=204)
+async def permanent_delete_repo_endpoint(
+    repo_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    r = await _get_repo(db, repo_id)
+    if is_active(r):
+        raise ApiError(400, "not_trashed", "Hapus ke trash terlebih dahulu sebelum penghapusan permanen.")
+    from app.modules.repos.trash import assert_can_manage_repo
+
+    await assert_can_manage_repo(r, user, db)
+    await permanent_delete_repo(db, r)
+    return Response(status_code=204)

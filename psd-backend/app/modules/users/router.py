@@ -110,7 +110,7 @@ async def portfolio(
     if not u:
         raise ApiError(404, "not_found", "Pengguna tidak ditemukan")
     _check_profile_access(u, viewer)
-    stmt = select(Repo).where(Repo.owner_id == u.id)
+    stmt = select(Repo).where(Repo.owner_id == u.id, Repo.deleted_at.is_(None))
     if kind:
         stmt = stmt.where(Repo.kind == kind)
     stmt = stmt.order_by(Repo.updated_at.desc())

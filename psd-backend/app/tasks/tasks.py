@@ -31,6 +31,22 @@ def run_drift_job(self, report_id: str, payload: dict) -> dict:
     return execute(self, "drift", report_id, payload, seams.drift_impl)
 
 
+@celery_app.task(bind=True, base=PSDTask, name="psd.repos.purge_trash")
+def purge_trash_job(self) -> dict:
+    """Hapus permanen aset di trash yang sudah lewat retensi 30 hari."""
+    import asyncio
+
+    from app.core.db import SessionLocal
+    from app.modules.repos.trash import purge_expired_trash
+
+    async def _run() -> int:
+        async with SessionLocal() as db:
+            return await purge_expired_trash(db)
+
+    count = asyncio.run(_run())
+    return {"purged": count}
+
+
 @celery_app.task(bind=True, base=PSDTask, name="psd.serving.retrain")
 def run_retrain_job(self, model_name: str, reason: str) -> dict:
     """Stub retraining — log & kembalikan status (pipeline penuh menyusul)."""

@@ -338,6 +338,9 @@ class GiteaClient:
     async def delete_user_key(self, username: str, key_id: int) -> None:
         await self._req("DELETE", f"/admin/users/{username}/keys/{key_id}")
 
+    async def delete_repo(self, owner: str, repo: str) -> None:
+        await self._req("DELETE", f"/repos/{owner}/{repo}")
+
 
 def make_operations(files: list[dict], operation: str = "create") -> list[dict]:
     ops = []

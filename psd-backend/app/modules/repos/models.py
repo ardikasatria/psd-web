@@ -39,6 +39,8 @@ class Repo(Base):
     gitea_owner: Mapped[str | None] = mapped_column(String, nullable=True)
     gitea_name: Mapped[str | None] = mapped_column(String, nullable=True)
     source_of_truth: Mapped[str] = mapped_column(String, default="psd")
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    deleted_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

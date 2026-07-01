@@ -482,6 +482,16 @@ export const RepoSummarySchema = z.object({
 })
 export type RepoSummary = z.infer<typeof RepoSummarySchema>
 
+export const TrashRepoSummarySchema = RepoSummarySchema.extend({
+  deleted_at: z.string(),
+  purge_at: z.string(),
+  days_until_purge: z.number(),
+})
+export type TrashRepoSummary = z.infer<typeof TrashRepoSummarySchema>
+
+export const PaginatedTrashRepoSchema = Paginated(TrashRepoSummarySchema)
+export type PaginatedTrashRepo = PaginatedResult<TrashRepoSummary>
+
 export const RepoFileSchema = z.object({
   path: z.string(),
   size_bytes: z.number(),

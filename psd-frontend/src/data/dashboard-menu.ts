@@ -10,6 +10,7 @@ import {
   HomeIcon,
   LifebuoyIcon,
   ShieldCheckIcon,
+  TrashIcon,
   TrophyIcon,
   BoltIcon,
   CalendarDaysIcon,
@@ -43,6 +44,7 @@ export const dashboardMenuSections: DashboardMenuSection[] = [
       { name: 'Dataset saya', href: '/dashboard/datasets', icon: CircleStackIcon },
       { name: 'Model saya', href: '/dashboard/models', icon: CpuChipIcon },
       { name: 'Notebook saya', href: '/dashboard/notebooks', icon: BeakerIcon },
+      { name: 'Sampah aset', href: '/dashboard/trash', icon: TrashIcon },
     ],
   },
   {

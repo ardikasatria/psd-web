@@ -5,6 +5,8 @@ import {
   FileEntrySchema,
   PaginatedRepoSummary,
   PaginatedRepoSummarySchema,
+  PaginatedTrashRepo,
+  PaginatedTrashRepoSchema,
   RepoDetail,
   RepoDetailSchema,
   RepoKind,
@@ -66,6 +68,32 @@ export const uploadRepoFile = async (repoId: string, file: File) => {
 
 export const deleteRepoFile = (repoId: string, path: string) =>
   apiDelete(`/repos/${repoId}/files?path=${encodeURIComponent(path)}`)
+
+/** Pindahkan aset ke trash (soft delete, retensi 30 hari). */
+export const trashRepo = (repoId: string) =>
+  apiFetch(
+    `/repos/${repoId}`,
+    z.object({
+      trashed: z.boolean(),
+      deleted_at: z.string(),
+      purge_at: z.string(),
+      days_until_purge: z.number(),
+    }),
+    { method: 'DELETE' },
+  )
+
+export const restoreRepo = (repoId: string) =>
+  apiFetch(
+    `/repos/${repoId}/restore`,
+    z.object({ restored: z.boolean(), id: z.string(), slug: z.string() }),
+    { method: 'POST' },
+  )
+
+export const permanentDeleteRepo = (repoId: string) =>
+  apiDelete(`/repos/${repoId}/permanent`)
+
+export const listMyTrash = (q?: { kind?: RepoKind; page?: number; page_size?: number }) =>
+  apiFetch<PaginatedTrashRepo>(`/me/repos/trash${buildQuery(q ?? {})}`, PaginatedTrashRepoSchema)
 
 export const likeRepo = (repoId: string) =>
   apiFetch<{ liked: boolean; likes: number }>(`/repos/${repoId}/like`, LikeResultSchema, {

@@ -42,6 +42,7 @@ celery_app.conf.update(
         "psd.pipeline.run": {"queue": "pabrik_data"},
         "psd.pipeline.spark_run": {"queue": "spark"},
         "psd.mlops.drift_run": {"queue": "pabrik_data"},
+        "psd.repos.purge_trash": {"queue": "pabrik_data"},
         "psd.email.*": {"queue": "email"},
     },
     beat_schedule={
@@ -49,6 +50,11 @@ celery_app.conf.update(
             "task": "psd.email.daily_digest",
             "schedule": 60 * 60 * 24,
             "options": {"queue": "email"},
+        },
+        "repos-purge-trash": {
+            "task": "psd.repos.purge_trash",
+            "schedule": 60 * 60 * 24,
+            "options": {"queue": "pabrik_data"},
         },
     },
 )

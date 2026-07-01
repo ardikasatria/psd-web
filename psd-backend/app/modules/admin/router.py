@@ -697,12 +697,9 @@ async def delete_ann(ann_id: str, db: AsyncSession = Depends(get_db)):
 async def delete_repo(repo_id: str, db: AsyncSession = Depends(get_db)):
     r = (await db.execute(select(Repo).where(Repo.id == repo_id))).scalar_one_or_none()
     if r:
-        try:
-            delete_repo_doc(r.id)
-        except Exception:
-            pass
-        await db.delete(r)
-        await db.commit()
+        from app.modules.repos.trash import permanent_delete_repo
+
+        await permanent_delete_repo(db, r)
 
 
 @router.delete("/admin/threads/{thread_id}", status_code=204)

@@ -172,6 +172,12 @@ const likeState: Record<string, { liked: boolean; likes: number }> = Object.from
 const repoFileState: Record<string, Array<{ path: string; size_bytes: number; type: string; url: string }>> = {}
 const repoMetaState: Record<string, Partial<{ readme_md: string; description: string; tags: string[]; license: string | null; visibility: string }>> = {}
 
+const repoTrashState: Record<string, { deleted_at: string; purge_at: string; days_until_purge: number }> = {}
+
+function isRepoTrashed(id: string) {
+  return id in repoTrashState
+}
+
 type MockAnnouncement = {
   id: string
   title: string
@@ -474,7 +480,7 @@ export const handlers = [
     const url = new URL(request.url)
     const page = Number(url.searchParams.get('page') ?? 1)
     const kind = url.searchParams.get('kind')
-    let items = repos.filter((r) => r.owner.username === params.username)
+    let items = repos.filter((r) => r.owner.username === params.username && !isRepoTrashed(r.id))
     if (kind) items = items.filter((r) => r.kind === kind)
     return HttpResponse.json(paginate(items, page))
   }),
@@ -504,7 +510,7 @@ export const handlers = [
       const page_size = Number(url.searchParams.get('page_size') ?? 20)
       const kindSingular = kind.slice(0, -1) as 'project' | 'dataset' | 'model'
 
-      let items = repos.filter((r) => r.kind === kindSingular)
+      let items = repos.filter((r) => r.kind === kindSingular && !isRepoTrashed(r.id))
       if (q) items = items.filter((r) => r.name.includes(q) || r.description.toLowerCase().includes(q))
       if (tags?.length) items = items.filter((r) => tags.some((t) => r.tags.includes(t)))
       const teamSlug = url.searchParams.get('team')
@@ -523,7 +529,7 @@ export const handlers = [
     http.get(`${API}/${kind}/:owner/:name`, ({ params }) => {
       const kindSingular = kind.slice(0, -1)
       const repo = findRepo(kindSingular, String(params.owner), String(params.name))
-      if (!repo) return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+      if (!repo || isRepoTrashed(repo.id)) return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
       const state = likeState[repo.id] ?? { liked: false, likes: repo.likes }
       return HttpResponse.json({ ...mockRepoDetail(repo), liked: state.liked, likes: state.likes })
     }),
@@ -662,6 +668,52 @@ export const handlers = [
     const body = (await request.json()) as Record<string, unknown>
     repoMetaState[repo.id] = { ...repoMetaState[repo.id], ...body } as typeof repoMetaState[string]
     return HttpResponse.json({ ...mockRepoDetail(repo), liked: likeState[repo.id]?.liked ?? false })
+  }),
+
+  http.get(`${API}/me/repos/trash`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Sesi tidak valid.')
+    const url = new URL(request.url)
+    const kind = url.searchParams.get('kind')
+    const page = Number(url.searchParams.get('page') ?? 1)
+    let items = repos.filter((r) => r.owner.username === user.username && isRepoTrashed(r.id))
+    if (kind) items = items.filter((r) => r.kind === kind)
+    const mapped = items.map((r) => ({ ...r, ...repoTrashState[r.id] }))
+    return HttpResponse.json(paginate(mapped, page))
+  }),
+
+  http.delete(`${API}/repos/:repoId`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Sesi tidak valid.')
+    const repo = repos.find((r) => r.id === params.repoId)
+    if (!repo) return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+    if (isRepoTrashed(repo.id)) return errorResponse(409, 'already_trashed', 'Aset sudah ada di trash.')
+    const deleted_at = new Date().toISOString()
+    const purge = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    repoTrashState[repo.id] = { deleted_at, purge_at: purge, days_until_purge: 30 }
+    return HttpResponse.json({ trashed: true, ...repoTrashState[repo.id] })
+  }),
+
+  http.post(`${API}/repos/:repoId/restore`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Sesi tidak valid.')
+    const repo = repos.find((r) => r.id === params.repoId)
+    if (!repo) return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+    if (!isRepoTrashed(repo.id)) return errorResponse(409, 'not_trashed', 'Aset tidak berada di trash.')
+    delete repoTrashState[repo.id]
+    return HttpResponse.json({ restored: true, id: repo.id, slug: repo.slug })
+  }),
+
+  http.delete(`${API}/repos/:repoId/permanent`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user) return errorResponse(401, 'unauthorized', 'Sesi tidak valid.')
+    const repo = repos.find((r) => r.id === params.repoId)
+    if (!repo) return errorResponse(404, 'not_found', 'Aset tidak ditemukan.')
+    if (!isRepoTrashed(repo.id)) return errorResponse(400, 'not_trashed', 'Hapus ke trash terlebih dahulu.')
+    delete repoTrashState[repo.id]
+    const idx = repos.findIndex((r) => r.id === repo.id)
+    if (idx >= 0) repos.splice(idx, 1)
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.post(`${API}/repos/:repoId/files`, async ({ request, params }) => {
