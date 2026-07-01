@@ -258,6 +258,8 @@ export function PostCard({
             onVisibilityChange={(v) => updateMutation.mutate({ visibility: v })}
             deletePending={deleteMutation.isPending}
             visibilityPending={updateMutation.isPending}
+            deleteConfirmTitle="Hapus postingan?"
+            deleteConfirmDescription="Postingan ini akan dihapus permanen dari feed. Tindakan ini tidak dapat dibatalkan."
           />
         )}
         {isLoggedIn && !isOwner && (

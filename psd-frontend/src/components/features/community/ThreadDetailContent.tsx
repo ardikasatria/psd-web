@@ -155,6 +155,8 @@ function ForumReplyCard({
                 onVisibilityChange={(v) => updateMutation.mutate({ visibility: v })}
                 deletePending={deleteMutation.isPending}
                 visibilityPending={updateMutation.isPending}
+                deleteConfirmTitle="Hapus balasan?"
+                deleteConfirmDescription="Balasan ini akan dihapus permanen dari thread. Tindakan ini tidak dapat dibatalkan."
               />
             )}
             {isLoggedIn && currentUsername !== post.author.username && !isEditing && (
@@ -410,6 +412,8 @@ export function ThreadDetailContent({ id }: { id: string }) {
                         onVisibilityChange={(v) => updateThreadMutation.mutate({ visibility: v })}
                         deletePending={deleteThreadMutation.isPending}
                         visibilityPending={updateThreadMutation.isPending}
+                        deleteConfirmTitle="Hapus thread?"
+                        deleteConfirmDescription="Thread beserta semua balasannya akan dihapus permanen. Tindakan ini tidak dapat dibatalkan."
                       />
                     )}
                     {isLoggedIn && !isThreadOwner && !isEditingThread && (
