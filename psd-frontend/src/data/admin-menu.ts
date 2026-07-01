@@ -17,6 +17,7 @@ import {
   TagIcon,
   TrophyIcon,
   CalendarDaysIcon,
+  BuildingOffice2Icon,
   UserGroupIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
@@ -37,6 +38,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   { name: 'Micro-lesson', href: '/admin/micro', icon: BoltIcon },
   { name: 'Kompetisi', href: '/admin/competitions', icon: TrophyIcon },
   { name: 'Tim Kolaborasi', href: '/admin/teams', icon: UserGroupIcon },
+  { name: 'Organisasi', href: '/admin/orgs', icon: BuildingOffice2Icon },
   { name: 'Pengajuan kompetisi', href: '/admin/competitions/proposals', icon: TrophyIcon },
   { name: 'Event', href: '/admin/events', icon: CalendarDaysIcon },
   { name: 'Pengajuan event', href: '/admin/events/proposals', icon: CalendarDaysIcon },

@@ -9,6 +9,7 @@ import { AchievementBadge, BADGE_META } from '@/components/features/gamification
 import { TierBadge } from '@/components/features/gamification/TierBadge'
 import { SimpleMarkdown } from '@/components/common/SimpleMarkdown'
 import { OfficialBadge } from '@/components/common/OfficialBadge'
+import { OrgMembershipBadges } from '@/components/features/orgs/OrgMembershipBadges'
 import { FollowButton } from '@/components/features/social/FollowButton'
 import { FollowListDialog } from '@/components/features/social/FollowListDialog'
 import { ProfileAvatar, ProfileCover } from '@/components/features/users/ProfileCover'
@@ -205,6 +206,7 @@ export function ProfileCard({
               )}
             </p>
           )}
+          {isOwner && <OrgMembershipBadges />}
           {profile.pronouns && (
             <p className="text-center text-sm text-neutral-500 dark:text-neutral-400">{profile.pronouns}</p>
           )}

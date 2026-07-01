@@ -52,6 +52,7 @@ import {
 } from './data/social'
 import { buildDiscoveryPanels, discoveryListForKind } from './data/discovery'
 import { runUniversalSearch } from './data/search'
+import { createOrgHandlers } from './org-handlers'
 import { mockContributors, mockGamificationFor } from './data/gamification'
 import {
   getMockAssetStats,
@@ -4994,4 +4995,6 @@ export const handlers = [
     if (result.error) return errorResponse(result.error.status, result.error.code, result.error.message)
     return HttpResponse.json(result.data)
   }),
+
+  ...createOrgHandlers({ API, resolveUserFromRequest, errorResponse, paginate }),
 ]

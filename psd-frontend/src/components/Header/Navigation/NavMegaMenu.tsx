@@ -80,35 +80,31 @@ export function NavMegaMenu({ menuItem }: { menuItem: TNavigationItem }) {
       {columns.length > 0 ? (
         <div
           className={clsx(
-            'absolute inset-x-0 top-full z-50',
+            'fixed inset-x-0 top-20 z-50 border-t border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900',
             open ? 'block' : 'hidden',
           )}
         >
-          <div className="bg-white shadow-lg dark:bg-neutral-900">
-            <div className="container">
-              <div className="border-t border-neutral-200 py-8 text-sm dark:border-neutral-700 lg:py-10">
-                <div
-                  className={clsx(
-                    'grid gap-8',
-                    colCount >= 3 && 'sm:grid-cols-2 lg:grid-cols-3',
-                    colCount === 2 && 'sm:grid-cols-2',
-                    colCount === 1 && 'max-w-sm',
-                  )}
-                >
-                  {columns.map((col) => (
-                    <div key={col.id}>
-                      <p className="font-medium text-neutral-900 dark:text-neutral-200">{col.name}</p>
-                      <ul className="mt-4 grid space-y-3">
-                        {col.children?.map((link) => (
-                          <li key={link.id}>
-                            <MegaMenuLink item={link} onNavigate={close} />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
+          <div className="container py-8 text-sm lg:py-10">
+            <div
+              className={clsx(
+                'grid gap-x-12 gap-y-8',
+                colCount === 1 && 'max-w-sm grid-cols-1',
+                colCount === 2 && 'grid-cols-2',
+                colCount >= 3 && 'grid-cols-3',
+              )}
+            >
+              {columns.map((col) => (
+                <div key={col.id} className="min-w-0">
+                  <p className="font-medium text-neutral-900 dark:text-neutral-200">{col.name}</p>
+                  <ul className="mt-4 flex flex-col gap-3">
+                    {col.children?.map((link) => (
+                      <li key={link.id}>
+                        <MegaMenuLink item={link} onNavigate={close} />
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>

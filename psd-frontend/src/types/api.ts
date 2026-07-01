@@ -777,6 +777,143 @@ export type TeamJoinRequest = z.infer<typeof TeamJoinRequestSchema>
 export const PaginatedTeamSummarySchema = Paginated(TeamSummarySchema)
 export type PaginatedTeamSummary = PaginatedResult<TeamSummary>
 
+export const OrgTypeSchema = z.enum(['personal', 'community', 'academic', 'umkm', 'enterprise'])
+export const OrgRoleSchema = z.enum(['owner', 'admin', 'member', 'billing_manager'])
+export const OrgVerificationSchema = z.enum(['unverified', 'pending', 'verified', 'rejected'])
+export const AccessLevelSchema = z.enum(['read', 'triage', 'write', 'maintain', 'admin'])
+
+export const OrgSchema = z.object({
+  id: z.string(),
+  handle: z.string(),
+  name: z.string(),
+  type: OrgTypeSchema,
+  verification: OrgVerificationSchema,
+  my_role: OrgRoleSchema.nullable().optional(),
+})
+export type Org = z.infer<typeof OrgSchema>
+
+export const OrgMemberSchema = z.object({
+  user_id: z.string(),
+  username: z.string(),
+  name: z.string().nullable(),
+  avatar_url: z.string().nullable(),
+  role: OrgRoleSchema,
+  joined_at: z.string().nullable().optional(),
+})
+export type OrgMember = z.infer<typeof OrgMemberSchema>
+
+export const OrgTeamSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  member_count: z.number().optional(),
+  members: z
+    .array(z.object({ user_id: z.string(), username: z.string(), name: z.string().nullable() }))
+    .optional(),
+})
+export type OrgTeam = z.infer<typeof OrgTeamSchema>
+
+export const OrgAssetSchema = z.object({
+  id: z.string(),
+  kind: z.string(),
+  title: z.string(),
+  path: z.string().optional(),
+  my_access: AccessLevelSchema.nullable().optional(),
+})
+export type OrgAsset = z.infer<typeof OrgAssetSchema>
+
+export const OrgGrantSchema = z.object({
+  id: z.number().optional(),
+  team_id: z.string().nullable().optional(),
+  user_id: z.string().nullable().optional(),
+  level: AccessLevelSchema,
+  team_name: z.string().nullable().optional(),
+  username: z.string().nullable().optional(),
+})
+export type OrgGrant = z.infer<typeof OrgGrantSchema>
+
+export const OpportunitySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  skills: z.array(z.string()).optional(),
+  status: z.enum(['open', 'closed']),
+  created_at: z.string().nullable().optional(),
+})
+export type Opportunity = z.infer<typeof OpportunitySchema>
+
+export const OrgApplicationSchema = z.object({
+  id: z.string(),
+  opportunity_id: z.string(),
+  opportunity_title: z.string().optional(),
+  applicant: z.object({
+    user_id: z.string(),
+    username: z.string(),
+    name: z.string().nullable(),
+  }),
+  status: z.enum(['pending', 'accepted', 'rejected']),
+  created_at: z.string().nullable().optional(),
+})
+export type OrgApplication = z.infer<typeof OrgApplicationSchema>
+
+export const OrgDetailSchema = OrgSchema.extend({
+  description: z.string().nullable().optional(),
+  base_permission: AccessLevelSchema.nullable().optional(),
+  suspended: z.boolean().optional(),
+  members: z.array(OrgMemberSchema).optional(),
+  teams: z.array(OrgTeamSchema).optional(),
+  assets: z.array(OrgAssetSchema).optional(),
+  opportunities: z.array(OpportunitySchema).optional(),
+  verification_request: z
+    .object({
+      id: z.string(),
+      status: z.string(),
+      doc_keys: z.array(z.string()).optional(),
+      note: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+})
+export type OrgDetail = z.infer<typeof OrgDetailSchema>
+
+export const MyOrgSchema = z.object({
+  id: z.string(),
+  handle: z.string(),
+  name: z.string(),
+  type: OrgTypeSchema,
+  verification: OrgVerificationSchema,
+  role: OrgRoleSchema,
+})
+export type MyOrg = z.infer<typeof MyOrgSchema>
+
+export const AdminOrgSchema = z.object({
+  id: z.string(),
+  handle: z.string(),
+  name: z.string(),
+  type: OrgTypeSchema,
+  verification: OrgVerificationSchema,
+  member_count: z.number(),
+  owner_username: z.string(),
+  suspended: z.boolean().optional(),
+  created_at: z.string().nullable().optional(),
+})
+export type AdminOrg = z.infer<typeof AdminOrgSchema>
+
+export const PaginatedAdminOrgSchema = Paginated(AdminOrgSchema)
+export type PaginatedAdminOrg = PaginatedResult<AdminOrg>
+
+export const OrgVerificationQueueSchema = z.object({
+  id: z.string(),
+  org_id: z.string(),
+  org_handle: z.string(),
+  org_name: z.string(),
+  org_type: OrgTypeSchema,
+  status: z.string(),
+  doc_keys: z.array(z.string()),
+  doc_urls: z.array(z.object({ key: z.string(), url: z.string() })).optional(),
+  submitted_at: z.string().nullable().optional(),
+})
+export type OrgVerificationQueue = z.infer<typeof OrgVerificationQueueSchema>
+
 export const SynthQuotaSchema = z.object({
   plans_per_day: z.number(),
   plans_used: z.number(),

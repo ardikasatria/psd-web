@@ -44,6 +44,7 @@ from app.modules.social.router import router as social_router
 from app.modules.support.router import router as support_router
 from app.modules.synthesis.router import router as synthesis_router
 from app.modules.teams.router import router as teams_router
+from app.modules.orgs.router import router as orgs_router
 from app.modules.users.router import router as users_router
 from app.contrib.router import router as contrib_router
 from app.hub.router import router as hub_router
@@ -162,6 +163,7 @@ app.include_router(quests_router, prefix=settings.API_PREFIX)
 app.include_router(activity_router, prefix=settings.API_PREFIX)
 app.include_router(micro_router, prefix=settings.API_PREFIX)
 app.include_router(teams_router, prefix=settings.API_PREFIX)
+app.include_router(orgs_router, prefix=settings.API_PREFIX)
 app.include_router(synthesis_router, prefix=settings.API_PREFIX)
 app.include_router(rooms_router, prefix=settings.API_PREFIX)
 app.include_router(collections_router, prefix=settings.API_PREFIX)

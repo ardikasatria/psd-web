@@ -1,6 +1,7 @@
 import {
   AcademicCapIcon,
   BeakerIcon,
+  BuildingOffice2Icon,
   CalendarDaysIcon,
   ChatBubbleLeftRightIcon,
   ChatBubbleBottomCenterTextIcon,
@@ -42,6 +43,8 @@ export const NAV_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> =
   '/forum': ChatBubbleLeftRightIcon,
   '/teams': UserGroupIcon,
   '/leaderboard': TrophyIcon,
+  '/search?type=org': BuildingOffice2Icon,
+  '/me/org/teams': BuildingOffice2Icon,
 }
 
 export function getNavIcon(href?: string) {

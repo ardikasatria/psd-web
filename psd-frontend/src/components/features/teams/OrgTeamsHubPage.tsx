@@ -74,10 +74,15 @@ export function OrgTeamsHubPage() {
               reputasi di kompetisi PSD.
             </p>
           </div>
-          <ButtonPrimary type="button" onClick={() => setCreateOpen(true)}>
-            <PlusIcon className="size-4" aria-hidden />
-            Buat tim organisasi
-          </ButtonPrimary>
+          <div className="flex flex-wrap gap-2">
+            <ButtonPrimary href="/me/orgs" outline>
+              Kelola organisasi
+            </ButtonPrimary>
+            <ButtonPrimary type="button" onClick={() => setCreateOpen(true)}>
+              <PlusIcon className="size-4" aria-hidden />
+              Buat tim organisasi
+            </ButtonPrimary>
+          </div>
         </div>
         <div
           className="pointer-events-none absolute -end-12 -top-12 size-48 rounded-full bg-emerald-400/10 blur-3xl"

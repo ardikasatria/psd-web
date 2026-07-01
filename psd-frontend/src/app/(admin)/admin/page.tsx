@@ -81,6 +81,7 @@ export default function AdminHomePage() {
             { label: 'Kelola pengguna', href: '/admin/users' },
             { label: 'Tinjau aset', href: '/admin/repos' },
             { label: 'Kelola tim', href: '/admin/teams' },
+            { label: 'Kelola organisasi', href: '/admin/orgs' },
             { label: 'Atur kompetisi', href: '/admin/competitions' },
             { label: 'Moderasi forum', href: '/admin/forum' },
           ].map((item) => (

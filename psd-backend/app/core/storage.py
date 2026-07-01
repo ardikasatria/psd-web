@@ -125,6 +125,19 @@ def presigned_asset_put(key: str, content_type: str = "application/octet-stream"
     )
 
 
+def presigned_private_put(key: str, content_type: str = "application/octet-stream", expires: int = 3600) -> str:
+    client = get_s3()
+    return client.generate_presigned_url(
+        "put_object",
+        Params={
+            "Bucket": settings.S3_SUBMISSIONS_BUCKET,
+            "Key": key,
+            "ContentType": content_type,
+        },
+        ExpiresIn=expires,
+    )
+
+
 def asset_key_from_uri(uri: str) -> str | None:
     prefix = f"s3://{settings.MINIO_BUCKET}/"
     if uri.startswith(prefix):
