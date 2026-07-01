@@ -3,7 +3,7 @@ import { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Explore',
-  description: 'Jelajahi proyek, dataset, dan model sains data dari komunitas Projek Sains Data.',
+  description: 'Jelajahi proyek, dataset, model, notebook, ruang kerja, dan komunitas sains data Indonesia.',
 }
 
 export default function Page() {
