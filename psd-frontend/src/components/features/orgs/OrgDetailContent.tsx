@@ -1,5 +1,6 @@
 'use client'
 
+import { OrgAnnouncementsTab } from '@/components/features/orgs/OrgAnnouncementsTab'
 import { OrgAssetsTab } from '@/components/features/orgs/OrgAssetsTab'
 import { OrgMembersTab } from '@/components/features/orgs/OrgMembersTab'
 import { OrgOpportunitiesTab } from '@/components/features/orgs/OrgOpportunitiesTab'
@@ -25,6 +26,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react'
 
 const BASE_TABS = [
   { id: 'overview', label: 'Ikhtisar' },
+  { id: 'announcements', label: 'Pengumuman' },
   { id: 'members', label: 'Anggota', memberOnly: true },
   { id: 'teams', label: 'Tim', memberOnly: true },
   { id: 'assets', label: 'Aset', memberOnly: true },
@@ -168,6 +170,15 @@ function OrgDetailInner({ handle }: { handle: string }) {
 
             {tab === 'overview' && (
               <OrgOverviewTab org={org} handle={handle} myRole={myRole} isMember={isMember} />
+            )}
+            {tab === 'announcements' && (
+              <OrgAnnouncementsTab
+                orgId={org.id}
+                handle={handle}
+                org={org}
+                myRole={myRole}
+                isMember={isMember}
+              />
             )}
             {tab === 'members' && isMember && (
               <OrgMembersTab orgId={org.id} handle={handle} org={org} myRole={myRole} />

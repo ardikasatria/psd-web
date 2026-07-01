@@ -1,13 +1,13 @@
 'use client'
 
-import { OrgDetail, OrgMember } from '@/types/api'
+import { OrgDetail, OrgMember, OrgAnnouncement } from '@/types/api'
 import { orgCan, orgRoleLabel } from '@/lib/orgs/permissions'
 import { orgTypeLabel } from '@/lib/orgs/org-utils'
 import { orgCard, orgCardMuted, orgDivider, orgText, orgTextMuted } from '@/lib/orgs/org-ui'
 import { OrgVerificationBadge } from '@/components/features/orgs/OrgVerificationBadge'
 import ButtonPrimary from '@/shared/ButtonPrimary'
 import { Badge } from '@/shared/Badge'
-import { UserGroupIcon } from '@heroicons/react/24/outline'
+import { MegaphoneIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 
 export function OrgOverviewTab({
@@ -22,6 +22,9 @@ export function OrgOverviewTab({
   isMember: boolean
 }) {
   const members = org.members ?? []
+  const publicAnnouncements = (org.announcements ?? []).filter(
+    (a: OrgAnnouncement) => a.visibility === 'public',
+  )
 
   return (
     <div className="space-y-6">
@@ -70,6 +73,42 @@ export function OrgOverviewTab({
           </ul>
         </section>
       </div>
+
+      {publicAnnouncements.length > 0 && (
+        <section className={`${orgCard} p-5`}>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className={`flex items-center gap-2 text-sm font-semibold ${orgText}`}>
+              <MegaphoneIcon className="size-4 text-primary-500" />
+              Pengumuman terbaru
+            </h3>
+            <Link
+              href={`/orgs/${handle}?tab=announcements`}
+              className="text-xs font-medium text-primary-600 dark:text-primary-400"
+            >
+              Lihat semua →
+            </Link>
+          </div>
+          <ul className="space-y-3">
+            {publicAnnouncements.slice(0, 3).map((a) => (
+              <li key={a.id} className={`rounded-xl border border-neutral-100 p-3 dark:border-neutral-700`}>
+                <p className={`text-xs ${orgTextMuted}`}>
+                  @{a.author.username}
+                  {a.created_at && (
+                    <>
+                      <span className="mx-1">·</span>
+                      {new Date(a.created_at).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </>
+                  )}
+                </p>
+                <p className={`mt-1 line-clamp-3 text-sm ${orgText}`}>{a.body_md}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {(org.assets ?? []).length > 0 && (
         <section className={`${orgCard} p-5`}>

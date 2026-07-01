@@ -133,3 +133,15 @@ export const factoryGradient = {
   analyticsHero:
     `relative overflow-hidden rounded-3xl border border-primary-200/60 bg-gradient-to-br from-amber-50 via-rose-50/70 to-orange-50/60 p-8 ${darkCore} dark:to-rose-950/40 sm:p-10`,
 } as const
+
+/** Ruang Panen Data — emerald / teal accent */
+export const harvestGradient = {
+  hero:
+    `relative overflow-hidden rounded-3xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50 via-teal-50/70 to-cyan-50/60 p-8 ${darkCore} dark:to-emerald-950/40 sm:p-10`,
+  conceptBr:
+    `rounded-3xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/60 p-6 ${darkCore} dark:to-teal-950/35 sm:p-8`,
+  sidebarAccent:
+    `rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 to-teal-50/60 p-4 ${darkCore} dark:to-teal-950/35`,
+  ethicsBanner:
+    `flex gap-3 rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-50/90 via-teal-50/50 to-white p-4 ${darkCore} dark:to-emerald-950/30`,
+} as const

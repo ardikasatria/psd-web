@@ -25,7 +25,7 @@ const ORG_PERMS: Record<string, Set<string>> = {
     'manage_recruitment',
     'manage_verification',
   ]),
-  member: new Set(['view_org']),
+  member: new Set(['view_org', 'post_announcement']),
   billing_manager: new Set(['view_org', 'manage_billing']),
 }
 

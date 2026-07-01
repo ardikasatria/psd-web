@@ -10,6 +10,7 @@ from app.modules.orgs.deps import membership, members_dicts
 from app.modules.orgs.models import (
     Opportunity,
     OpportunityApplication,
+    OrgAnnouncement,
     OrgAsset,
     OrgAssetGrant,
     OrgMember,
@@ -78,6 +79,30 @@ async def resolve_my_access(
     )
 
 
+async def serialize_announcement(db: AsyncSession, ann: OrgAnnouncement) -> dict:
+    u = (await db.execute(select(User).where(User.id == ann.author_id))).scalar_one()
+    return {
+        "id": ann.id,
+        "body_md": ann.body_md,
+        "images": json.loads(ann.images or "[]"),
+        "visibility": ann.visibility,
+        "author": {
+            "user_id": ann.author_id,
+            "username": u.username,
+            "name": u.name,
+            "avatar_url": u.avatar_url,
+        },
+        "created_at": ann.created_at.isoformat() if ann.created_at else None,
+        "updated_at": ann.updated_at.isoformat() if ann.updated_at else None,
+    }
+
+
+def filter_announcements_for_viewer(items: list[dict], is_member: bool) -> list[dict]:
+    if is_member:
+        return items
+    return [a for a in items if a.get("visibility") == "public"]
+
+
 async def serialize_org_detail(db: AsyncSession, org: Organization, viewer_id: str | None) -> dict:
     mem_rows = (await db.execute(select(OrgMember).where(OrgMember.org_id == org.id))).scalars().all()
     mem = next((m for m in mem_rows if m.user_id == viewer_id), None) if viewer_id else None
@@ -125,6 +150,16 @@ async def serialize_org_detail(db: AsyncSession, org: Organization, viewer_id: s
         for o in opps
     ]
 
+    anns_raw = (
+        await db.execute(
+            select(OrgAnnouncement)
+            .where(OrgAnnouncement.org_id == org.id)
+            .order_by(OrgAnnouncement.created_at.desc())
+        )
+    ).scalars().all()
+    announcements_all = [await serialize_announcement(db, a) for a in anns_raw]
+    announcements = filter_announcements_for_viewer(announcements_all, mem is not None)
+
     vr = (
         await db.execute(
             select(OrgVerificationRequest)
@@ -147,6 +182,7 @@ async def serialize_org_detail(db: AsyncSession, org: Organization, viewer_id: s
         "teams": teams,
         "assets": assets,
         "opportunities": opportunities,
+        "announcements": announcements,
         "verification_request": (
             {
                 "id": vr.id,

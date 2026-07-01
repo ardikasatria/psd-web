@@ -85,6 +85,14 @@ export function FactorySidebar({ className, onCreateClick }: Props) {
       </Link>
 
       <Link
+        href="/harvest"
+        className="flex items-center justify-between rounded-2xl border border-neutral-200/80 bg-white px-4 py-3 text-sm font-medium text-neutral-700 transition hover:border-primary-200 hover:text-primary-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:border-primary-800"
+      >
+        Ruang Panen Data
+        <ArrowRightIcon className="size-4" aria-hidden />
+      </Link>
+
+      <Link
         href="/factory/sources"
         className="flex items-center justify-between rounded-2xl border border-neutral-200/80 bg-white px-4 py-3 text-sm font-medium text-neutral-700 transition hover:border-primary-200 hover:text-primary-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:border-primary-800"
       >

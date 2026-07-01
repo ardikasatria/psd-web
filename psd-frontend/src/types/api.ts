@@ -841,6 +841,24 @@ export const OpportunitySchema = z.object({
 })
 export type Opportunity = z.infer<typeof OpportunitySchema>
 
+export const OrgAnnouncementAuthorSchema = z.object({
+  user_id: z.string(),
+  username: z.string(),
+  name: z.string().nullable(),
+  avatar_url: z.string().nullable().optional(),
+})
+
+export const OrgAnnouncementSchema = z.object({
+  id: z.string(),
+  body_md: z.string(),
+  images: z.array(z.string()).optional(),
+  visibility: z.enum(['public', 'private']),
+  author: OrgAnnouncementAuthorSchema,
+  created_at: z.string().nullable().optional(),
+  updated_at: z.string().nullable().optional(),
+})
+export type OrgAnnouncement = z.infer<typeof OrgAnnouncementSchema>
+
 export const OrgApplicationSchema = z.object({
   id: z.string(),
   opportunity_id: z.string(),
@@ -863,6 +881,7 @@ export const OrgDetailSchema = OrgSchema.extend({
   teams: z.array(OrgTeamSchema).optional(),
   assets: z.array(OrgAssetSchema).optional(),
   opportunities: z.array(OpportunitySchema).optional(),
+  announcements: z.array(OrgAnnouncementSchema).optional(),
   verification_request: z
     .object({
       id: z.string(),

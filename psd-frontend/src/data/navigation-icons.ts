@@ -1,4 +1,5 @@
 import {
+  ArrowDownTrayIcon,
   AcademicCapIcon,
   BeakerIcon,
   BuildingOffice2Icon,
@@ -27,6 +28,7 @@ export const NAV_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> =
   '/datasets': CircleStackIcon,
   '/synthesis': SparklesIcon,
   '/factory/pipelines': Cog6ToothIcon,
+  '/harvest': ArrowDownTrayIcon,
   '/analytics': ChartBarSquareIcon,
   '/ml': RectangleStackIcon,
   '/assistant': ChatBubbleBottomCenterTextIcon,

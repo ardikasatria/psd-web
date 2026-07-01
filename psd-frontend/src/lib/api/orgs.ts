@@ -4,6 +4,7 @@ import {
   MyOrgSchema,
   OpportunitySchema,
   OrgApplicationSchema,
+  OrgAnnouncementSchema,
   OrgAssetSchema,
   OrgDetailSchema,
   OrgGrantSchema,
@@ -132,6 +133,31 @@ export const createOpportunity = (
 
 export const listOrgApplications = (id: string) =>
   apiFetch(`/orgs/${id}/applications`, z.object({ items: z.array(OrgApplicationSchema) }))
+
+export const listOrgAnnouncements = (id: string) =>
+  apiFetch(`/orgs/${id}/announcements`, z.object({ items: z.array(OrgAnnouncementSchema) }))
+
+export const createOrgAnnouncement = (
+  id: string,
+  b: { body_md: string; visibility: 'public' | 'private'; images?: string[] },
+) =>
+  apiFetch(`/orgs/${id}/announcements`, OrgAnnouncementSchema, {
+    method: 'POST',
+    body: JSON.stringify(b),
+  })
+
+export const updateOrgAnnouncement = (
+  id: string,
+  annId: string,
+  b: { body_md?: string; visibility?: 'public' | 'private'; images?: string[] },
+) =>
+  apiFetch(`/orgs/${id}/announcements/${annId}`, OrgAnnouncementSchema, {
+    method: 'PATCH',
+    body: JSON.stringify(b),
+  })
+
+export const deleteOrgAnnouncement = (id: string, annId: string) =>
+  apiDelete(`/orgs/${id}/announcements/${annId}`)
 
 export const transferOrg = (id: string, uid: string) =>
   apiFetch(`/orgs/${id}/transfer`, OkSchema, {

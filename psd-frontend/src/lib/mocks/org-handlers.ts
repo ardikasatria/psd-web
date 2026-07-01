@@ -8,6 +8,8 @@ import {
   canRemoveMember,
   createMockOrg,
   findOrg,
+  announcementsForViewer,
+  mockOrgAnnouncements,
   mockOpportunities,
   mockOrgApplications,
   mockOrgAssets,
@@ -21,6 +23,7 @@ import {
   nextGrantId,
   orgDetailOf,
   orgMembersOf,
+  serializeAnnouncement,
   userOrgMembership,
   verificationQueueItems,
 } from '@/lib/mocks/data/orgs'
@@ -385,6 +388,91 @@ export function createOrgHandlers(ctx: HandlerCtx) {
       }
       mockOpportunities.push(op)
       return HttpResponse.json(op, { status: 201 })
+    }),
+
+    http.get(`${API}/orgs/:id/announcements`, ({ request, params }) => {
+      const user = resolveUserFromRequest(request)
+      const o = findOrg(String(params.id))
+      if (!o) return errorResponse(404, 'not_found', 'Organisasi tidak ditemukan')
+      const items = announcementsForViewer(o.id, user?.id).map(serializeAnnouncement)
+      return HttpResponse.json({ items })
+    }),
+
+    http.post(`${API}/orgs/:id/announcements`, async ({ request, params }) => {
+      const user = resolveUserFromRequest(request)
+      if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+      const o = findOrg(String(params.id))
+      if (!o) return errorResponse(404, 'not_found', 'Organisasi tidak ditemukan')
+      const me = userOrgMembership(o.id, user.id)
+      if (!me || !orgCan(me.role, 'post_announcement')) {
+        return errorResponse(403, 'forbidden', 'Butuh izin membuat pengumuman')
+      }
+      const body = (await request.json()) as {
+        body_md: string
+        visibility?: 'public' | 'private'
+        images?: string[]
+      }
+      const bodyMd = (body.body_md ?? '').trim()
+      if (!bodyMd) return errorResponse(400, 'empty_body', 'Isi pengumuman tidak boleh kosong')
+      const vis = body.visibility === 'private' ? 'private' : 'public'
+      const ann = {
+        id: `ann_${Date.now()}`,
+        org_id: o.id,
+        author_id: user.id,
+        body_md: bodyMd,
+        images: body.images ?? [],
+        visibility: vis,
+        created_at: new Date().toISOString(),
+      }
+      mockOrgAnnouncements.push(ann)
+      return HttpResponse.json(serializeAnnouncement(ann), { status: 201 })
+    }),
+
+    http.patch(`${API}/orgs/:id/announcements/:annId`, async ({ request, params }) => {
+      const user = resolveUserFromRequest(request)
+      if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+      const o = findOrg(String(params.id))
+      if (!o) return errorResponse(404, 'not_found', 'Organisasi tidak ditemukan')
+      const ann = mockOrgAnnouncements.find(
+        (a) => a.id === String(params.annId) && a.org_id === o.id,
+      )
+      if (!ann) return errorResponse(404, 'not_found', 'Pengumuman tidak ditemukan')
+      const me = userOrgMembership(o.id, user.id)
+      const canManage = ann.author_id === user.id || (me && orgCan(me.role, 'manage_members'))
+      if (!canManage) return errorResponse(403, 'forbidden', 'Tidak boleh mengubah pengumuman ini')
+      const body = (await request.json()) as {
+        body_md?: string
+        visibility?: 'public' | 'private'
+        images?: string[]
+      }
+      if (body.body_md !== undefined) {
+        const bodyMd = body.body_md.trim()
+        if (!bodyMd) return errorResponse(400, 'empty_body', 'Isi pengumuman tidak boleh kosong')
+        ann.body_md = bodyMd
+      }
+      if (body.visibility !== undefined) {
+        ann.visibility = body.visibility === 'private' ? 'private' : 'public'
+      }
+      if (body.images !== undefined) ann.images = body.images
+      ann.updated_at = new Date().toISOString()
+      return HttpResponse.json(serializeAnnouncement(ann))
+    }),
+
+    http.delete(`${API}/orgs/:id/announcements/:annId`, ({ request, params }) => {
+      const user = resolveUserFromRequest(request)
+      if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
+      const o = findOrg(String(params.id))
+      if (!o) return errorResponse(404, 'not_found', 'Organisasi tidak ditemukan')
+      const idx = mockOrgAnnouncements.findIndex(
+        (a) => a.id === String(params.annId) && a.org_id === o.id,
+      )
+      if (idx < 0) return errorResponse(404, 'not_found', 'Pengumuman tidak ditemukan')
+      const ann = mockOrgAnnouncements[idx]!
+      const me = userOrgMembership(o.id, user.id)
+      const canManage = ann.author_id === user.id || (me && orgCan(me.role, 'manage_members'))
+      if (!canManage) return errorResponse(403, 'forbidden', 'Tidak boleh menghapus pengumuman ini')
+      mockOrgAnnouncements.splice(idx, 1)
+      return new HttpResponse(null, { status: 204 })
     }),
 
     http.get(`${API}/orgs/:id/applications`, ({ request, params }) => {

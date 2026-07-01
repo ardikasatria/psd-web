@@ -226,6 +226,7 @@ Disallow: /studio/
 Disallow: /notifications/
 Disallow: /m/
 Disallow: /factory/
+Disallow: /harvest/
 Disallow: /analytics/
 Disallow: /idea-rooms/
 Disallow: /synthesis/

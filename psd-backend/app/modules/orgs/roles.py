@@ -9,7 +9,7 @@ MEMBER = "member"
 BILLING = "billing_manager"
 ORG_ROLES = (OWNER, ADMIN, MEMBER, BILLING)
 
-_MEMBER = {"view_org"}
+_MEMBER = {"view_org", "post_announcement"}
 _ADMIN = _MEMBER | {
     "manage_members",
     "manage_teams",

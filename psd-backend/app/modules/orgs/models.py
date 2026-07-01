@@ -102,3 +102,16 @@ class OpportunityApplication(Base):
     applicant_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     status: Mapped[str] = mapped_column(String, default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class OrgAnnouncement(Base):
+    __tablename__ = "org_announcements"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: f"ann_{uuid.uuid4().hex[:12]}")
+    org_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    author_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    body_md: Mapped[str] = mapped_column(Text)
+    images: Mapped[str] = mapped_column(Text, default="[]")
+    visibility: Mapped[str] = mapped_column(String, default="public")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, onupdate=func.now())

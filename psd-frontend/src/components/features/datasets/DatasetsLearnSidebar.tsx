@@ -169,6 +169,13 @@ export function DatasetsLearnSidebar({ className, onScrollToCatalog }: Props) {
             Notebook
           </Link>
           <Link
+            href="/harvest"
+            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-primary-50 hover:text-primary-700 dark:text-neutral-300 dark:hover:bg-neutral-700/80 dark:hover:text-primary-300"
+          >
+            <ArrowDownTrayIcon className="size-4" />
+            Ruang Panen Data
+          </Link>
+          <Link
             href="/synthesis"
             className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-primary-50 hover:text-primary-700 dark:text-neutral-300 dark:hover:bg-neutral-700/80 dark:hover:text-primary-300"
           >

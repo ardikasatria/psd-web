@@ -18,6 +18,9 @@ export function buildAssistantContext(pathname: string): Record<string, string> 
     ctx.fitur = 'ruang ide'
   } else if (pathname.startsWith('/analytics') || pathname.startsWith('/factory/dashboards')) {
     ctx.fitur = 'ruang analitik / dashboard BI'
+  } else if (pathname.startsWith('/harvest')) {
+    ctx.fitur = 'ruang panen data'
+    ctx.topik = 'panen API eksternal ke dataset, paginasi, allowlist, rate limit'
   } else if (pathname.startsWith('/factory')) {
     ctx.fitur = 'pabrik data'
   } else if (pathname.startsWith('/projects')) {

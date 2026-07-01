@@ -18,7 +18,13 @@ describe('org permissions', () => {
     expect(canSetOrgRole('admin', 'member', 'admin')).toBe(false)
   })
 
-  it('member is view only', () => {
+  it('member can post announcements', () => {
+    expect(orgCan('member', 'post_announcement')).toBe(true)
+    expect(orgCan('member', 'manage_members')).toBe(false)
+    expect(orgCan('billing_manager', 'post_announcement')).toBe(false)
+  })
+
+  it('member is view only for management', () => {
     expect(orgCan('member', 'view_org')).toBe(true)
     expect(orgCan('member', 'manage_members')).toBe(false)
   })

@@ -53,6 +53,7 @@ import {
 import { buildDiscoveryPanels, discoveryListForKind } from './data/discovery'
 import { runUniversalSearch } from './data/search'
 import { createOrgHandlers } from './org-handlers'
+import { createHarvestHandlers } from './harvest-handlers'
 import { mockContributors, mockGamificationFor } from './data/gamification'
 import {
   getMockAssetStats,
@@ -4997,4 +4998,5 @@ export const handlers = [
   }),
 
   ...createOrgHandlers({ API, resolveUserFromRequest, errorResponse, paginate }),
+  ...createHarvestHandlers({ API, resolveUserFromRequest, errorResponse }),
 ]

@@ -26,6 +26,7 @@ export async function getNavigation(): Promise<TNavigationItem[]> {
           children: [
             { id: '3b', href: '/synthesis', name: 'Data Sintesis' },
             { id: '5c', href: '/factory/pipelines', name: 'Pabrik Data' },
+            { id: '5f', href: '/harvest', name: 'Ruang Panen Data' },
             { id: '5d', href: '/analytics', name: 'Ruang Analitik' },
             { id: '5a', href: '/idea-rooms', name: 'Ruang Ide' },
             { id: '5b', href: '/transformer', name: 'Ruang Transformer' },

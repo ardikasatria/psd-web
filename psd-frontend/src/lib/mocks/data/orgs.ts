@@ -78,6 +78,17 @@ export type MockOrgApplication = {
   created_at: string
 }
 
+export type MockOrgAnnouncement = {
+  id: string
+  org_id: string
+  author_id: string
+  body_md: string
+  images: string[]
+  visibility: 'public' | 'private'
+  created_at: string
+  updated_at?: string | null
+}
+
 export const mockOrgs: MockOrg[] = [
   {
     id: 'org_umkm_batik',
@@ -236,6 +247,46 @@ export const mockOrgApplications: MockOrgApplication[] = [
   },
 ]
 
+export const mockOrgAnnouncements: MockOrgAnnouncement[] = [
+  {
+    id: 'ann_batik_public',
+    org_id: 'org_umkm_batik',
+    author_id: demoUser.id,
+    body_md:
+      '**Kebutuhan data analyst** — kami mencari talenta untuk membantu forecasting penjualan batik musiman. Lihat tab Peluang untuk detail lamaran.',
+    images: [],
+    visibility: 'public',
+    created_at: '2025-03-01T09:00:00Z',
+  },
+  {
+    id: 'ann_batik_private',
+    org_id: 'org_umkm_batik',
+    author_id: users[1]?.id ?? demoUser.id,
+    body_md: 'Rapat tim data Jumat pukul 14:00 WIB — bahas pipeline dashboard internal.',
+    images: [],
+    visibility: 'private',
+    created_at: '2025-03-10T11:30:00Z',
+  },
+  {
+    id: 'ann_itera_public',
+    org_id: 'org_itera_lab',
+    author_id: users[1]?.id ?? demoUser.id,
+    body_md: 'Open call kolaborasi riset NLP bahasa daerah — mahasiswa S2/S3 dipersilakan menghubungi lab.',
+    images: [],
+    visibility: 'public',
+    created_at: '2025-02-28T08:00:00Z',
+  },
+  {
+    id: 'ann_psd_public',
+    org_id: 'org_psd_comm',
+    author_id: demoUser.id,
+    body_md: 'Hackathon komunitas PSD bulan depan — daftar via forum!',
+    images: [],
+    visibility: 'public',
+    created_at: '2025-03-12T07:00:00Z',
+  },
+]
+
 let grantIdCounter = mockOrgGrants.length + 1
 
 export function findOrg(handleOrId: string) {
@@ -301,6 +352,33 @@ export function assetAccessForUser(orgId: string, assetId: string, userId: strin
   })
 }
 
+export function announcementsForViewer(orgId: string, viewerId?: string) {
+  const isMember = viewerId ? !!userOrgMembership(orgId, viewerId) : false
+  const items = mockOrgAnnouncements
+    .filter((a) => a.org_id === orgId)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  if (isMember) return items
+  return items.filter((a) => a.visibility === 'public')
+}
+
+export function serializeAnnouncement(a: MockOrgAnnouncement) {
+  const u = users.find((x) => x.id === a.author_id) ?? demoUser
+  return {
+    id: a.id,
+    body_md: a.body_md,
+    images: a.images,
+    visibility: a.visibility,
+    author: {
+      user_id: a.author_id,
+      username: u.username,
+      name: u.name,
+      avatar_url: u.avatar_url,
+    },
+    created_at: a.created_at,
+    updated_at: a.updated_at ?? null,
+  }
+}
+
 export function orgDetailOf(o: MockOrg, viewerId?: string) {
   const mem = viewerId ? userOrgMembership(o.id, viewerId) : undefined
   const members = orgMembersOf(o.id).map((m) => {
@@ -337,6 +415,7 @@ export function orgDetailOf(o: MockOrg, viewerId?: string) {
       my_access: viewerId ? assetAccessForUser(o.id, a.id, viewerId) : null,
     }))
   const opportunities = mockOpportunities.filter((op) => op.org_id === o.id)
+  const announcements = announcementsForViewer(o.id, viewerId).map(serializeAnnouncement)
   const vr = mockOrgVerifications.find((v) => v.org_id === o.id && v.status === 'pending')
   return {
     id: o.id,
@@ -352,6 +431,7 @@ export function orgDetailOf(o: MockOrg, viewerId?: string) {
     teams,
     assets,
     opportunities,
+    announcements,
     verification_request: vr
       ? { id: vr.id, status: vr.status, doc_keys: vr.doc_keys, note: vr.note }
       : null,

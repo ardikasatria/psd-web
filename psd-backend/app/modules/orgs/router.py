@@ -22,6 +22,7 @@ from app.modules.orgs.deps import (
 from app.modules.orgs.models import (
     Opportunity,
     OpportunityApplication,
+    OrgAnnouncement,
     OrgAsset,
     OrgAssetGrant,
     OrgMember,
@@ -31,7 +32,7 @@ from app.modules.orgs.models import (
     Organization,
 )
 from app.modules.orgs.org_types import apply_verification, can_post_opportunity, validate_org_type
-from app.modules.orgs.roles import can_set_role, require as require_perm
+from app.modules.orgs.roles import can_set_role, require as require_perm, can as role_can
 from app.modules.users.models import User
 from app.modules.users.refs import is_staff
 
@@ -470,6 +471,125 @@ async def create_opportunity(
         "status": op.status,
         "created_at": op.created_at.isoformat() if op.created_at else None,
     }
+
+
+def _announcement_visibility(body: dict) -> str:
+    vis = body.get("visibility", "public")
+    if vis not in ("public", "private"):
+        raise ApiError(400, "invalid_visibility", "Visibilitas harus public atau private")
+    return vis
+
+
+def _can_manage_announcement(me: OrgMember | None, ann: OrgAnnouncement, user_id: str) -> bool:
+    if not me:
+        return False
+    if ann.author_id == user_id:
+        return True
+    return role_can(me.role, "manage_members")
+
+
+@router.get("/orgs/{org_id}/announcements")
+async def list_announcements(
+    org_id: str,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    org = await get_org_by_id(db, org_id)
+    mem = await membership(db, org.id, user.id) if user else None
+    rows = (
+        await db.execute(
+            select(OrgAnnouncement)
+            .where(OrgAnnouncement.org_id == org.id)
+            .order_by(OrgAnnouncement.created_at.desc())
+        )
+    ).scalars().all()
+    items = [await org_svc.serialize_announcement(db, a) for a in rows]
+    return {"items": org_svc.filter_announcements_for_viewer(items, mem is not None)}
+
+
+@router.post("/orgs/{org_id}/announcements", status_code=201)
+async def create_announcement(
+    org_id: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    org = await get_org_by_id(db, org_id)
+    me = await require_member(db, org, user)
+    require_perm(me.role, "post_announcement")
+    body_md = (body.get("body_md") or "").strip()
+    if not body_md:
+        raise ApiError(400, "empty_body", "Isi pengumuman tidak boleh kosong")
+    ann = OrgAnnouncement(
+        org_id=org.id,
+        author_id=user.id,
+        body_md=body_md,
+        images=json.dumps(body.get("images", [])),
+        visibility=_announcement_visibility(body),
+    )
+    db.add(ann)
+    await db.commit()
+    await db.refresh(ann)
+    return await org_svc.serialize_announcement(db, ann)
+
+
+@router.patch("/orgs/{org_id}/announcements/{ann_id}")
+async def update_announcement(
+    org_id: str,
+    ann_id: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    org = await get_org_by_id(db, org_id)
+    me = await membership(db, org.id, user.id)
+    ann = (
+        await db.execute(
+            select(OrgAnnouncement).where(
+                OrgAnnouncement.id == ann_id, OrgAnnouncement.org_id == org.id
+            )
+        )
+    ).scalar_one_or_none()
+    if not ann:
+        raise ApiError(404, "not_found", "Pengumuman tidak ditemukan")
+    if not _can_manage_announcement(me, ann, user.id):
+        raise ApiError(403, "forbidden", "Tidak boleh mengubah pengumuman ini")
+    if "body_md" in body:
+        body_md = (body["body_md"] or "").strip()
+        if not body_md:
+            raise ApiError(400, "empty_body", "Isi pengumuman tidak boleh kosong")
+        ann.body_md = body_md
+    if "images" in body:
+        ann.images = json.dumps(body["images"])
+    if "visibility" in body:
+        ann.visibility = _announcement_visibility(body)
+    await db.commit()
+    await db.refresh(ann)
+    return await org_svc.serialize_announcement(db, ann)
+
+
+@router.delete("/orgs/{org_id}/announcements/{ann_id}", status_code=204)
+async def delete_announcement(
+    org_id: str,
+    ann_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    org = await get_org_by_id(db, org_id)
+    me = await membership(db, org.id, user.id)
+    ann = (
+        await db.execute(
+            select(OrgAnnouncement).where(
+                OrgAnnouncement.id == ann_id, OrgAnnouncement.org_id == org.id
+            )
+        )
+    ).scalar_one_or_none()
+    if not ann:
+        raise ApiError(404, "not_found", "Pengumuman tidak ditemukan")
+    if not _can_manage_announcement(me, ann, user.id):
+        raise ApiError(403, "forbidden", "Tidak boleh menghapus pengumuman ini")
+    await db.delete(ann)
+    await db.commit()
 
 
 @router.get("/orgs/{org_id}/applications")

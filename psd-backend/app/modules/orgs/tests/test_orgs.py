@@ -28,8 +28,10 @@ def test_admin_can_manage_but_not_billing():
 
 def test_member_and_billing_scope():
     assert roles.can(MEMBER, "view_org") is True
+    assert roles.can(MEMBER, "post_announcement") is True
     assert roles.can(MEMBER, "manage_members") is False
     assert roles.can(BILLING, "manage_billing") is True
+    assert roles.can(BILLING, "post_announcement") is False
     assert roles.can(BILLING, "manage_teams") is False
 
 
