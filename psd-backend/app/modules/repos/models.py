@@ -45,7 +45,7 @@ class Repo(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    owner: Mapped[User] = relationship(lazy="selectin")
+    owner: Mapped[User] = relationship(lazy="selectin", foreign_keys=[owner_id])
 
 
 class RepoLike(Base):
