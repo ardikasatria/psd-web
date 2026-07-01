@@ -6,6 +6,7 @@ import { ChevronDownIcon } from '@heroicons/react/24/solid'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { FC } from 'react'
+import { HamburgerNavMenu } from './HamburgerNavMenu'
 
 const Lv1MenuItem = ({ menuItem }: { menuItem: TNavigationItem }) => {
   const Icon = getNavItemIcon(menuItem)
@@ -104,15 +105,15 @@ const DropdownMenuLink = ({ menuItem }: { menuItem: TNavigationItem }) => {
   )
 }
 
-import { HamburgerNavMenu } from './HamburgerNavMenu'
-  const renderDropdown = (menuItem: TNavigationItem) => {
+const DropdownMenu = ({ menuItem }: { menuItem: TNavigationItem }) => {
+  const renderDropdown = (item: TNavigationItem) => {
     return (
-      <li key={menuItem.id} className="menu-dropdown relative menu-item px-2">
-        <DropdownMenuLink menuItem={menuItem} />
-        {menuItem.children?.length && (
+      <li key={item.id} className="menu-dropdown relative menu-item px-2">
+        <DropdownMenuLink menuItem={item} />
+        {item.children?.length && (
           <div className="absolute top-0 left-full z-10 sub-menu w-56 pl-2">
             <ul className="relative grid space-y-1 rounded-lg bg-white py-4 text-sm shadow-lg ring-1 ring-black/5 dark:bg-neutral-900 dark:ring-white/10">
-              {menuItem.children.map((child) => {
+              {item.children.map((child) => {
                 if (child.type === 'dropdown' && child.children?.length) {
                   return renderDropdown(child)
                 }
