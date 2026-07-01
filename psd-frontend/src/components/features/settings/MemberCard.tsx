@@ -89,11 +89,28 @@ export const MemberCardFace = forwardRef<HTMLDivElement, MemberCardFaceProps>(fu
         draggable={false}
       />
 
+      {side === 'front' && (
+        <p
+          className="absolute flex items-center justify-center text-center font-extrabold normal-case text-white"
+          style={{
+            left: '17%',
+            top: '37.3%',
+            width: '66%',
+            height: '19.3%',
+            fontSize: 'clamp(1.2rem, 4.2vw, 2.5rem)',
+            letterSpacing: '0.02em',
+            lineHeight: 1.1,
+          }}
+        >
+          Projek Sains Data
+        </p>
+      )}
+
       {side === 'back' && (
         <>
           {/* 1. Username */}
           <div
-            className="absolute font-extrabold uppercase leading-none tracking-wide text-white"
+            className="absolute font-extrabold uppercase leading-none tracking-wide text-neutral-900"
             style={{ left: '8.7%', top: '17%', fontSize: 'clamp(1.1rem, 4.8vw, 2.6rem)', maxWidth: '55%' }}
           >
             <p>{line1}</p>
@@ -102,7 +119,7 @@ export const MemberCardFace = forwardRef<HTMLDivElement, MemberCardFaceProps>(fu
 
           {/* 2. Email */}
           <p
-            className="absolute font-extrabold lowercase text-white"
+            className="absolute font-extrabold lowercase text-neutral-900"
             style={{
               left: '8.9%',
               top: '47%',
@@ -155,7 +172,7 @@ export const MemberCardFace = forwardRef<HTMLDivElement, MemberCardFaceProps>(fu
 
           {/* 5. URL di bawah badge */}
           <p
-            className="absolute text-center font-bold uppercase tracking-wider text-[#717990]"
+            className="absolute text-center font-semibold lowercase tracking-normal text-[#717990]"
             style={{
               left: '29.3%',
               top: '90%',
