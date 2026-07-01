@@ -23,7 +23,25 @@ export function createAutosave(saveFn: (ipynb: IpyNb) => Promise<void>, delayMs 
     timer = setTimeout(flush, delayMs)
   }
 
-  return { schedule, flush }
+  const cancel = () => {
+    if (timer) {
+      clearTimeout(timer)
+      timer = null
+    }
+  }
+
+  return { schedule, flush, cancel }
+}
+
+const AUTOSAVE_PREF_KEY = 'psd:notebook-autosave'
+
+export function readNotebookAutosavePref(): boolean {
+  if (typeof window === 'undefined') return true
+  return localStorage.getItem(AUTOSAVE_PREF_KEY) !== 'false'
+}
+
+export function writeNotebookAutosavePref(enabled: boolean) {
+  localStorage.setItem(AUTOSAVE_PREF_KEY, enabled ? 'true' : 'false')
 }
 
 export function createNotebookAutosave(notebookId: string, delayMs = 1200) {

@@ -42,10 +42,22 @@
   --nb-run-hover: #aecbfa;
 }
 
+/* Judul + toolbar — sticky bersama saat scroll */
+.nb-editor__sticky {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--nb-bg);
+  border-bottom: 1px solid var(--nb-border);
+  box-shadow: 0 1px 2px rgb(60 64 67 / 8%);
+}
+.dark .nb-editor__sticky {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 25%);
+}
+
 /* Header judul — ringkas seperti Colab */
 .nb-editor__header {
-  border-bottom: 1px solid var(--nb-border);
-  padding: 10px 20px 8px;
+  padding: 10px 20px 6px;
   background: var(--nb-bg);
 }
 .nb-editor__title {
@@ -59,22 +71,14 @@
   display: none;
 }
 
-/* Toolbar — sticky bar ala Colab */
+/* Toolbar */
 .nb-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
   padding: 6px 16px;
   background: var(--nb-bg);
-  border-bottom: 1px solid var(--nb-border);
-  box-shadow: 0 1px 2px rgb(60 64 67 / 8%);
-}
-.dark .nb-toolbar {
-  box-shadow: 0 1px 2px rgb(0 0 0 / 25%);
 }
 .nb-toolbar button {
   font: inherit;
@@ -202,6 +206,26 @@
 }
 .nb-save--err {
   color: var(--nb-error);
+}
+.nb-autosave-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--nb-muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nb-autosave-toggle:hover {
+  color: var(--nb-fg);
+  background: var(--nb-accent-soft);
+}
+.nb-autosave-toggle span {
+  line-height: 1;
 }
 
 /* Daftar sel */

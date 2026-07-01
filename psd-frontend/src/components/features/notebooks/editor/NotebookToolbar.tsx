@@ -2,6 +2,7 @@
 
 import type { CellType } from '@/lib/notebooks/editor/notebookModel'
 import type { KernelStatusValue } from '@/lib/notebooks/kernels/kernelInterface'
+import { Switch } from '@/shared/switch'
 import clsx from 'clsx'
 
 const STATUS_LABEL: Record<KernelStatusValue, string> = {
@@ -24,6 +25,8 @@ type Props = {
   runtime: 'browser' | 'server'
   kernelStatus: KernelStatusValue
   saveState: SaveState
+  autosaveEnabled: boolean
+  onAutosaveChange: (enabled: boolean) => void
   onSave: () => void
   onRunAll: () => void
   onAddCell: (type: CellType) => void
@@ -35,6 +38,8 @@ export function NotebookToolbar({
   runtime,
   kernelStatus,
   saveState,
+  autosaveEnabled,
+  onAutosaveChange,
   onSave,
   onRunAll,
   onAddCell,
@@ -58,6 +63,23 @@ export function NotebookToolbar({
         >
           {saveState === 'saving' ? 'Menyimpan…' : 'Simpan'}
         </button>
+
+        <label
+          className="nb-autosave-toggle"
+          title={
+            autosaveEnabled
+              ? 'Perubahan disimpan otomatis ke server'
+              : 'Simpan manual — tekan Simpan atau Ctrl+S'
+          }
+        >
+          <span>Autosimpan</span>
+          <Switch
+            color="primary"
+            checked={autosaveEnabled}
+            onChange={onAutosaveChange}
+            aria-label="Autosimpan notebook"
+          />
+        </label>
 
         <span className="nb-toolbar__sep" aria-hidden />
 
@@ -89,7 +111,10 @@ export function NotebookToolbar({
           <i className="nb-dot" aria-hidden />
           {STATUS_LABEL[kernelStatus] || kernelStatus}
         </span>
-        <span className={saveClass}>{SAVE_LABEL[saveState]}</span>
+        <span className={saveClass} title={autosaveEnabled ? undefined : 'Mode simpan manual'}>
+          {SAVE_LABEL[saveState]}
+          {!autosaveEnabled && saveState === 'saved' && ' · manual'}
+        </span>
       </div>
     </div>
   )

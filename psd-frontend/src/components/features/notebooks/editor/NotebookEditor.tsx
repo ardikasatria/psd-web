@@ -5,7 +5,7 @@ import type { CellType } from '@/lib/notebooks/editor/notebookModel'
 import type { IpyNb } from '@/lib/notebooks/ipynb'
 import type { NotebookKernel } from '@/lib/notebooks/kernels/kernelInterface'
 import { KernelStatus } from '@/lib/notebooks/kernels/kernelInterface'
-import { createNotebookAutosave } from '@/lib/notebooks/persistence'
+import { createNotebookAutosave, readNotebookAutosavePref, writeNotebookAutosavePref } from '@/lib/notebooks/persistence'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { NotebookCell } from './NotebookCell'
 import { NotebookToolbar } from './NotebookToolbar'
@@ -32,11 +32,18 @@ export function NotebookEditor({
   const [kernelStatus, setKernelStatus] = useState(kernel?.status ?? KernelStatus.STARTING)
   const [runningId, setRunningId] = useState<string | null>(null)
   const [saveState, setSaveState] = useState<SaveState>('saved')
+  const [autosaveEnabled, setAutosaveEnabled] = useState(true)
 
   const autosave = useMemo(() => createNotebookAutosave(notebookId), [notebookId])
   const first = useRef(true)
   const nbRef = useRef(nb)
   nbRef.current = nb
+  const autosaveEnabledRef = useRef(autosaveEnabled)
+  autosaveEnabledRef.current = autosaveEnabled
+
+  useEffect(() => {
+    setAutosaveEnabled(readNotebookAutosavePref())
+  }, [])
 
   const persist = useCallback(() => {
     setSaveState('saving')
@@ -52,8 +59,23 @@ export function NotebookEditor({
       return
     }
     setSaveState('dirty')
-    autosave.schedule(M.toIpynb(nbRef.current) as IpyNb)
+    if (autosaveEnabledRef.current) {
+      autosave.schedule(M.toIpynb(nbRef.current) as IpyNb)
+    }
   }, [nb, autosave])
+
+  const handleAutosaveChange = useCallback(
+    (enabled: boolean) => {
+      setAutosaveEnabled(enabled)
+      writeNotebookAutosavePref(enabled)
+      if (!enabled) {
+        autosave.cancel()
+      } else if (saveState === 'dirty' || saveState === 'error') {
+        autosave.schedule(M.toIpynb(nbRef.current) as IpyNb)
+      }
+    },
+    [autosave, saveState],
+  )
 
   useEffect(() => {
     if (!kernel?.onStatus) {
@@ -75,13 +97,21 @@ export function NotebookEditor({
   }, [persist])
 
   useEffect(() => {
-    const onLeave = () => {
-      if (saveState === 'dirty') void autosave.flush()
+    const onLeave = (e: BeforeUnloadEvent) => {
+      if (saveState !== 'dirty' && saveState !== 'error') return
+      if (autosaveEnabledRef.current) {
+        void autosave.flush()
+        return
+      }
+      e.preventDefault()
+      e.returnValue = ''
     }
     window.addEventListener('beforeunload', onLeave)
     return () => {
       window.removeEventListener('beforeunload', onLeave)
-      onLeave()
+      if (autosaveEnabledRef.current && (saveState === 'dirty' || saveState === 'error')) {
+        void autosave.flush()
+      }
     }
   }, [autosave, saveState])
 
@@ -117,27 +147,31 @@ export function NotebookEditor({
 
   return (
     <div className="nb-editor">
-      <div className="nb-editor__header">
-        <p className="nb-editor__subtitle">Notebook PSD · Editor sel</p>
-        <h1 className="nb-editor__title">{title}</h1>
-      </div>
+      <div className="nb-editor__sticky">
+        <div className="nb-editor__header">
+          <p className="nb-editor__subtitle">Notebook PSD · Editor sel</p>
+          <h1 className="nb-editor__title">{title}</h1>
+        </div>
 
-      <NotebookToolbar
-        runtime={runtime}
-        kernelStatus={kernelStatus}
-        saveState={saveState}
-        onSave={() => void persist()}
-        onRunAll={() => void runAll()}
-        onAddCell={(type) => setNb((cur) => M.addCell(cur, { type }))}
-        onRestart={async () => {
-          await kernel?.restart?.()
-          setNb((cur) => ({
-            ...cur,
-            cells: cur.cells.map((c) => ({ ...c, outputs: [], execution_count: null })),
-          }))
-        }}
-        onInterrupt={() => void kernel?.interrupt?.()}
-      />
+        <NotebookToolbar
+          runtime={runtime}
+          kernelStatus={kernelStatus}
+          saveState={saveState}
+          autosaveEnabled={autosaveEnabled}
+          onAutosaveChange={handleAutosaveChange}
+          onSave={() => void persist()}
+          onRunAll={() => void runAll()}
+          onAddCell={(type) => setNb((cur) => M.addCell(cur, { type }))}
+          onRestart={async () => {
+            await kernel?.restart?.()
+            setNb((cur) => ({
+              ...cur,
+              cells: cur.cells.map((c) => ({ ...c, outputs: [], execution_count: null })),
+            }))
+          }}
+          onInterrupt={() => void kernel?.interrupt?.()}
+        />
+      </div>
 
       <div className="nb-cells">
         {nb.cells.map((cell, idx) => (
