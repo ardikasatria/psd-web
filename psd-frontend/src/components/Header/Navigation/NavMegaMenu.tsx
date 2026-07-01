@@ -95,7 +95,13 @@ export function NavMegaMenu({ menuItem }: { menuItem: TNavigationItem }) {
             >
               {columns.map((col) => (
                 <div key={col.id} className="min-w-0">
-                  <p className="font-medium text-neutral-900 dark:text-neutral-200">{col.name}</p>
+                  {col.name ? (
+                    <p className="font-medium text-neutral-900 dark:text-neutral-200">{col.name}</p>
+                  ) : (
+                    <p className="font-medium invisible select-none" aria-hidden="true">
+                      Aset
+                    </p>
+                  )}
                   <ul className="mt-4 flex flex-col gap-3">
                     {col.children?.map((link) => (
                       <li key={link.id}>

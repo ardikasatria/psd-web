@@ -68,10 +68,12 @@ const SidebarNavigation: React.FC<Props> = ({ data }) => {
     <ul className="nav-mobile-sub-menu space-y-5 ps-3 pb-2">
       {item.children?.map((col) => (
         <li key={col.id}>
-          <p className="px-3 text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">
-            {col.name}
-          </p>
-          <ul className="mt-2 space-y-0.5">
+          {col.name ? (
+            <p className="px-3 text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">
+              {col.name}
+            </p>
+          ) : null}
+          <ul className={clsx('space-y-0.5', col.name ? 'mt-2' : 'mt-0')}>
             {col.children?.map((link) => {
               const LinkIcon = getNavItemIcon(link)
               return (

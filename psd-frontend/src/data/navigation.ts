@@ -11,7 +11,7 @@ export async function getNavigation(): Promise<TNavigationItem[]> {
       type: 'mega-menu',
       children: [
         {
-          id: 'col-aset',
+          id: 'col-aset-1',
           name: 'Aset',
           children: [
             { id: '3a', href: '/models', name: 'Model' },
@@ -19,6 +19,12 @@ export async function getNavigation(): Promise<TNavigationItem[]> {
             { id: '5', href: '/competitions', name: 'Kompetisi' },
             { id: '2b', href: '/categories', name: 'Kategori' },
             { id: '5e', href: '/ml', name: 'Registry Model' },
+          ],
+        },
+        {
+          id: 'col-aset-2',
+          name: '',
+          children: [
             { id: '3b', href: '/synthesis', name: 'Data Sintesis' },
             { id: '5c', href: '/factory/pipelines', name: 'Pabrik Data' },
             { id: '5d', href: '/analytics', name: 'Ruang Analitik' },
