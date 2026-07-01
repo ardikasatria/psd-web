@@ -8,7 +8,6 @@ import { Link } from '@/shared/link'
 import SocialsList from '@/shared/SocialsList'
 import { Disclosure, DisclosureButton, DisclosurePanel, useClose } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/24/solid'
-import { Bars3Icon } from '@heroicons/react/24/outline'
 import { Search01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import clsx from 'clsx'
@@ -66,15 +65,18 @@ const SidebarNavigation: React.FC<Props> = ({ data }) => {
   }
 
   const _renderItem = (menu: TNavigationItem, index: number) => {
-    const isHamburger = menu.type === 'hamburger-menu'
-    const Icon = isHamburger ? Bars3Icon : getNavItemIcon(menu)
+    const isDropdown =
+      (menu.type === 'dropdown' || menu.type === 'hamburger-menu') && !!menu.children?.length
+    const Icon = !isDropdown ? getNavItemIcon(menu) : null
     return (
       <Disclosure key={index} as="li" className="text-neutral-900 dark:text-white">
         <DisclosureButton className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 text-start text-sm font-medium tracking-wide uppercase hover:bg-neutral-100 dark:hover:bg-neutral-800">
           {Icon && (
             <Icon className="size-5 shrink-0 text-primary-600 dark:text-primary-400" aria-hidden />
           )}
-          {!isHamburger && (
+          {isDropdown ? (
+            <span className="block flex-1 py-2.5">{menu.name}</span>
+          ) : (
             <Link
               href={menu.href || '#'}
               className={clsx(!menu.children?.length && 'flex-1', 'block py-2.5')}
@@ -83,7 +85,6 @@ const SidebarNavigation: React.FC<Props> = ({ data }) => {
               {menu.name}
             </Link>
           )}
-          {isHamburger && <span className="block flex-1 py-2.5">{menu.name}</span>}
           {menu.children?.length && (
             <div className="flex flex-1 justify-end">
               <ChevronDownIcon className="ms-2 h-4 w-4 self-center text-neutral-500" aria-hidden="true" />

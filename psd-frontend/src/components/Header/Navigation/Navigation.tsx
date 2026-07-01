@@ -6,7 +6,7 @@ import { ChevronDownIcon } from '@heroicons/react/24/solid'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { FC } from 'react'
-import { HamburgerNavMenu } from './HamburgerNavMenu'
+import { NavDropdownMenu } from './NavDropdownMenu'
 
 const Lv1MenuItem = ({ menuItem }: { menuItem: TNavigationItem }) => {
   const Icon = getNavItemIcon(menuItem)
@@ -87,73 +87,6 @@ const MegaMenu = ({ menuItem, featuredPosts }: { menuItem: TNavigationItem; feat
   )
 }
 
-const DropdownMenuLink = ({ menuItem }: { menuItem: TNavigationItem }) => {
-  const Icon = getNavItemIcon(menuItem)
-  return (
-    <Link
-      className="flex items-center gap-2.5 rounded-md px-4 py-2.5 font-normal text-neutral-600 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-      href={menuItem.href || '#'}
-    >
-      {Icon && (
-        <Icon className="size-[18px] shrink-0 text-primary-600 dark:text-primary-400" aria-hidden />
-      )}
-      {menuItem.name}
-      {menuItem.children?.length && (
-        <ChevronDownIcon className="ml-auto h-4 w-4 text-neutral-500" aria-hidden="true" />
-      )}
-    </Link>
-  )
-}
-
-const DropdownMenu = ({ menuItem }: { menuItem: TNavigationItem }) => {
-  const renderDropdown = (item: TNavigationItem) => {
-    return (
-      <li key={item.id} className="menu-dropdown relative menu-item px-2">
-        <DropdownMenuLink menuItem={item} />
-        {item.children?.length && (
-          <div className="absolute top-0 left-full z-10 sub-menu w-56 pl-2">
-            <ul className="relative grid space-y-1 rounded-lg bg-white py-4 text-sm shadow-lg ring-1 ring-black/5 dark:bg-neutral-900 dark:ring-white/10">
-              {item.children.map((child) => {
-                if (child.type === 'dropdown' && child.children?.length) {
-                  return renderDropdown(child)
-                }
-                return (
-                  <li key={child.id} className="px-2">
-                    <DropdownMenuLink menuItem={child} />
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        )}
-      </li>
-    )
-  }
-
-  return (
-    <li className="menu-dropdown relative menu-item flex">
-      <Lv1MenuItem menuItem={menuItem} />
-
-      {menuItem.children?.length && menuItem.type === 'dropdown' ? (
-        <div className="absolute top-full left-0 z-50 sub-menu w-56">
-          <ul className="relative grid space-y-1 rounded-lg bg-white py-3 text-sm shadow-lg ring-1 ring-black/5 dark:bg-neutral-900 dark:ring-white/10">
-            {menuItem.children?.map((childItem) => {
-              if (childItem.type === 'dropdown' && childItem.children?.length) {
-                return renderDropdown(childItem)
-              }
-              return (
-                <li key={childItem.id} className="px-2">
-                  <DropdownMenuLink menuItem={childItem} />
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      ) : null}
-    </li>
-  )
-}
-
 export interface Props {
   menu: TNavigationItem[]
   className?: string
@@ -163,11 +96,8 @@ const Navigation: FC<Props> = ({ menu, className, featuredPosts }) => {
   return (
     <ul className={clsx('flex', className)}>
       {menu.map((menuItem) => {
-        if (menuItem.type === 'hamburger-menu') {
-          return <HamburgerNavMenu key={menuItem.id} menuItem={menuItem} />
-        }
-        if (menuItem.type === 'dropdown') {
-          return <DropdownMenu key={menuItem.id} menuItem={menuItem} />
+        if (menuItem.type === 'dropdown' || menuItem.type === 'hamburger-menu') {
+          return <NavDropdownMenu key={menuItem.id} menuItem={menuItem} />
         }
         if (menuItem.type === 'mega-menu') {
           return <MegaMenu featuredPosts={featuredPosts} key={menuItem.id} menuItem={menuItem} />
