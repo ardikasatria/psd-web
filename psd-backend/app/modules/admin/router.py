@@ -660,11 +660,11 @@ async def _admin_team_row(db: AsyncSession, t: Team) -> dict:
         "name": t.name,
         "description": t.description or "",
         "visibility": t.visibility,
-        "focus": t.focus,
+        "focus": getattr(t, "focus", None),
         "member_count": member_count,
         "owner_username": owner.username if owner else "",
         "owner_account_type": owner.account_type if owner else "individual",
-        "featured": bool(t.featured),
+        "featured": bool(getattr(t, "featured", False)),
         "created_at": t.created_at,
     }
 
@@ -706,7 +706,8 @@ async def update_admin_team(team_id: str, body: dict, db: AsyncSession = Depends
             raise ApiError(422, "validation_error", "Visibilitas harus public atau private")
         t.visibility = vis
     if "featured" in body:
-        t.featured = bool(body["featured"])
+        if hasattr(t, "featured"):
+            t.featured = bool(body["featured"])
     await db.commit()
     await db.refresh(t)
     return await _admin_team_row(db, t)

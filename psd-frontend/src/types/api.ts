@@ -613,14 +613,14 @@ export const AdminTeamSchema = z.object({
   id: z.string(),
   slug: z.string(),
   name: z.string(),
-  description: z.string().optional(),
+  description: z.string().nullish(),
   visibility: z.enum(['public', 'private']),
-  focus: z.string().optional(),
+  focus: z.string().nullish(),
   member_count: z.number(),
   owner_username: z.string(),
-  owner_account_type: z.enum(['individual', 'organization']).optional(),
-  featured: z.boolean().optional(),
-  created_at: z.string().optional(),
+  owner_account_type: z.enum(['individual', 'organization']).nullish(),
+  featured: z.boolean().nullish(),
+  created_at: z.string().nullish(),
 })
 export type AdminTeam = z.infer<typeof AdminTeamSchema>
 

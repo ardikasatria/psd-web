@@ -12,6 +12,7 @@ import {
 } from '@/components/admin/AdminShared'
 import { deleteAdminTeam, listAdminTeams, updateAdminTeam } from '@/lib/api/admin'
 import { useAdminGuard } from '@/lib/auth/useAdminGuard'
+import { QueryState } from '@/components/features/QueryState'
 import { Badge } from '@/shared/Badge'
 import Input from '@/shared/Input'
 import Select from '@/shared/Select'
@@ -67,6 +68,7 @@ export default function AdminTeamsPage() {
       {teams.isLoading ? (
         <AdminPageSkeleton />
       ) : (
+        <QueryState isError={teams.isError} error={teams.error}>
         <AdminContentCard>
           <AdminTableToolbar>
             <Input
@@ -165,6 +167,7 @@ export default function AdminTeamsPage() {
             </AdminTableFooter>
           )}
         </AdminContentCard>
+        </QueryState>
       )}
     </div>
   )
