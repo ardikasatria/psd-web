@@ -17,6 +17,7 @@ import {
   TagIcon,
   TrophyIcon,
   CalendarDaysIcon,
+  UserGroupIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
 import type { ComponentType, SVGProps } from 'react'
@@ -35,6 +36,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   { name: 'Quest', href: '/admin/quests', icon: SparklesIcon },
   { name: 'Micro-lesson', href: '/admin/micro', icon: BoltIcon },
   { name: 'Kompetisi', href: '/admin/competitions', icon: TrophyIcon },
+  { name: 'Tim Kolaborasi', href: '/admin/teams', icon: UserGroupIcon },
   { name: 'Pengajuan kompetisi', href: '/admin/competitions/proposals', icon: TrophyIcon },
   { name: 'Event', href: '/admin/events', icon: CalendarDaysIcon },
   { name: 'Pengajuan event', href: '/admin/events/proposals', icon: CalendarDaysIcon },

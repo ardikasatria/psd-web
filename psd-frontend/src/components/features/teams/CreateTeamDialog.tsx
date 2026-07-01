@@ -14,13 +14,24 @@ import { useState } from 'react'
 type Props = {
   open: boolean
   onClose: () => void
+  defaultFocus?: string
 }
 
-export function CreateTeamDialog({ open, onClose }: Props) {
+const FOCUS_OPTIONS = [
+  { value: '', label: 'Umum' },
+  { value: 'UMKM', label: 'UMKM & bisnis' },
+  { value: 'Kompetisi', label: 'Kompetisi' },
+  { value: 'NLP', label: 'NLP & bahasa' },
+  { value: 'Organisasi', label: 'Organisasi & komunitas' },
+  { value: 'Akademik', label: 'Akademik & riset' },
+] as const
+
+export function CreateTeamDialog({ open, onClose, defaultFocus = '' }: Props) {
   const router = useRouter()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [visibility, setVisibility] = useState<'public' | 'private'>('public')
+  const [focus, setFocus] = useState(defaultFocus)
   const [error, setError] = useState<string | null>(null)
 
   const create = useMutation({
@@ -29,12 +40,14 @@ export function CreateTeamDialog({ open, onClose }: Props) {
         name: name.trim(),
         description: description.trim(),
         visibility,
+        focus: focus.trim() || undefined,
       }),
     onSuccess: (res) => {
       onClose()
       setName('')
       setDescription('')
       setVisibility('public')
+      setFocus(defaultFocus)
       setError(null)
       router.push(`/teams/${res.slug}`)
     },
@@ -81,6 +94,23 @@ export function CreateTeamDialog({ open, onClose }: Props) {
             />
           </div>
           <div>
+            <label htmlFor="team-focus" className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              Fokus tim
+            </label>
+            <Select
+              id="team-focus"
+              value={focus}
+              onChange={(e) => setFocus(e.target.value)}
+              className="!rounded-xl"
+            >
+              {FOCUS_OPTIONS.map((o) => (
+                <option key={o.value || 'general'} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
             <label htmlFor="team-vis" className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
               Visibilitas
             </label>
@@ -94,7 +124,7 @@ export function CreateTeamDialog({ open, onClose }: Props) {
               <option value="private">Privat — hanya undangan</option>
             </Select>
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <DialogActions>
             <Button type="button" outline onClick={onClose} disabled={create.isPending}>
               Batal

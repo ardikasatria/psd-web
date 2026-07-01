@@ -3,7 +3,6 @@ import { getNavItemIcon } from '@/data/navigation-icons'
 import { TNavigationItem } from '@/data/navigation'
 import { TPost } from '@/data/posts'
 import { ChevronDownIcon } from '@heroicons/react/24/solid'
-import { Bars3Icon } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { FC } from 'react'
@@ -105,34 +104,7 @@ const DropdownMenuLink = ({ menuItem }: { menuItem: TNavigationItem }) => {
   )
 }
 
-const HamburgerNavMenu = ({ menuItem }: { menuItem: TNavigationItem }) => {
-  return (
-    <li className="menu-dropdown relative menu-item flex">
-      <span
-        className="flex cursor-default items-center gap-0.5 self-center rounded-full px-3 py-2.5 text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-        aria-haspopup="true"
-        aria-label={menuItem.name ?? 'Menu lainnya'}
-      >
-        <Bars3Icon className="size-5" aria-hidden />
-        <ChevronDownIcon className="size-4 text-neutral-400" aria-hidden />
-      </span>
-
-      {menuItem.children?.length ? (
-        <div className="absolute top-full left-1/2 z-50 sub-menu w-52 -translate-x-1/2 pt-1">
-          <ul className="relative grid space-y-0.5 rounded-xl bg-white py-2 text-sm shadow-lg ring-1 ring-black/5 dark:bg-neutral-900 dark:ring-white/10">
-            {menuItem.children.map((childItem) => (
-              <li key={childItem.id} className="px-1.5">
-                <DropdownMenuLink menuItem={childItem} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </li>
-  )
-}
-
-const DropdownMenu = ({ menuItem }: { menuItem: TNavigationItem }) => {
+import { HamburgerNavMenu } from './HamburgerNavMenu'
   const renderDropdown = (menuItem: TNavigationItem) => {
     return (
       <li key={menuItem.id} className="menu-dropdown relative menu-item px-2">

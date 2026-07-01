@@ -3,6 +3,7 @@
 import { useToast } from '@/components/common/Toast'
 import { QueryState } from '@/components/features/QueryState'
 import { FeaturePageShell } from '@/components/features/layout'
+import { useAuthGuard } from '@/lib/auth/useAuthGuard'
 import { claimQuest, getMyQuests } from '@/lib/api/quests'
 import { getApiErrorMessage } from '@/lib/api/errors'
 import type { Quest } from '@/types/api'
@@ -14,6 +15,7 @@ import { GiftIcon, TrophyIcon } from '@heroicons/react/24/outline'
 import { QuestStepList } from './QuestStepList'
 
 export function QuestDetailContent({ slug }: { slug: string }) {
+  useAuthGuard(`/login?next=/quests/${slug}`)
   const { toast } = useToast()
   const qc = useQueryClient()
 

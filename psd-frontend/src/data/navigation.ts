@@ -8,13 +8,14 @@ export async function getNavigation(): Promise<TNavigationItem[]> {
     { id: '3a', href: '/models', name: 'Model' },
     { id: '4', href: '/notebooks', name: 'Notebook' },
     { id: '5', href: '/competitions', name: 'Kompetisi' },
+    { id: '9b', href: '/teams', name: 'Tim Kolaborasi' },
     {
       id: MORE_MENU_ID,
       name: 'Menu lainnya',
       type: 'hamburger-menu',
       children: [
         { id: '2b', href: '/categories', name: 'Kategori' },
-        { id: '2c', href: '/quests', name: 'Quest' },
+        { id: '2c', href: '/quests', name: 'Quest', authRequired: true },
         { id: '8', href: '/community', name: 'Feed' },
         { id: '9', href: '/forum', name: 'Forum' },
         { id: '9a', href: '/teams', name: 'Tim Kolaborasi' },
@@ -42,9 +43,22 @@ export type TNavigationItem = Partial<{
   name: string
   iconHref: string
   type?: 'dropdown' | 'mega-menu' | 'hamburger-menu'
+  /** Hanya tampil setelah login (mis. Quest pribadi). */
+  authRequired?: boolean
   isNew?: boolean
   children?: TNavigationItem[]
 }>
+
+/** Sembunyikan item `authRequired` bila pengguna belum login. */
+export function filterNavigationByAuth(items: TNavigationItem[], isLoggedIn: boolean): TNavigationItem[] {
+  return items
+    .filter((item) => !item.authRequired || isLoggedIn)
+    .map((item) =>
+      item.children?.length
+        ? { ...item, children: filterNavigationByAuth(item.children, isLoggedIn) }
+        : item,
+    )
+}
 
 export const getLanguages = async () => [
   { id: 'Indonesian', name: 'Bahasa Indonesia', description: 'Indonesia', href: '#', active: true },

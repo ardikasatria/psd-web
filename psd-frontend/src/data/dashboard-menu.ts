@@ -15,6 +15,7 @@ import {
   CalendarDaysIcon,
   BeakerIcon,
   SparklesIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline'
 
 import type { ComponentType, SVGProps } from 'react'
@@ -47,6 +48,7 @@ export const dashboardMenuSections: DashboardMenuSection[] = [
   {
     label: 'Aktivitas',
     items: [
+      { name: 'Tim Kolaborasi', href: '/me/teams', icon: UserGroupIcon },
       { name: 'Kompetisi saya', href: '/dashboard/competitions', icon: TrophyIcon },
       { name: 'Event saya', href: '/dashboard/events', icon: CalendarDaysIcon },
       { name: 'Belajar saya', href: '/dashboard/learning', icon: AcademicCapIcon },

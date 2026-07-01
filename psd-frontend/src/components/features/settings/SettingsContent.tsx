@@ -136,6 +136,14 @@ export function SettingsContent() {
                   description="Sesuaikan banner, accent color, status, tentang, dan tautan profil publik Anda."
                   cta="Buka editor profil"
                 />
+                {user.account_type === 'organization' && (
+                  <ShortcutCard
+                    href="/me/org/teams"
+                    title="Tim organisasi"
+                    description="Kelola tim kolaborasi, undang anggota, dan bangun portofolio UMKM bersama."
+                    cta="Buka hub organisasi"
+                  />
+                )}
                 <ShortcutCard
                   href="/settings/security"
                   title="Keamanan akun"

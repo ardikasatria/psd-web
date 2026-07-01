@@ -46,8 +46,12 @@ const TeamAssetSchema = z.object({
   path: z.string(),
 })
 
-export const createTeam = (b: { name: string; description?: string; visibility?: 'public' | 'private' }) =>
-  apiFetch('/teams', SlugResponseSchema, { method: 'POST', body: JSON.stringify(b) })
+export const createTeam = (b: {
+  name: string
+  description?: string
+  visibility?: 'public' | 'private'
+  focus?: string
+}) => apiFetch('/teams', SlugResponseSchema, { method: 'POST', body: JSON.stringify(b) })
 
 export const listTeams = (q = '', page = 1) =>
   apiFetch<PaginatedTeamSummary>(`/teams${buildQuery({ q: q || undefined, page })}`, PaginatedTeamSummarySchema)

@@ -87,6 +87,7 @@ import {
 import { mockNotifications, notificationsForUser, unreadCountForUser } from './data/notifications'
 import {
   findTeam,
+  adminTeamOf,
   mockTeamChannels,
   mockTeamFiles,
   mockTeamInvites,
@@ -2039,6 +2040,7 @@ export const handlers = [
       events: events.length,
       courses: courses.length,
       threads: threads.length,
+      teams: mockTeams.length,
     })
   }),
 
@@ -2091,6 +2093,49 @@ export const handlers = [
   http.delete(`${API}/admin/repos/:id`, ({ request }) => {
     const user = resolveUserFromRequest(request)
     if (!user || !isStaff(user)) return errorResponse(403, 'forbidden', 'Akses khusus admin')
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.get(`${API}/admin/teams`, ({ request }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || !isStaff(user)) return errorResponse(403, 'forbidden', 'Akses khusus admin')
+    const url = new URL(request.url)
+    const q = url.searchParams.get('q')?.toLowerCase()
+    const page = Number(url.searchParams.get('page') ?? 1)
+    let items = mockTeams.map(adminTeamOf)
+    if (q) {
+      items = items.filter(
+        (t) =>
+          t.name.toLowerCase().includes(q) ||
+          t.slug.includes(q) ||
+          (t.focus?.toLowerCase().includes(q) ?? false) ||
+          t.owner_username.includes(q),
+      )
+    }
+    return HttpResponse.json(paginate(items, page))
+  }),
+
+  http.patch(`${API}/admin/teams/:id`, async ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || !isStaff(user)) return errorResponse(403, 'forbidden', 'Akses khusus admin')
+    const body = (await request.json()) as { visibility?: 'public' | 'private'; featured?: boolean }
+    const t = mockTeams.find((x) => x.id === params.id)
+    if (!t) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    if (body.visibility) t.visibility = body.visibility
+    if (typeof body.featured === 'boolean') t.featured = body.featured
+    return HttpResponse.json(adminTeamOf(t))
+  }),
+
+  http.delete(`${API}/admin/teams/:id`, ({ request, params }) => {
+    const user = resolveUserFromRequest(request)
+    if (!user || !isStaff(user)) return errorResponse(403, 'forbidden', 'Akses khusus admin')
+    const idx = mockTeams.findIndex((x) => x.id === params.id)
+    if (idx < 0) return errorResponse(404, 'not_found', 'Tim tidak ditemukan')
+    const t = mockTeams[idx]
+    mockTeams.splice(idx, 1)
+    for (let i = mockTeamMembers.length - 1; i >= 0; i--) {
+      if (mockTeamMembers[i].team_id === t.id) mockTeamMembers.splice(i, 1)
+    }
     return new HttpResponse(null, { status: 204 })
   }),
 
@@ -3336,7 +3381,12 @@ export const handlers = [
   http.post(`${API}/teams`, async ({ request }) => {
     const user = resolveUserFromRequest(request)
     if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')
-    const body = (await request.json()) as { name: string; description?: string; visibility?: string }
+    const body = (await request.json()) as {
+      name: string
+      description?: string
+      visibility?: string
+      focus?: string
+    }
     const slug = body.name
       .trim()
       .toLowerCase()
@@ -3351,6 +3401,8 @@ export const handlers = [
       avatar_url: null,
       visibility: (body.visibility as 'public' | 'private') ?? 'public',
       created_by: user.id,
+      focus: body.focus?.trim() || undefined,
+      created_at: new Date().toISOString(),
     })
     mockTeamMembers.push({ team_id: id, user_id: user.id, role: 'owner' })
     return HttpResponse.json({ slug }, { status: 201 })

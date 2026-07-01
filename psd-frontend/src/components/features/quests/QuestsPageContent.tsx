@@ -2,6 +2,7 @@
 
 import { QueryState } from '@/components/features/QueryState'
 import { FeaturePageHero, FeaturePageShell } from '@/components/features/layout'
+import { useAuthGuard } from '@/lib/auth/useAuthGuard'
 import { getMyQuests } from '@/lib/api/quests'
 import type { Quest } from '@/types/api'
 import { useQuery } from '@tanstack/react-query'
@@ -21,6 +22,7 @@ function inferActivePhase(quests: { progress: { done: number; total: number }; c
 }
 
 export function QuestsPageContent() {
+  useAuthGuard('/login?next=/quests')
   const quests = useQuery({ queryKey: ['me', 'quests'], queryFn: getMyQuests })
   const items = quests.data?.items ?? []
   const activePhase = inferActivePhase(items)

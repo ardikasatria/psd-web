@@ -595,8 +595,27 @@ export const AdminStatsSchema = z.object({
   events: z.number(),
   courses: z.number(),
   threads: z.number(),
+  teams: z.number().optional(),
 })
 export type AdminStats = z.infer<typeof AdminStatsSchema>
+
+export const AdminTeamSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  visibility: z.enum(['public', 'private']),
+  focus: z.string().optional(),
+  member_count: z.number(),
+  owner_username: z.string(),
+  owner_account_type: z.enum(['individual', 'organization']).optional(),
+  featured: z.boolean().optional(),
+  created_at: z.string().optional(),
+})
+export type AdminTeam = z.infer<typeof AdminTeamSchema>
+
+export const PaginatedAdminTeamSchema = Paginated(AdminTeamSchema)
+export type PaginatedAdminTeam = PaginatedResult<AdminTeam>
 
 export const PaginatedAdminUserSchema = Paginated(AdminUserSchema)
 export type PaginatedAdminUser = PaginatedResult<AdminUser>

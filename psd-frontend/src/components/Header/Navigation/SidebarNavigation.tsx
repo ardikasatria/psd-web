@@ -2,7 +2,8 @@
 
 import { getNavItemIcon } from '@/data/navigation-icons'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
-import { TNavigationItem } from '@/data/navigation'
+import { filterNavigationByAuth, TNavigationItem } from '@/data/navigation'
+import { useAuth } from '@/lib/auth/useAuth'
 import { Link } from '@/shared/link'
 import SocialsList from '@/shared/SocialsList'
 import { Disclosure, DisclosureButton, DisclosurePanel, useClose } from '@headlessui/react'
@@ -12,7 +13,7 @@ import { Search01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import clsx from 'clsx'
 import { useRouter } from 'next/navigation'
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 
 interface Props {
   data: TNavigationItem[]
@@ -22,6 +23,8 @@ const SidebarNavigation: React.FC<Props> = ({ data }) => {
   const handleClose = useClose()
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
+  const { isLoggedIn } = useAuth()
+  const navItems = useMemo(() => filterNavigationByAuth(data, isLoggedIn), [data, isLoggedIn])
 
   const _renderMenuChild = (
     item: TNavigationItem,
@@ -134,7 +137,7 @@ const SidebarNavigation: React.FC<Props> = ({ data }) => {
         <div className="min-w-0 flex-1">{renderSearchForm()}</div>
         <ThemeToggle />
       </div>
-      <ul className="flex flex-col gap-y-1 px-2 py-6">{data?.map(_renderItem)}</ul>
+      <ul className="flex flex-col gap-y-1 px-2 py-6">{navItems.map(_renderItem)}</ul>
     </div>
   )
 }

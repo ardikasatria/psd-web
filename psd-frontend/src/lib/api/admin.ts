@@ -9,6 +9,10 @@ import {
   LearningPathSummary,
   PaginatedAdminUser,
   PaginatedAdminUserSchema,
+  PaginatedAdminTeam,
+  PaginatedAdminTeamSchema,
+  AdminTeam,
+  AdminTeamSchema,
   PaginatedAdminInstructorApplication,
   PaginatedAdminInstructorApplicationSchema,
   PaginatedAdminNotebookKernelRequest,
@@ -67,6 +71,20 @@ export const updateAdminRepo = (id: string, body: { visibility?: 'public' | 'pri
   })
 
 export const deleteAdminRepo = (id: string) => apiDelete(`/admin/repos/${id}`)
+
+export const listAdminTeams = (q: { q?: string; page?: number; page_size?: number } = {}) =>
+  apiFetch<PaginatedAdminTeam>(`/admin/teams${buildQuery(q)}`, PaginatedAdminTeamSchema)
+
+export const updateAdminTeam = (
+  id: string,
+  body: { visibility?: 'public' | 'private'; featured?: boolean },
+) =>
+  apiFetch<AdminTeam>(`/admin/teams/${id}`, AdminTeamSchema, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+
+export const deleteAdminTeam = (id: string) => apiDelete(`/admin/teams/${id}`)
 
 export const createCompetition = (body: Record<string, unknown>) =>
   apiFetch<SlugResponse>('/admin/competitions', SlugResponseSchema, {

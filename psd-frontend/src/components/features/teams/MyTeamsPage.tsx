@@ -5,6 +5,7 @@ import { QueryState } from '@/components/features/QueryState'
 import { FeaturePageHero, FeaturePageShell } from '@/components/features/layout'
 import { getMyInvites, respondInvite } from '@/lib/api/teams'
 import { fetchMyTeams, MY_TEAMS_QUERY_KEY } from '@/lib/teams/myTeamsQuery'
+import { roleLabel } from '@/lib/teams/permissions'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useAuthGuard } from '@/lib/auth/useAuthGuard'
 import { MyTeam, TeamInvite, TeamSummary } from '@/types/api'
@@ -13,14 +14,12 @@ import { Badge } from '@/shared/Badge'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 
-const roleLabel: Record<string, string> = {
-  owner: 'Owner',
-  admin: 'Admin',
-  member: 'Anggota',
-}
+const roleLabelMap = roleLabel
 
 export function MyTeamsPage() {
   useAuthGuard('/me/teams')
+  const { user } = useAuth()
+  const isOrg = user?.account_type === 'organization'
   const qc = useQueryClient()
 
   const teamsQuery = useQuery({
@@ -53,9 +52,16 @@ export function MyTeamsPage() {
         title="Tim saya"
         subtitle="Tim yang Anda ikuti dan undangan yang menunggu tanggapan."
         actions={
-          <ButtonPrimary href="/teams" outline>
-            Jelajahi tim
-          </ButtonPrimary>
+          <div className="flex flex-wrap gap-2">
+            {isOrg && (
+              <ButtonPrimary href="/me/org/teams" outline>
+                Hub organisasi
+              </ButtonPrimary>
+            )}
+            <ButtonPrimary href="/teams" outline>
+              Jelajahi tim
+            </ButtonPrimary>
+          </div>
         }
       />
 
@@ -113,7 +119,7 @@ export function MyTeamsPage() {
                 href={`/teams/${t.slug}`}
                 className="absolute end-3 top-3 rounded-lg bg-white/90 px-2 py-1 text-xs font-medium shadow-sm dark:bg-neutral-800/90"
               >
-                <Badge color="zinc">{roleLabel[t.role] ?? t.role}</Badge>
+                <Badge color="zinc">{roleLabelMap[t.role] ?? t.role}</Badge>
               </Link>
             </div>
           ))}

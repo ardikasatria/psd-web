@@ -11,6 +11,8 @@ export type MockTeam = {
   focus?: string
   assets_count?: number
   competitions_count?: number
+  featured?: boolean
+  created_at?: string
 }
 
 export type MockTeamMember = {
@@ -46,6 +48,8 @@ export const mockTeams: MockTeam[] = [
     focus: 'UMKM & NLP',
     assets_count: 12,
     competitions_count: 4,
+    featured: true,
+    created_at: '2025-01-15T00:00:00Z',
   },
   {
     id: 'team_itera_nlp',
@@ -70,6 +74,8 @@ export const mockTeams: MockTeam[] = [
     focus: 'UMKM',
     assets_count: 15,
     competitions_count: 2,
+    featured: true,
+    created_at: '2025-02-01T00:00:00Z',
   },
   {
     id: 'team_tabular',
@@ -237,4 +243,21 @@ export function myTeamsOf(userId: string) {
       const t = mockTeams.find((x) => x.id === m.team_id)!
       return { id: t.id, slug: t.slug, name: t.name, avatar_url: t.avatar_url, role: normalizeMockRole(m.role) }
     })
+}
+
+export function adminTeamOf(t: MockTeam) {
+  const owner = users.find((u) => u.id === t.created_by) ?? demoUser
+  return {
+    id: t.id,
+    slug: t.slug,
+    name: t.name,
+    description: t.description,
+    visibility: t.visibility,
+    focus: t.focus,
+    member_count: memberCount(t.id),
+    owner_username: owner.username,
+    owner_account_type: owner.account_type,
+    featured: t.featured ?? false,
+    created_at: t.created_at ?? new Date().toISOString(),
+  }
 }

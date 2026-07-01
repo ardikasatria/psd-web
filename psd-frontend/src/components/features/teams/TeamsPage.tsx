@@ -3,6 +3,7 @@
 import { conceptGradientRow, heroGradient, highlightGradientBr } from '@/components/common/featureGradients'
 import { CreateTeamDialog } from '@/components/features/teams/CreateTeamDialog'
 import { TeamCard } from '@/components/features/teams/TeamCard'
+import { OrgUmkmShowcase } from '@/components/features/teams/OrgUmkmShowcase'
 import { TeamCompeteJourney } from '@/components/features/teams/TeamCompeteJourney'
 import { TeamsSidebar } from '@/components/features/teams/TeamsSidebar'
 import { QueryState } from '@/components/features/QueryState'
@@ -30,6 +31,7 @@ const FOCUS_FILTERS = [
   { id: '', label: 'Semua' },
   { id: 'kompetisi', label: 'Kompetisi' },
   { id: 'umkm', label: 'UMKM' },
+  { id: 'organisasi', label: 'Organisasi' },
   { id: 'nlp', label: 'NLP' },
 ] as const
 
@@ -38,6 +40,7 @@ function matchesFocus(team: TeamSummary, focus: string) {
   const hay = `${team.name} ${team.description ?? ''} ${team.focus ?? ''}`.toLowerCase()
   if (focus === 'kompetisi') return hay.includes('kompetisi') || hay.includes('competition') || hay.includes('tabular')
   if (focus === 'umkm') return hay.includes('umkm')
+  if (focus === 'organisasi') return hay.includes('organisasi') || hay.includes('kolektif') || hay.includes('collective')
   if (focus === 'nlp') return hay.includes('nlp')
   return true
 }
@@ -111,6 +114,8 @@ function TeamsPageInner() {
           </div>
 
           <TeamCompeteJourney />
+
+          <OrgUmkmShowcase onCreateClick={() => setCreateOpen(true)} />
 
           {competitive.length > 0 && !q && !focus && (
             <section className={highlightGradientBr.team}>

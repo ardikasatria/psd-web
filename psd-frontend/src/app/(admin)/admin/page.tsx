@@ -11,6 +11,7 @@ import {
   ChatBubbleLeftRightIcon,
   CubeIcon,
   TrophyIcon,
+  UserGroupIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
 import { useQuery } from '@tanstack/react-query'
@@ -62,6 +63,12 @@ export default function AdminHomePage() {
           href="/admin/forum"
           icon={<ChatBubbleLeftRightIcon className="size-5" />}
         />
+        <StatCard
+          label="Tim kolaborasi"
+          value={stats.data?.teams ?? 0}
+          href="/admin/teams"
+          icon={<UserGroupIcon className="size-5" />}
+        />
       </div>
 
       <AdminContentCard className="p-5 sm:p-6">
@@ -73,6 +80,7 @@ export default function AdminHomePage() {
           {[
             { label: 'Kelola pengguna', href: '/admin/users' },
             { label: 'Tinjau aset', href: '/admin/repos' },
+            { label: 'Kelola tim', href: '/admin/teams' },
             { label: 'Atur kompetisi', href: '/admin/competitions' },
             { label: 'Moderasi forum', href: '/admin/forum' },
           ].map((item) => (
