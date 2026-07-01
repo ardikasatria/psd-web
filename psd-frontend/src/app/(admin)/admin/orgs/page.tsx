@@ -36,7 +36,6 @@ export default function AdminOrgsPage() {
   const [q, setQ] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [verificationFilter, setVerificationFilter] = useState('')
-  const [rejectNote, setRejectNote] = useState('')
   const [rejectId, setRejectId] = useState<string | null>(null)
   const qc = useQueryClient()
 
@@ -74,7 +73,6 @@ export default function AdminOrgsPage() {
     mutationFn: ({ id, note }: { id: string; note: string }) => adminRejectVerify(id, note),
     onSuccess: () => {
       setRejectId(null)
-      setRejectNote('')
       invalidate()
     },
   })
@@ -126,13 +124,17 @@ export default function AdminOrgsPage() {
                       @{item.org_handle} · {orgTypeLabel[item.org_type as keyof typeof orgTypeLabel]}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <ButtonActions
-                      onApprove={() => approve.mutate(item.org_id)}
-                      onReject={() => setRejectId(item.org_id)}
-                      pending={approve.isPending || reject.isPending}
-                    />
-                  </div>
+                  <OrgVerificationActions
+                    orgName={item.org_name}
+                    verification="pending"
+                    onApprove={() => approve.mutate(item.org_id)}
+                    onReject={(note) => reject.mutate({ id: item.org_id, note })}
+                    onRevoke={() => revoke.mutate(item.org_id)}
+                    rejectOpen={rejectId === item.org_id}
+                    onRejectOpen={() => setRejectId(item.org_id)}
+                    onRejectCancel={() => setRejectId(null)}
+                    pending={approve.isPending || reject.isPending}
+                  />
                 </div>
                 <ul className="mt-3 space-y-1 text-sm">
                   {(item.doc_urls ??
@@ -149,26 +151,6 @@ export default function AdminOrgsPage() {
                     </li>
                   ))}
                 </ul>
-                {rejectId === item.org_id && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Input
-                      value={rejectNote}
-                      onChange={(e) => setRejectNote(e.target.value)}
-                      placeholder="Catatan penolakan"
-                      className="!max-w-md !rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white"
-                      onClick={() => reject.mutate({ id: item.org_id, note: rejectNote })}
-                    >
-                      Tolak
-                    </button>
-                    <button type="button" className="text-sm text-neutral-500" onClick={() => setRejectId(null)}>
-                      Batal
-                    </button>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -251,14 +233,19 @@ export default function AdminOrgsPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-2">
-                      {o.verification === 'verified' && (
-                        <ConfirmDialog
-                          label="Cabut"
-                          confirm={`Cabut verifikasi "${o.name}"?`}
-                          onConfirm={() => revoke.mutate(o.id)}
-                        />
-                      )}
+                    <div className="flex min-w-[12rem] flex-col gap-2">
+                      <OrgVerificationActions
+                        orgName={o.name}
+                        verification={o.verification}
+                        onApprove={() => approve.mutate(o.id)}
+                        onReject={(note) => reject.mutate({ id: o.id, note })}
+                        onRevoke={() => revoke.mutate(o.id)}
+                        rejectOpen={rejectId === o.id}
+                        onRejectOpen={() => setRejectId(o.id)}
+                        onRejectCancel={() => setRejectId(null)}
+                        pending={approve.isPending || reject.isPending || revoke.isPending}
+                      />
+                      <div className="flex flex-wrap gap-2 border-t border-neutral-100 pt-2 dark:border-neutral-800">
                       {o.suspended ? (
                         <button
                           type="button"
@@ -275,6 +262,7 @@ export default function AdminOrgsPage() {
                           onConfirm={() => suspend.mutate(o.id)}
                         />
                       )}
+                      </div>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -300,33 +288,90 @@ export default function AdminOrgsPage() {
   )
 }
 
-function ButtonActions({
+type VerificationStatus = AdminOrg['verification']
+
+function OrgVerificationActions({
+  orgName,
+  verification,
   onApprove,
   onReject,
+  onRevoke,
+  rejectOpen,
+  onRejectOpen,
+  onRejectCancel,
   pending,
 }: {
+  orgName: string
+  verification: VerificationStatus
   onApprove: () => void
-  onReject: () => void
+  onReject: (note: string) => void
+  onRevoke: () => void
+  rejectOpen: boolean
+  onRejectOpen: () => void
+  onRejectCancel: () => void
   pending: boolean
 }) {
+  const [note, setNote] = useState('')
+
+  const handleRejectCancel = () => {
+    setNote('')
+    onRejectCancel()
+  }
+
   return (
-    <>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={onApprove}
-        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-      >
-        Setujui
-      </button>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={onReject}
-        className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 dark:border-red-800 dark:text-red-400"
-      >
-        Tolak
-      </button>
-    </>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
+        {verification !== 'verified' && (
+          <ConfirmDialog
+            label={verification === 'pending' ? 'Setujui' : 'Verifikasi'}
+            confirm={`Tandai "${orgName}" sebagai sudah diverifikasi?`}
+            onConfirm={onApprove}
+            disabled={pending}
+          />
+        )}
+        {verification === 'pending' && !rejectOpen && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={onRejectOpen}
+            className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 disabled:opacity-50 dark:border-red-800 dark:text-red-400"
+          >
+            Tolak
+          </button>
+        )}
+        {verification === 'verified' && (
+          <ConfirmDialog
+            label="Cabut verifikasi"
+            confirm={`Cabut verifikasi "${orgName}"? Status kembali ke belum terverifikasi.`}
+            onConfirm={onRevoke}
+            disabled={pending}
+          />
+        )}
+      </div>
+      {rejectOpen && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Catatan penolakan"
+            className="!max-w-xs !rounded-lg"
+          />
+          <button
+            type="button"
+            disabled={pending || !note.trim()}
+            className="rounded-lg bg-red-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+            onClick={() => {
+              onReject(note.trim())
+              setNote('')
+            }}
+          >
+            Kirim penolakan
+          </button>
+          <button type="button" className="text-sm text-neutral-500" onClick={handleRejectCancel}>
+            Batal
+          </button>
+        </div>
+      )}
+    </div>
   )
 }

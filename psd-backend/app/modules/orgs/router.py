@@ -721,7 +721,10 @@ async def admin_approve(
     db: AsyncSession = Depends(get_db),
 ):
     org = await get_org_by_id(db, org_id)
-    org.verification = apply_verification(org.verification, "approve")
+    if org.verification in ("unverified", "rejected"):
+        org.verification = "verified"
+    else:
+        org.verification = apply_verification(org.verification, "approve")
     vr = (
         await db.execute(
             select(OrgVerificationRequest).where(

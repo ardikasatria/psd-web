@@ -24,6 +24,11 @@ describe('org permissions', () => {
     expect(orgCan('billing_manager', 'post_announcement')).toBe(false)
   })
 
+  it('owner and admin inherit announcement posting', () => {
+    expect(orgCan('owner', 'post_announcement')).toBe(true)
+    expect(orgCan('admin', 'post_announcement')).toBe(true)
+  })
+
   it('member is view only for management', () => {
     expect(orgCan('member', 'view_org')).toBe(true)
     expect(orgCan('member', 'manage_members')).toBe(false)

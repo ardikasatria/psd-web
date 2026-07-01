@@ -568,8 +568,8 @@ export function createOrgHandlers(ctx: HandlerCtx) {
       if (!user || !isStaff(user)) return errorResponse(403, 'forbidden', 'Akses khusus admin')
       const o = findOrg(String(params.id))
       if (!o) return errorResponse(404, 'not_found', 'Organisasi tidak ditemukan')
-      if (o.verification !== 'pending') {
-        return errorResponse(409, 'invalid_transition', 'Hanya bisa setujui yang pending')
+      if (o.verification === 'verified') {
+        return errorResponse(409, 'invalid_transition', 'Organisasi sudah terverifikasi')
       }
       o.verification = 'verified'
       const vr = mockOrgVerifications.find((v) => v.org_id === o.id && v.status === 'pending')

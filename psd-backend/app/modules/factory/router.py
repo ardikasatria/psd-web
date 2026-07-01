@@ -17,8 +17,10 @@ from app.engine.airflow_gen import render_dag
 from app.engine.dispatch import plan_execution
 from app.engine.estimate import estimate_pipeline_bytes
 from app.modules.factory.analytics import widget_data  # noqa: F401 — via perf.integration
+from app.modules.factory.compile_script import compile_pipeline_script
 from app.modules.factory.dashboard_helpers import can_edit_dashboard, get_dashboard_by_slug, latest_done_run, latest_gold_map
-from app.modules.factory.engine import _connect, _resolve_source
+from app.modules.factory.engine import _connect, _resolve_source, preview_rows
+from app.modules.factory.engine_limits import effective_engine, engine_limits_for_user
 from app.modules.factory.models import Dashboard, DataSource, Pipeline, PipelineRun, Widget
 from app.perf.integration import fetch_schema_payload, fetch_widget_payload
 from app.perf.deps import get_cache
@@ -42,7 +44,7 @@ async def _can_edit_pipeline(db: AsyncSession, pl: Pipeline, user: User) -> None
 
 
 async def _ensure_can_view_pipeline(db: AsyncSession, pl: Pipeline, user: User | None) -> None:
-    """Pipeline hanya milik pemilik/anggota tim/staf — sembunyikan dari lainnya."""
+    """Pipeline privat — pemilik, anggota tim aset, atau staf."""
     if user is not None:
         if pl.owner_id == user.id:
             return
@@ -50,8 +52,13 @@ async def _ensure_can_view_pipeline(db: AsyncSession, pl: Pipeline, user: User |
             return
         if pl.team_id and await membership(db, pl.team_id, user.id):
             return
-    # 404 agar keberadaan pipeline privat tidak terekspos.
     raise ApiError(404, "not_found", "Pipeline tidak ditemukan")
+
+
+async def _get_pipeline_for_view(db: AsyncSession, slug: str, user: User | None) -> Pipeline:
+    pl = await _get_pipeline_by_slug(db, slug)
+    await _ensure_can_view_pipeline(db, pl, user)
+    return pl
 
 
 async def _runs_today(db: AsyncSession, owner_id: str) -> int:
@@ -77,6 +84,11 @@ async def _get_pipeline_by_slug(db: AsyncSession, slug: str) -> Pipeline:
 async def factory_quota(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     q = quota_for(user)
     return {**q, "runs_used_today": await _runs_today(db, user.id)}
+
+
+@router.get("/me/factory/engine-limits")
+async def factory_engine_limits(user: User = Depends(get_current_user)):
+    return engine_limits_for_user(user)
 
 
 async def _validate_and_set(db: AsyncSession, pl: Pipeline, user: User) -> list[str]:
@@ -214,13 +226,10 @@ async def list_pipelines(
 @router.get("/pipelines/{slug}")
 async def get_pipeline(
     slug: str,
-    user: User | None = Depends(get_current_user_optional),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    pl = (await db.execute(select(Pipeline).where(Pipeline.slug == slug))).scalar_one_or_none()
-    if not pl:
-        raise ApiError(404, "not_found", "Pipeline tidak ditemukan")
-    await _ensure_can_view_pipeline(db, pl, user)
+    pl = await _get_pipeline_for_view(db, slug, user)
     return {
         "id": pl.id,
         "slug": pl.slug,
@@ -269,9 +278,55 @@ async def validate_pipeline(
     pl = (await db.execute(select(Pipeline).where(Pipeline.slug == slug))).scalar_one_or_none()
     if not pl:
         raise ApiError(404, "not_found", "Pipeline tidak ditemukan")
+    await _can_edit_pipeline(db, pl, user)
     errors = await _validate_and_set(db, pl, user)
     await db.commit()
-    return {"status": pl.status, "errors": errors}
+    limits = engine_limits_for_user(user)
+    eng = effective_engine(None, pl.engine, limits["suggested_engine"])
+    out: dict = {"status": pl.status, "errors": errors}
+    if not errors:
+        script, language = compile_pipeline_script(pl.spec_json or {"nodes": [], "edges": []}, eng)
+        if language == "sql":
+            out["compiled_sql"] = script
+        else:
+            out["compiled_script"] = script
+        out["script_language"] = language
+    return out
+
+
+@router.post("/pipelines/{slug}/compile")
+async def compile_pipeline(
+    slug: str,
+    engine: str | None = None,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    pl = await _get_pipeline_for_view(db, slug, user)
+    limits = engine_limits_for_user(user)
+    eng = effective_engine(engine, pl.engine, limits["suggested_engine"])
+    script, language = compile_pipeline_script(pl.spec_json or {"nodes": [], "edges": []}, eng)
+    return {"script": script, "language": language}
+
+
+@router.post("/pipelines/{slug}/preview")
+async def preview_pipeline(
+    slug: str,
+    body: dict | None = None,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    pl = (await db.execute(select(Pipeline).where(Pipeline.slug == slug))).scalar_one_or_none()
+    if not pl:
+        raise ApiError(404, "not_found", "Pipeline tidak ditemukan")
+    await _can_edit_pipeline(db, pl, user)
+    if pl.status != "valid":
+        raise ApiError(400, "invalid", "Pipeline belum valid")
+    limit = min(int((body or {}).get("limit") or 50), 100)
+    try:
+        rows = await preview_rows(db, pl.spec_json or {"nodes": [], "edges": []}, limit=limit)
+    except Exception as exc:
+        raise ApiError(400, "preview_failed", str(exc)[:200]) from exc
+    return {"rows": rows}
 
 
 @router.delete("/pipelines/{slug}", status_code=204)
@@ -335,11 +390,10 @@ async def export_airflow_dag(
 @router.get("/pipelines/{slug}/runs")
 async def list_runs(
     slug: str,
-    user: User | None = Depends(get_current_user_optional),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    pl = await _get_pipeline_by_slug(db, slug)
-    await _ensure_can_view_pipeline(db, pl, user)
+    pl = await _get_pipeline_for_view(db, slug, user)
     rows = (
         await db.execute(
             select(PipelineRun)
@@ -367,11 +421,10 @@ async def list_runs(
 async def run_detail(
     slug: str,
     run_id: str,
-    user: User | None = Depends(get_current_user_optional),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    pl = await _get_pipeline_by_slug(db, slug)
-    await _ensure_can_view_pipeline(db, pl, user)
+    pl = await _get_pipeline_for_view(db, slug, user)
     r = (
         await db.execute(
             select(PipelineRun).where(PipelineRun.id == run_id, PipelineRun.pipeline_id == pl.id)
@@ -396,11 +449,10 @@ async def download_layer(
     slug: str,
     run_id: str,
     uri: str,
-    user: User | None = Depends(get_current_user_optional),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    pl = await _get_pipeline_by_slug(db, slug)
-    await _ensure_can_view_pipeline(db, pl, user)
+    pl = await _get_pipeline_for_view(db, slug, user)
     r = (
         await db.execute(
             select(PipelineRun).where(PipelineRun.id == run_id, PipelineRun.pipeline_id == pl.id)

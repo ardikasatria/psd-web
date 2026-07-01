@@ -72,6 +72,8 @@ export function PipelineDetailContent({ slug }: Props) {
   const engineLimits = useQuery({
     queryKey: ['factory-engine-limits'],
     queryFn: getFactoryEngineLimits,
+    retry: false,
+    staleTime: 60_000,
   })
 
   useEffect(() => {
@@ -278,6 +280,14 @@ export function PipelineDetailContent({ slug }: Props) {
     setMobilePanel(null)
   }, [])
 
+  const registerAddNode = useCallback((fn: (kind: PipelineNode['type'], op?: PipelineNode['op']) => string) => {
+    addNodeRef.current = fn
+  }, [])
+
+  const registerDeleteNode = useCallback((fn: (nodeId: string) => void) => {
+    deleteNodeRef.current = fn
+  }, [])
+
   const q = quota.data
   const runsLeft = q ? Math.max(0, q.runs_per_day - q.runs_used_today) : 0
   const status = data?.status ?? 'draft'
@@ -411,12 +421,8 @@ export function PipelineDetailContent({ slug }: Props) {
                     selectedId={selectedId}
                     onSelect={setSelectedId}
                     nodeErrors={nodeErrors}
-                    registerAddNode={(fn) => {
-                      addNodeRef.current = fn
-                    }}
-                    registerDeleteNode={(fn) => {
-                      deleteNodeRef.current = fn
-                    }}
+                    registerAddNode={registerAddNode}
+                    registerDeleteNode={registerDeleteNode}
                   />
                 )}
                 <NodePropertiesPanel

@@ -82,6 +82,17 @@ export const mockPipelines: MockPipeline[] = [
     room_id: null,
     owner_id: 'usr_01',
   },
+  {
+    id: 'pl_draft_budi',
+    slug: 'draft-umkm-budi',
+    title: 'Draft ETL UMKM (privat)',
+    status: 'draft',
+    spec: { nodes: [], edges: [] },
+    validation_error: null,
+    team_id: null,
+    room_id: null,
+    owner_id: 'usr_02',
+  },
 ]
 
 export function sourcesForUser(userId: string | undefined): DataSource[] {

@@ -99,3 +99,37 @@ def run_dag(con, nodes_by_id, order, preds, source_map, max_rows, run_id):
             if lyr == "gold":
                 rows_out += cnt
     return layers, lineage, rows_out
+
+
+async def preview_rows(
+    db: AsyncSession,
+    spec: dict,
+    *,
+    limit: int = 50,
+) -> list[dict]:
+    """Jalankan DAG in-memory dan kembalikan sampel baris dari node sink."""
+    nodes = spec.get("nodes") or []
+    edges = spec.get("edges") or []
+    if not nodes:
+        return []
+    nodes_by_id = {n["id"]: n for n in nodes}
+    order, preds = _topo(nodes, edges)
+    sink_ids = [n["id"] for n in nodes if n.get("type") == "sink"]
+    if not sink_ids:
+        return []
+    sink_id = sink_ids[0]
+    source_map = {}
+    for n in nodes:
+        if n.get("type") == "source":
+            sid = (n.get("params") or {}).get("source_id")
+            if not sid:
+                raise ValueError("Node source tanpa source_id")
+            source_map[n["id"]] = await _resolve_source(db, sid)
+    con = _connect()
+    try:
+        run_dag(con, nodes_by_id, order, preds, source_map, max(limit, 1), "preview")
+        cols = [d[0] for d in con.execute(f'DESCRIBE SELECT * FROM "{sink_id}";').fetchall()]
+        fetched = con.execute(f'SELECT * FROM "{sink_id}" LIMIT {int(limit)};').fetchall()
+        return [dict(zip(cols, row)) for row in fetched]
+    finally:
+        con.close()
