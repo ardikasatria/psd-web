@@ -39,7 +39,7 @@ export function NotebookDetailContent({ id }: { id: string }) {
     queryFn: () => getNotebook(id),
   })
 
-  const { canEdit } = useAssetCollaboration(data?.team, data?.owner.username)
+  const { canEdit, canRun } = useAssetCollaboration(data?.team, data?.owner.username)
 
   const remove = useMutation({
     mutationFn: () => deleteNotebook(id),
@@ -151,18 +151,20 @@ export function NotebookDetailContent({ id }: { id: string }) {
                   <CodeBracketSquareIcon className="size-10 shrink-0" aria-hidden />
                   <div className="mt-4 lg:mt-0">
                     <p className="text-sm font-medium text-white/90">Notebook PSD</p>
-                    <p className="mt-1 text-xl font-semibold">Workspace notebook</p>
+                    <p className="mt-1 text-xl font-semibold">
+                      {canRun ? 'Workspace notebook' : 'Preview notebook'}
+                    </p>
                     <p className="mt-2 text-sm text-white/85">
-                      {canEdit
+                      {canRun
                         ? 'Jalankan di editor terintegrasi PSD — tanpa membuka tab baru.'
-                        : 'Lihat hasil kerja pemilik notebook dalam mode baca.'}
+                        : 'Lihat isi notebook dalam mode render — tanpa kernel atau edit.'}
                     </p>
                   </div>
                 </div>
                 <div className="flex flex-col justify-center gap-3 border-t border-neutral-200/80 p-6 dark:border-neutral-700 lg:w-72 lg:shrink-0 lg:border-t-0 lg:border-s">
                   <OpenNotebookButton
                     notebookId={id}
-                    viewOnly={!canEdit}
+                    viewOnly={!canRun}
                     className="w-full [&_a]:w-full [&_button]:w-full [&_a]:justify-center [&_button]:justify-center"
                   />
                   <p className="text-center text-xs text-neutral-500 dark:text-neutral-400 lg:text-left">

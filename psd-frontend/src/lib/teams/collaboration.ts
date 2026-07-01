@@ -25,3 +25,17 @@ export function canCollaborateOnAsset(opts: {
   if (team && isTeamMemberOf(myTeams, team)) return true
   return false
 }
+
+/** Jalankan editor/kernel notebook — hanya pemilik atau anggota tim aset (bukan staff). */
+export function canRunNotebook(opts: {
+  user: UserLike
+  ownerUsername: string
+  team?: TeamRef | null
+  myTeams?: MyTeam[]
+}): boolean {
+  const { user, ownerUsername, team, myTeams } = opts
+  if (!user) return false
+  if (isPersonalAssetOwner(user, ownerUsername)) return true
+  if (team && isTeamMemberOf(myTeams, team)) return true
+  return false
+}

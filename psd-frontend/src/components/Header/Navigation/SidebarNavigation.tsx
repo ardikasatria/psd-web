@@ -69,7 +69,7 @@ const SidebarNavigation: React.FC<Props> = ({ data }) => {
       {item.children?.map((col) => (
         <li key={col.id}>
           {col.name ? (
-            <p className="px-3 text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">
+            <p className="px-3 text-xs font-bold tracking-wide text-neutral-800 uppercase dark:text-neutral-200">
               {col.name}
             </p>
           ) : null}

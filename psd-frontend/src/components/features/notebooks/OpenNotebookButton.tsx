@@ -22,12 +22,16 @@ export function OpenNotebookButton({ notebookId, outline, compact, plain, viewOn
   const { isLoggedIn } = useAuth()
   const label = compact
     ? viewOnly
-      ? 'Lihat'
+      ? 'Preview'
       : 'Mulai'
     : viewOnly
-      ? 'Lihat notebook'
+      ? 'Preview notebook'
       : 'Mulai notebook'
-  const target = notebookId ? `/notebooks/${notebookId}/workspace` : WORKSPACE_PATH
+  const target = notebookId
+    ? viewOnly
+      ? `/notebooks/${notebookId}/preview`
+      : `/notebooks/${notebookId}/workspace`
+    : WORKSPACE_PATH
   const href = isLoggedIn ? target : `/login?next=${encodeURIComponent(target)}`
 
   if (plain) {

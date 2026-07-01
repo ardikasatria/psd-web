@@ -50,7 +50,7 @@ export default function MegaMenuPopover({
                       return (
                       <div key={index}>
                         {menuChild.name ? (
-                          <p className="font-medium text-neutral-900 dark:text-neutral-200">{menuChild.name}</p>
+                          <p className="text-sm font-bold text-neutral-900 dark:text-neutral-100">{menuChild.name}</p>
                         ) : (
                           <p className="font-medium invisible select-none" aria-hidden="true">
                             {sectionTitle}
