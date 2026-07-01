@@ -69,6 +69,24 @@ export function createOrgHandlers(ctx: HandlerCtx) {
       return HttpResponse.json(paginate(items, page))
     }),
 
+    http.get(`${API}/orgs/opportunities/featured`, () => {
+      const items = mockOpportunities
+        .filter((op) => op.status === 'open')
+        .map((op) => {
+          const org = findOrg(op.org_id)
+          return {
+            id: op.id,
+            title: op.title,
+            org_handle: org?.handle ?? '',
+            org_name: org?.name ?? 'Organisasi',
+            skills: op.skills,
+            created_at: op.created_at,
+          }
+        })
+        .filter((op) => op.org_handle)
+      return HttpResponse.json({ items })
+    }),
+
     http.post(`${API}/orgs`, async ({ request }) => {
       const user = resolveUserFromRequest(request)
       if (!user) return errorResponse(401, 'unauthorized', 'Masuk dulu')

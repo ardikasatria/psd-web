@@ -41,6 +41,18 @@ const OrgBrowseSchema = z.object({
 export const listOrgs = (q: { q?: string; type?: string; page?: number } = {}) =>
   apiFetch(`/orgs${buildQuery(q)}`, Paginated(OrgBrowseSchema))
 
+const FeaturedOpportunitySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  org_handle: z.string(),
+  org_name: z.string(),
+  skills: z.array(z.string()),
+  created_at: z.string(),
+})
+
+export const listFeaturedOrgOpportunities = () =>
+  apiFetch('/orgs/opportunities/featured', z.object({ items: z.array(FeaturedOpportunitySchema) }))
+
 export const myOrgs = () => apiFetch('/orgs/me', z.object({ items: z.array(MyOrgSchema) }))
 
 export const getOrg = (handle: string) => apiFetch<OrgDetail>(`/orgs/${handle}`, OrgDetailSchema)
