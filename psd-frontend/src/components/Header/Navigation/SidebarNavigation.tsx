@@ -64,17 +64,50 @@ const SidebarNavigation: React.FC<Props> = ({ data }) => {
     )
   }
 
+  const _renderMegaMenuChild = (item: TNavigationItem) => (
+    <ul className="nav-mobile-sub-menu space-y-5 ps-3 pb-2">
+      {item.children?.map((col) => (
+        <li key={col.id}>
+          <p className="px-3 text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">
+            {col.name}
+          </p>
+          <ul className="mt-2 space-y-0.5">
+            {col.children?.map((link) => {
+              const LinkIcon = getNavItemIcon(link)
+              return (
+                <li key={link.id}>
+                  <Link
+                    href={link.href || '#'}
+                    onClick={handleClose}
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  >
+                    {LinkIcon && (
+                      <LinkIcon className="size-5 shrink-0 text-primary-600 dark:text-primary-400" aria-hidden />
+                    )}
+                    {link.name}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  )
+
   const _renderItem = (menu: TNavigationItem, index: number) => {
+    const isMegaMenu = menu.type === 'mega-menu' && !!menu.children?.length
     const isDropdown =
       (menu.type === 'dropdown' || menu.type === 'hamburger-menu') && !!menu.children?.length
-    const Icon = !isDropdown ? getNavItemIcon(menu) : null
+    const hasPanel = isMegaMenu || isDropdown
+    const Icon = !hasPanel ? getNavItemIcon(menu) : null
     return (
       <Disclosure key={index} as="li" className="text-neutral-900 dark:text-white">
         <DisclosureButton className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 text-start text-sm font-medium tracking-wide uppercase hover:bg-neutral-100 dark:hover:bg-neutral-800">
           {Icon && (
             <Icon className="size-5 shrink-0 text-primary-600 dark:text-primary-400" aria-hidden />
           )}
-          {isDropdown ? (
+          {hasPanel ? (
             <span className="block flex-1 py-2.5">{menu.name}</span>
           ) : (
             <Link
@@ -91,7 +124,12 @@ const SidebarNavigation: React.FC<Props> = ({ data }) => {
             </div>
           )}
         </DisclosureButton>
-        {menu.children && <DisclosurePanel>{_renderMenuChild(menu)}</DisclosurePanel>}
+        {menu.children &&
+          (isMegaMenu ? (
+            <DisclosurePanel>{_renderMegaMenuChild(menu)}</DisclosurePanel>
+          ) : (
+            <DisclosurePanel>{_renderMenuChild(menu)}</DisclosurePanel>
+          ))}
       </Disclosure>
     )
   }

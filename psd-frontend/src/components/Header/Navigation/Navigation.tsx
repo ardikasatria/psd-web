@@ -1,4 +1,3 @@
-import Card20 from '@/components/PostCards/Card20'
 import { getNavItemIcon } from '@/data/navigation-icons'
 import { TNavigationItem } from '@/data/navigation'
 import { TPost } from '@/data/posts'
@@ -7,6 +6,7 @@ import clsx from 'clsx'
 import Link from 'next/link'
 import { FC } from 'react'
 import { NavDropdownMenu } from './NavDropdownMenu'
+import { NavMegaMenu } from './NavMegaMenu'
 
 const Lv1MenuItem = ({ menuItem }: { menuItem: TNavigationItem }) => {
   const Icon = getNavItemIcon(menuItem)
@@ -42,69 +42,25 @@ const Lv1MenuItem = ({ menuItem }: { menuItem: TNavigationItem }) => {
   )
 }
 
-const MegaMenu = ({ menuItem, featuredPosts }: { menuItem: TNavigationItem; featuredPosts: TPost[] }) => {
-  const renderNavlink = (item: TNavigationItem) => {
-    return (
-      <li key={item.id} className={clsx('menu-item', item.isNew && 'menuIsNew')}>
-        <Link
-          className="font-normal text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white"
-          href={item.href || '#'}
-        >
-          {item.name}
-        </Link>
-      </li>
-    )
-  }
-
-  return (
-    <li className="menu-megamenu menu-item flex">
-      <Lv1MenuItem menuItem={menuItem} />
-
-      {menuItem.children?.length && menuItem.type === 'mega-menu' ? (
-        <div className="absolute inset-x-0 top-full z-50 sub-menu">
-          <div className="bg-white shadow-lg dark:bg-neutral-900">
-            <div className="container">
-              <div className="flex border-t border-neutral-200 py-11 text-sm dark:border-neutral-700">
-                <div className="grid flex-1 grid-cols-4 gap-6 pe-10 xl:gap-8 2xl:pe-14">
-                  {menuItem.children?.map((menuChild, index) => (
-                    <div key={index}>
-                      <p className="font-medium text-neutral-900 dark:text-neutral-200">{menuChild.name}</p>
-                      <ul className="mt-4 grid space-y-4">{menuChild.children?.map(renderNavlink)}</ul>
-                    </div>
-                  ))}
-                </div>
-                <div className="grid w-2/7 grid-cols-1 gap-5 xl:w-4/9 xl:grid-cols-2">
-                  {featuredPosts.map((post, index) => (
-                    <Card20 key={post.id} post={post} className={clsx(index === 0 ? '' : 'hidden xl:block')} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </li>
-  )
-}
-
 export interface Props {
   menu: TNavigationItem[]
   className?: string
   featuredPosts: TPost[]
 }
-const Navigation: FC<Props> = ({ menu, className, featuredPosts }) => {
+
+const Navigation: FC<Props> = ({ menu, className }) => {
   return (
     <ul className={clsx('flex', className)}>
       {menu.map((menuItem) => {
+        if (menuItem.type === 'mega-menu') {
+          return <NavMegaMenu key={menuItem.id} menuItem={menuItem} />
+        }
         if (menuItem.type === 'dropdown' || menuItem.type === 'hamburger-menu') {
           return <NavDropdownMenu key={menuItem.id} menuItem={menuItem} />
         }
-        if (menuItem.type === 'mega-menu') {
-          return <MegaMenu featuredPosts={featuredPosts} key={menuItem.id} menuItem={menuItem} />
-        }
         return (
           <li key={menuItem.id} className="relative menu-item flex">
-            <Lv1MenuItem key={menuItem.id} menuItem={menuItem} />
+            <Lv1MenuItem menuItem={menuItem} />
           </li>
         )
       })}
