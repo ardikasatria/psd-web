@@ -20,6 +20,8 @@ export type NotebookKernel = {
   interrupt(): Promise<void>
   restart(): Promise<void>
   onStatus(cb: (s: KernelStatusValue) => void): () => void
+  /** Tutup koneksi kernel (mis. WebSocket server). */
+  dispose?(): void
 }
 
 export function createMockKernel(): NotebookKernel {

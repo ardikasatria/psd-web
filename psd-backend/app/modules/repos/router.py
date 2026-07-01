@@ -1,8 +1,12 @@
+import logging
+import os
 import uuid
 
 from fastapi import APIRouter, Depends, File, Response, UploadFile
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.db import get_db
 from app.core.deps import get_current_user, get_current_user_optional
@@ -12,6 +16,7 @@ from app.core.search import client, delete_repo_doc, index_repo
 from app.core.storage import delete_asset, upload_asset
 from app.modules.categories.service import apply_category_body, filter_by_category_slugs, load_category_refs
 from app.modules.engagement import service as engagement_service
+from app.modules.gamification.service import after_repo_created
 from app.modules.gamification.tiers import perks_for
 from app.modules.repos.models import Repo, RepoLike
 from app.modules.repos.schemas import RepoUpdate, to_detail, to_summary
@@ -30,6 +35,7 @@ from app.gitea.service import (
 )
 
 router = APIRouter(tags=["registry"])
+log = logging.getLogger(__name__)
 KIND_MAP = {"projects": "project", "datasets": "dataset", "models": "model"}
 
 
@@ -243,20 +249,32 @@ def _register(seg: str, kind: str):
         )
         await apply_category_body(db, body, r)
         db.add(r)
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError as exc:
+            await db.rollback()
+            raise ApiError(
+                409,
+                "slug_taken",
+                f"Aset dengan nama '{body['name']}' sudah ada di akun Anda.",
+            ) from exc
         await db.refresh(r, ["owner"])
         try:
             index_repo(r)
         except Exception:
             pass
-        await after_repo_created(db, user)
+        try:
+            await after_repo_created(db, user)
+        except Exception:
+            log.exception("gamification after_repo_created gagal untuk repo %s", r.id)
         try:
             await maybe_provision(db, r, user)
             await db.refresh(r)
         except Exception:
-            pass
+            log.exception("gitea provision gagal untuk repo %s", r.id)
+        cat, sub = await load_category_refs(db, r.category_id, r.subcategory_id)
         tm = await team_ref(db, r.team_id)
-        return {**to_detail(r, team=tm), "liked": False}
+        return {**to_detail(r, cat, sub, tm), "liked": False}
 
     router.add_api_route(f"/{seg}", list_ep, methods=["GET"])
     router.add_api_route(f"/{seg}/{{owner}}/{{name}}", detail_ep, methods=["GET"])
@@ -326,15 +344,19 @@ async def add_file(
 ):
     r = await _can_edit_repo(db, repo_id, user)
     data = await file.read()
+    if not data:
+        raise ApiError(400, "empty_file", "File kosong tidak dapat diunggah.")
     max_mb = perks_for(user.reputation or 0)["upload_max_mb"]
     if len(data) > max_mb * 1024 * 1024:
         raise ApiError(413, "too_large", f"Ukuran maksimal {max_mb} MB")
-    name = file.filename or f"file-{uuid.uuid4().hex}"
+    raw_name = file.filename or f"file-{uuid.uuid4().hex}"
+    name = os.path.basename(raw_name.replace("\\", "/")).strip() or f"file-{uuid.uuid4().hex}"
     key = f"repos/{repo_id}/{name}"
     try:
         url = upload_asset(key, data, file.content_type or "application/octet-stream")
     except Exception as exc:
-        raise ApiError(502, "storage_error", "Gagal mengunggah file") from exc
+        log.exception("upload_asset gagal repo=%s key=%s", repo_id, key)
+        raise ApiError(502, "storage_error", "Gagal mengunggah file ke penyimpanan.") from exc
     entry = {
         "path": name,
         "path_key": key,
@@ -343,12 +365,27 @@ async def add_file(
         "url": url,
     }
     r.files = [f for f in (r.files or []) if f.get("path") != name] + [entry]
-    await db.commit()
+    flag_modified(r, "files")
+    try:
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        log.exception("commit files gagal repo=%s", repo_id)
+        try:
+            delete_asset(key)
+        except Exception:
+            pass
+        raise ApiError(500, "save_failed", "Gagal menyimpan metadata file.") from exc
     try:
         await mirror_upload(db, r, name, data)
     except Exception:
-        pass
-    return entry
+        log.warning("mirror_upload ke Gitea gagal repo=%s path=%s", repo_id, name, exc_info=True)
+    return {
+        "path": entry["path"],
+        "size_bytes": entry["size_bytes"],
+        "type": entry["type"],
+        "url": entry["url"],
+    }
 
 
 @router.delete("/repos/{repo_id}/files", status_code=204)

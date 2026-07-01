@@ -56,6 +56,7 @@ export function createServerKernel({
     listeners.forEach((cb) => cb(s))
   }
 
+  let intentionalClose = false
   const authToken = token || ''
   const restBase = kernelsUrl || `${wsBase.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:')}/api/kernels`
   const url = `${wsBase}/api/kernels/${kernelId}/channels?token=${encodeURIComponent(authToken)}`
@@ -64,14 +65,32 @@ export function createServerKernel({
     string,
     {
       resolve: (v: { outputs: NbOutput[]; execution_count: number | null }) => void
+      reject: (e: Error) => void
       outputs: NbOutput[]
       count: number | null
     }
   >()
 
+  const rejectPending = (message: string) => {
+    for (const [id, job] of pending) {
+      job.reject(new Error(message))
+      pending.delete(id)
+    }
+  }
+
   ws.onopen = () => setStatus(KernelStatus.IDLE)
-  ws.onclose = () => setStatus(KernelStatus.DEAD)
-  ws.onerror = () => setStatus(KernelStatus.DEAD)
+  ws.onclose = () => {
+    if (!intentionalClose) {
+      rejectPending('Koneksi kernel server terputus')
+    }
+    setStatus(KernelStatus.DEAD)
+  }
+  ws.onerror = () => {
+    if (!intentionalClose) {
+      rejectPending('Koneksi kernel server gagal')
+    }
+    setStatus(KernelStatus.DEAD)
+  }
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data as string)
     const parentId = msg.parent_header?.msg_id as string | undefined
@@ -131,6 +150,7 @@ export function createServerKernel({
       return new Promise((resolve, reject) => {
         pending.set(msgId, {
           resolve: (v) => resolve({ outputs: v.outputs, execution_count: v.execution_count ?? 0 }),
+          reject,
           outputs: [],
           count: null,
         })
@@ -153,6 +173,16 @@ export function createServerKernel({
         await hubFetch(`${restBase}/${kernelId}/restart`, authToken, { method: 'POST' })
       }
       setStatus(KernelStatus.IDLE)
+    },
+    dispose() {
+      intentionalClose = true
+      rejectPending('Kernel dihentikan')
+      try {
+        ws.close(1000, 'kernel stopped')
+      } catch {
+        /* ignore */
+      }
+      setStatus(KernelStatus.DEAD)
     },
   }
 }

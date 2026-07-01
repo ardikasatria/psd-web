@@ -54,6 +54,20 @@ function PublishedAssetBanner() {
   return <CircleJourneyCTA variant="asset-published" className="mb-6" />
 }
 
+function UploadErrorBanner() {
+  const searchParams = useSearchParams()
+  if (searchParams.get('upload_error') !== '1') return null
+  return (
+    <div
+      className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100"
+      role="alert"
+    >
+      Aset sudah dibuat, tetapi file awal gagal diunggah. Buka tab <strong>File</strong> di bawah untuk
+      mengunggah ulang.
+    </div>
+  )
+}
+
 export function RepoDetailContent({
   kind,
   owner,
@@ -238,6 +252,7 @@ export function RepoDetailContent({
 
             <Suspense fallback={null}>
               <PublishedAssetBanner />
+              <UploadErrorBanner />
             </Suspense>
 
             {data.clone_url && <RepoCloneBanner cloneUrl={data.clone_url} />}

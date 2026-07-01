@@ -133,10 +133,3 @@ def asset_key_from_uri(uri: str) -> str | None:
     if uri.startswith(prefix2):
         return uri[len(prefix2) :]
     return None
-    if not settings.STORAGE_ENABLED:
-        return None
-    try:
-        return put_object(key, data, content_type)
-    except Exception:
-        logger.exception("Gagal mengunggah ke MinIO: %s", key)
-        return None

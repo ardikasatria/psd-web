@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { createRepo, uploadRepoFile } from '@/lib/api/repos'
+import { ApiError } from '@/lib/api/client'
 import { fetchMyTeams, MY_TEAMS_QUERY_KEY } from '@/lib/teams/myTeamsQuery'
 import { useAuth } from '@/lib/auth/useAuth'
 import type { MyTeam, RepoKind } from '@/types/api'
@@ -77,13 +78,25 @@ export function CreateRepoForm({ kind }: { kind: RepoKind }) {
         team_id: ownerTeamId || null,
       })
       if (initialFile) {
-        await uploadRepoFile(repo.id, initialFile)
+        try {
+          await uploadRepoFile(repo.id, initialFile)
+        } catch (err) {
+          const msg =
+            err instanceof ApiError
+              ? err.message
+              : err instanceof Error
+                ? err.message
+                : 'Gagal mengunggah file.'
+          return { repo, uploadFailed: msg }
+        }
       }
-      return repo
+      return { repo, uploadFailed: null as string | null }
     },
-    onSuccess: (repo) => {
+    onSuccess: ({ repo, uploadFailed }) => {
       const [owner, repoName] = repo.slug.split('/')
-      router.push(`${meta.basePath}/${owner}/${repoName}?published=1`)
+      const params = new URLSearchParams({ published: '1' })
+      if (uploadFailed) params.set('upload_error', '1')
+      router.push(`${meta.basePath}/${owner}/${repoName}?${params.toString()}`)
     },
     onError: (e: Error) => setError(e.message || 'Gagal membuat aset.'),
   })

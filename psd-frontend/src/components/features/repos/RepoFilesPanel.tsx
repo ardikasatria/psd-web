@@ -4,6 +4,7 @@ import { RepoGiteaFilesPanel } from '@/components/features/repos/RepoGiteaFilesP
 import { useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { deleteRepoFile, uploadRepoFile } from '@/lib/api/repos'
+import { ApiError } from '@/lib/api/client'
 import { formatFileSize } from '@/lib/utils/format'
 import type { RepoFile } from '@/types/api'
 import { Button } from '@/shared/Button'
@@ -51,7 +52,13 @@ function LegacyFilesPanel({
       setError(null)
       onChange()
     },
-    onError: (e: Error) => setError(e.message || 'Gagal mengunggah file.'),
+    onError: (e: Error) => {
+      const msg =
+        e instanceof ApiError
+          ? e.message
+          : e.message || 'Gagal mengunggah file.'
+      setError(msg)
+    },
   })
 
   const remove = useMutation({

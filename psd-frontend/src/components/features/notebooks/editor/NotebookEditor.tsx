@@ -56,7 +56,10 @@ export function NotebookEditor({
   }, [nb, autosave])
 
   useEffect(() => {
-    if (!kernel?.onStatus) return
+    if (!kernel?.onStatus) {
+      setKernelStatus(KernelStatus.DEAD)
+      return
+    }
     return kernel.onStatus(setKernelStatus)
   }, [kernel])
 
