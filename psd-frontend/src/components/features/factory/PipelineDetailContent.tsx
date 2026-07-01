@@ -278,12 +278,9 @@ export function PipelineDetailContent({ slug }: Props) {
   const handleAddNode = useCallback(
     (kind: PipelineNode['type'], op?: PipelineNode['op']) => {
       const id = addNodeRef.current?.(kind, op)
-      if (id) {
-        setSelectedId(id)
-        if (typeof window !== 'undefined' && window.innerWidth < 1280) {
-          setMobilePanel('properties')
-          return
-        }
+      if (id && typeof window !== 'undefined' && window.innerWidth < 1280) {
+        setMobilePanel('properties')
+        return
       }
       setMobilePanel(null)
     },

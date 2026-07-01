@@ -18,7 +18,7 @@ import {
   type Node,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 
 type Props = {
@@ -50,16 +50,6 @@ function useColorMode(): 'light' | 'dark' {
 
 function applyErrors(nodes: Node<PsdNodeData>[], nodeErrors: Record<string, string>) {
   return nodes.map((n) => ({ ...n, data: { ...n.data, error: nodeErrors[n.id] } }))
-}
-
-function applyEdgeHighlight(edges: Edge[], highlightEdges?: Set<string>) {
-  return edges.map((e) => ({
-    ...e,
-    animated: highlightEdges?.has(`${e.source}->${e.target}`),
-    style: highlightEdges?.has(`${e.source}->${e.target}`)
-      ? { stroke: '#6366f1', strokeWidth: 2.5 }
-      : undefined,
-  }))
 }
 
 function nodeDataFromSpec(sn: PipelineNode, error?: string): PsdNodeData {
@@ -100,101 +90,152 @@ function CanvasInner({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<PsdNodeData>>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
-  const syncOut = useCallback(
-    (n: Node<PsdNodeData>[], e: Edge[]) => {
-      onSpecChange(flowToSpec(n, e))
-    },
-    [onSpecChange],
-  )
+  const nodesRef = useRef(nodes)
+  const edgesRef = useRef(edges)
+  const onSpecChangeRef = useRef(onSpecChange)
+  const onSelectRef = useRef(onSelect)
+  const selectedIdRef = useRef(selectedId)
+  const liveSpecRef = useRef(liveSpec)
+  const nodeErrorsRef = useRef(nodeErrors)
+
+  nodesRef.current = nodes
+  edgesRef.current = edges
+  onSpecChangeRef.current = onSpecChange
+  onSelectRef.current = onSelect
+  selectedIdRef.current = selectedId
+  liveSpecRef.current = liveSpec
+  nodeErrorsRef.current = nodeErrors
+
+  const syncOut = useCallback((n: Node<PsdNodeData>[], e: Edge[]) => {
+    onSpecChangeRef.current(flowToSpec(n, e))
+  }, [])
 
   useEffect(() => {
     const { nodes: n, edges: e } = specToFlow(initialSpec)
-    setNodes(applyErrors(n, nodeErrors))
-    setEdges(applyEdgeHighlight(e, highlightEdges))
+    setNodes(applyErrors(n, nodeErrorsRef.current))
+    setEdges(e)
     requestAnimationFrame(() => fitView({ padding: 0.15, duration: 200 }))
-    // Reset kanvas hanya saat pindah pipeline, bukan tiap refetch API.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pipelineSlug, setNodes, setEdges, fitView])
 
+  // Sinkronkan properti node dari liveSpec (panel properti) tanpa loop seleksi.
   useEffect(() => {
+    const spec = liveSpecRef.current
+    const errors = nodeErrorsRef.current
     setNodes((nds) => {
+      const existingIds = new Set(nds.map((n) => n.id))
       let changed = false
-      const next = nds.map((n) => {
-        const sn = liveSpec.nodes.find((x) => x.id === n.id)
+      let result = [...nds]
+
+      for (const sn of spec.nodes) {
+        if (!existingIds.has(sn.id)) {
+          const { nodes: added } = specToFlow({ nodes: [sn], edges: [] })
+          const node = added[0]
+          if (node) {
+            result.push({
+              ...node,
+              data: { ...node.data, error: errors[sn.id] },
+            })
+            existingIds.add(sn.id)
+            changed = true
+          }
+        }
+      }
+
+      result = result.map((n) => {
+        const sn = spec.nodes.find((x) => x.id === n.id)
         if (!sn) return n
-        const data = nodeDataFromSpec(sn, nodeErrors[n.id])
+        const data = nodeDataFromSpec(sn, errors[n.id])
         if (!nodeDataChanged(n.data, data)) return n
         changed = true
         return { ...n, data }
       })
-      return changed ? next : nds
+
+      return changed ? result : nds
     })
   }, [liveSpec, nodeErrors, setNodes])
 
   useEffect(() => {
-    setNodes((nds) => {
-      const needs = nds.some((n) => Boolean(n.selected) !== (n.id === selectedId))
-      if (!needs) return nds
-      return nds.map((n) => ({ ...n, selected: n.id === selectedId }))
+    setEdges((eds) => {
+      let changed = false
+      const next = eds.map((e) => {
+        const highlighted = highlightEdges?.has(`${e.source}->${e.target}`) ?? false
+        if (!highlighted && !e.animated && e.style === undefined) return e
+        if (highlighted === Boolean(e.animated) && !highlighted) return e
+        changed = true
+        return highlighted
+          ? { ...e, animated: true, style: { stroke: '#6366f1', strokeWidth: 2.5 } }
+          : { ...e, animated: false, style: undefined }
+      })
+      return changed ? next : eds
     })
-  }, [selectedId, setNodes])
-
-  useEffect(() => {
-    setEdges((eds) => applyEdgeHighlight(eds, highlightEdges))
   }, [highlightEdges, setEdges])
 
   const addNode = useCallback(
     (kind: PipelineNode['type'], op?: PipelineNode['op']) => {
       const id = newNodeId(kind === 'transform' ? 't' : kind.slice(0, 3))
+      const count = nodesRef.current.length
       const newNode: Node<PsdNodeData> = {
         id,
         type: 'psdNode',
-        position: { x: 80 + nodes.length * 40, y: 80 + (nodes.length % 3) * 100 },
+        position: { x: 80 + count * 40, y: 80 + (count % 3) * 100 },
         data: defaultNodeData(kind, op),
+        selected: true,
       }
-      const nextNodes = [...nodes, newNode]
+      const nextNodes = [...nodesRef.current.map((n) => ({ ...n, selected: false })), newNode]
       setNodes(nextNodes)
-      syncOut(nextNodes, edges)
-      onSelect(id)
+      syncOut(nextNodes, edgesRef.current)
+      onSelectRef.current(id)
       return id
     },
-    [nodes, edges, setNodes, syncOut, onSelect],
+    [setNodes, syncOut],
   )
 
   const deleteNode = useCallback(
     (nodeId: string) => {
-      const nextNodes = nodes.filter((n) => n.id !== nodeId)
-      const nextEdges = edges.filter((e) => e.source !== nodeId && e.target !== nodeId)
+      const nextNodes = nodesRef.current.filter((n) => n.id !== nodeId)
+      const nextEdges = edgesRef.current.filter((e) => e.source !== nodeId && e.target !== nodeId)
       setNodes(nextNodes)
       setEdges(nextEdges)
       syncOut(nextNodes, nextEdges)
-      if (selectedId === nodeId) onSelect(null)
+      if (selectedIdRef.current === nodeId) onSelectRef.current(null)
     },
-    [nodes, edges, setNodes, setEdges, syncOut, selectedId, onSelect],
+    [setNodes, setEdges, syncOut],
   )
 
-  useEffect(() => {
-    registerAddNode?.(addNode)
-  }, [addNode, registerAddNode])
+  const addNodeRef = useRef(addNode)
+  const deleteNodeRef = useRef(deleteNode)
+  addNodeRef.current = addNode
+  deleteNodeRef.current = deleteNode
 
   useEffect(() => {
-    registerDeleteNode?.(deleteNode)
-  }, [deleteNode, registerDeleteNode])
+    registerAddNode?.((kind, op) => addNodeRef.current(kind, op))
+  }, [registerAddNode])
+
+  useEffect(() => {
+    registerDeleteNode?.((nodeId) => deleteNodeRef.current(nodeId))
+  }, [registerDeleteNode])
 
   const onConnect = useCallback(
     (conn: Connection) => {
       setEdges((eds) => {
         const next = addEdge(conn, eds)
-        syncOut(nodes, next)
+        syncOut(nodesRef.current, next)
         return next
       })
     },
-    [nodes, syncOut, setEdges],
+    [setEdges, syncOut],
   )
 
   const onNodeDragStop = useCallback(() => {
-    syncOut(nodes, edges)
-  }, [nodes, edges, syncOut])
+    syncOut(nodesRef.current, edgesRef.current)
+  }, [syncOut])
+
+  const onSelectionChange = useCallback(({ nodes: sel }: { nodes: Node[] }) => {
+    const next = sel[0]?.id ?? null
+    if (next === selectedIdRef.current) return
+    onSelectRef.current(next)
+  }, [])
 
   return (
     <div
@@ -210,25 +251,27 @@ function CanvasInner({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDragStop={onNodeDragStop}
-        onSelectionChange={({ nodes: sel }) => {
-          const next = sel[0]?.id ?? null
-          if (next !== selectedId) onSelect(next)
-        }}
-        nodesDeletable
+        onSelectionChange={onSelectionChange}
         onNodesDelete={(deleted) => {
           const ids = new Set(deleted.map((d) => d.id))
-          const nextNodes = nodes.filter((n) => !ids.has(n.id))
-          const nextEdges = edges.filter((e) => !ids.has(e.source) && !ids.has(e.target))
-          setNodes(nextNodes)
-          setEdges(nextEdges)
-          syncOut(nextNodes, nextEdges)
-          if (deleted.some((d) => d.id === selectedId)) onSelect(null)
+          setNodes((nds) => {
+            const nextNodes = nds.filter((n) => !ids.has(n.id))
+            setEdges((eds) => {
+              const nextEdges = eds.filter((e) => !ids.has(e.source) && !ids.has(e.target))
+              syncOut(nextNodes, nextEdges)
+              return nextEdges
+            })
+            return nextNodes
+          })
+          if (deleted.some((d) => d.id === selectedIdRef.current)) onSelectRef.current(null)
         }}
         onEdgesDelete={(deleted) => {
           const ids = new Set(deleted.map((d) => d.id))
-          const nextEdges = edges.filter((e) => !ids.has(e.id))
-          setEdges(nextEdges)
-          syncOut(nodes, nextEdges)
+          setEdges((eds) => {
+            const nextEdges = eds.filter((e) => !ids.has(e.id))
+            syncOut(nodesRef.current, nextEdges)
+            return nextEdges
+          })
         }}
         nodeTypes={psdNodeTypes}
         colorMode={colorMode}
