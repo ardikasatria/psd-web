@@ -73,9 +73,9 @@ export function MemberCardSettingsContent() {
   const memberCard: MemberCardData | null =
     user && cardData
       ? {
-          name: user.name,
+          username: user.username,
           email: user.email ?? '',
-          tierName: user.tier?.name ?? 'Pemula',
+          tierLevel: user.tier?.level ?? 0,
           shareUrl: cardData.share_url,
         }
       : null

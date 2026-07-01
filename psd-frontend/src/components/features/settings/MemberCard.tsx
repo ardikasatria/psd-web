@@ -1,8 +1,9 @@
 'use client'
 
+import { TIER_BADGE_FILES } from '@/lib/gamification/config'
 import clsx from 'clsx'
 import { Orbitron } from 'next/font/google'
-import { forwardRef, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { forwardRef, useEffect, useState, type CSSProperties } from 'react'
 import QRCode from 'qrcode'
 
 const orbitron = Orbitron({
@@ -14,16 +15,23 @@ const CARD_W = 1013
 const CARD_H = 638
 
 export type MemberCardData = {
-  name: string
+  username: string
   email: string
-  tierName: string
+  tierLevel: number
   shareUrl: string
 }
 
-function splitName(fullName: string) {
-  const parts = fullName.trim().split(/\s+/)
-  if (parts.length <= 1) return { first: parts[0] ?? '', last: '' }
-  return { first: parts[0], last: parts.slice(1).join(' ') }
+function badgeSrc(tierLevel: number) {
+  const idx = Math.min(Math.max(tierLevel, 0), TIER_BADGE_FILES.length - 1)
+  return `/badges/${TIER_BADGE_FILES[idx]}`
+}
+
+function splitUsername(username: string) {
+  const handle = username.replace(/^@/, '').trim().toUpperCase()
+  if (!handle) return { line1: '—', line2: '' }
+  if (handle.length <= 14) return { line1: handle, line2: '' }
+  const mid = Math.ceil(handle.length / 2)
+  return { line1: handle.slice(0, mid), line2: handle.slice(mid) }
 }
 
 type MemberCardFaceProps = {
@@ -38,7 +46,7 @@ export const MemberCardFace = forwardRef<HTMLDivElement, MemberCardFaceProps>(fu
   ref,
 ) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
-  const { first, last } = useMemo(() => splitName(data.name), [data.name])
+  const { line1, line2 } = splitUsername(data.username)
 
   useEffect(() => {
     if (side !== 'back' || !data.shareUrl) return
@@ -83,41 +91,44 @@ export const MemberCardFace = forwardRef<HTMLDivElement, MemberCardFaceProps>(fu
 
       {side === 'back' && (
         <>
+          {/* 1. Username */}
           <div
             className="absolute font-extrabold uppercase leading-none tracking-wide text-white"
-            style={{ left: '8.7%', top: '17%', fontSize: 'clamp(1.1rem, 4.8vw, 2.6rem)' }}
+            style={{ left: '8.7%', top: '17%', fontSize: 'clamp(1.1rem, 4.8vw, 2.6rem)', maxWidth: '55%' }}
           >
-            <p>{first || '—'}</p>
-            {last ? <p style={{ marginTop: '0.35em' }}>{last}</p> : null}
+            <p>{line1}</p>
+            {line2 ? <p style={{ marginTop: '0.35em' }}>{line2}</p> : null}
           </div>
 
+          {/* 2. Email */}
           <p
-            className="absolute font-semibold lowercase text-white/95"
+            className="absolute font-extrabold lowercase text-white"
             style={{
               left: '8.9%',
-              top: '44%',
-              fontSize: 'clamp(0.75rem, 2.2vw, 1.15rem)',
+              top: '47%',
+              fontSize: 'clamp(0.7rem, 2vw, 1.05rem)',
               maxWidth: '82%',
             }}
           >
-            {data.email}
+            {data.email || '—'}
           </p>
 
-          <div
-            className="absolute flex items-center justify-center text-center font-extrabold uppercase text-white"
+          {/* 3. Projek Sains Data */}
+          <p
+            className="absolute font-extrabold uppercase tracking-[0.12em] text-[#717990]"
             style={{
-              left: '29.3%',
-              top: '69.3%',
-              width: '35.6%',
-              height: '13.5%',
-              fontSize: 'clamp(1rem, 3.8vw, 2.2rem)',
+              left: '8.9%',
+              top: '54%',
+              fontSize: 'clamp(0.65rem, 1.8vw, 1rem)',
+              maxWidth: '82%',
             }}
           >
-            <span className="px-2">{data.tierName}</span>
-          </div>
+            Projek Sains Data
+          </p>
 
+          {/* 4a. QR */}
           <div
-            className="absolute overflow-hidden rounded-md bg-white p-1 shadow-sm"
+            className="absolute overflow-hidden rounded-sm bg-white p-1 shadow-sm"
             style={{ left: '8.9%', top: '63.7%', width: '17.2%', height: '24.9%' }}
           >
             {qrDataUrl ? (
@@ -127,6 +138,33 @@ export const MemberCardFace = forwardRef<HTMLDivElement, MemberCardFaceProps>(fu
               <div className="size-full animate-pulse bg-neutral-200" />
             )}
           </div>
+
+          {/* 4b. Badge gamifikasi */}
+          <div
+            className="absolute flex items-center justify-center"
+            style={{ left: '29.3%', top: '63.7%', width: '35.6%', height: '24.9%' }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={badgeSrc(data.tierLevel)}
+              alt=""
+              className="max-h-full max-w-full object-contain drop-shadow-md"
+              draggable={false}
+            />
+          </div>
+
+          {/* 5. URL di bawah badge */}
+          <p
+            className="absolute text-center font-bold uppercase tracking-wider text-[#717990]"
+            style={{
+              left: '29.3%',
+              top: '90%',
+              width: '35.6%',
+              fontSize: 'clamp(0.55rem, 1.5vw, 0.85rem)',
+            }}
+          >
+            projeksainsdata.com
+          </p>
         </>
       )}
     </div>

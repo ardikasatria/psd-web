@@ -478,15 +478,6 @@
           </g>
         </g>
       </g>
-      <text class="cls-11" transform="translate(88.26 148.64)"><tspan x="0" y="0">NAME</tspan><tspan x="0" y="78.13">SURNAME</tspan></text>
-      <text class="cls-12" transform="translate(90.47 344.5)"><tspan class="cls-63" x="0" y="0">P</tspan><tspan class="cls-61" x="22.93" y="0">R</tspan><tspan class="cls-63" x="47.62" y="0">O</tspan><tspan class="cls-65" x="75.52" y="0">J</tspan><tspan class="cls-63" x="90.14" y="0">EK SAINS </tspan><tspan class="cls-62" x="274.69" y="0">D</tspan><tspan class="cls-64" x="302.62" y="0">AT</tspan><tspan class="cls-63" x="347.71" y="0">A</tspan></text>
-      <g>
-        <rect class="cls-10" x="297.01" y="442.59" width="360.78" height="86.27" rx="43.14" ry="43.14"/>
-        <text class="cls-18" transform="translate(370.93 504.34)"><tspan x="0" y="0">Bad</tspan><tspan class="cls-60" x="129.62" y="0">g</tspan><tspan x="168.63" y="0">e</tspan></text>
-      </g>
-      <rect class="cls-10" x="90.47" y="406.31" width="173.81" height="158.82"/>
-      <text class="cls-17" transform="translate(118.59 470.06)"><tspan x="0" y="0">QR</tspan><tspan x="0" y="70.93">URL</tspan></text>
-      <text class="cls-19" transform="translate(90.47 299.65)"><tspan x="0" y="0">user email</tspan></text>
     </g>
   </g>
 </svg>
